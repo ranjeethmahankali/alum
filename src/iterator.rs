@@ -215,8 +215,9 @@ mod test {
             ff_ccw_iter, ff_cw_iter, fv_ccw_iter, fv_cw_iter, vf_ccw_iter, vf_cw_iter,
             vih_ccw_iter, vih_cw_iter, voh_ccw_iter, voh_cw_iter, vv_ccw_iter, vv_cw_iter,
         },
-        topol::{Handle, TopolCache, Topology},
+        topol::{Handle, TopolCache, Topology, VH},
     };
+    use arrayvec::ArrayVec;
 
     /**
      * Makes a box with the following topology.
@@ -263,6 +264,47 @@ mod test {
         assert_eq!(topol.num_halfedges(), 24);
         assert_eq!(topol.num_edges(), 12);
         assert_eq!(topol.num_faces(), 6);
+        topol
+    }
+
+    fn loop_mesh() -> Topology {
+        /*
+
+                            12---------13---------14---------15
+                           /          /          /          /
+                          /   f5     /   f6     /    f7    /
+                         /          /          /          /
+                        /          /          /          /
+                       8----------9----------10---------11
+                      /          /          /          /
+                     /    f3    /          /    f4    /
+                    /          /          /          /
+                   /          /          /          /
+                  4----------5----------6----------7
+                 /          /          /          /
+                /   f0     /    f1    /    f2    /
+               /          /          /          /
+              /          /          /          /
+             0----------1----------2----------3
+        */
+        let mut topol = Topology::with_capacity(16, 24, 8);
+        let mut cache = TopolCache::default();
+        for _ in 0u32..16 {
+            topol.add_vertex().expect("Unable to add vertex");
+        }
+        for fvi in [
+            [0u32, 1, 5, 4],
+            [1, 2, 6, 5],
+            [2, 3, 7, 6],
+            [4, 5, 9, 8],
+            [6, 7, 11, 10],
+            [8, 9, 13, 12],
+            [9, 10, 14, 13],
+            [10, 11, 15, 14],
+        ] {
+            let vs = fvi.iter().map(|i| (*i).into()).collect::<ArrayVec<VH, 4>>();
+            topol.add_face(&vs, &mut cache).expect("Unable to add face");
+        }
         topol
     }
 
@@ -454,6 +496,66 @@ mod test {
             assert_eq!(
                 ff_cw_iter(&qbox, fi.into())
                     .map(|f| f.index())
+                    .collect::<Vec<_>>(),
+                fis
+            );
+        }
+    }
+
+    #[test]
+    fn t_loop_mesh_vf_ccw_iter() {
+        let topol = loop_mesh();
+        for (v, fis) in [
+            (0u32, vec![0u32]),
+            (1, vec![1, 0]),
+            (2, vec![2, 1]),
+            (3, vec![2]),
+            (4, vec![0, 3]),
+            (5, vec![3, 0, 1]),
+            (6, vec![1, 2, 4]),
+            (7, vec![4, 2]),
+            (8, vec![3, 5]),
+            (9, vec![6, 5, 3]),
+            (10, vec![4, 7, 6]),
+            (11, vec![7, 4]),
+            (12, vec![5]),
+            (13, vec![5, 6]),
+            (14, vec![6, 7]),
+            (15, vec![7]),
+        ] {
+            assert_eq!(
+                vf_ccw_iter(&topol, v.into())
+                    .map(|i| i.index())
+                    .collect::<Vec<_>>(),
+                fis
+            );
+        }
+    }
+
+    #[test]
+    fn t_loop_mesh_vf_cw_iter() {
+        let topol = loop_mesh();
+        for (v, fis) in [
+            (0u32, vec![0u32]),
+            (1, vec![0, 1]),
+            (2, vec![1, 2]),
+            (3, vec![2]),
+            (4, vec![3, 0]),
+            (5, vec![1, 0, 3]),
+            (6, vec![4, 2, 1]),
+            (7, vec![2, 4]),
+            (8, vec![5, 3]),
+            (9, vec![3, 5, 6]),
+            (10, vec![6, 7, 4]),
+            (11, vec![4, 7]),
+            (12, vec![5]),
+            (13, vec![6, 5]),
+            (14, vec![7, 6]),
+            (15, vec![7]),
+        ] {
+            assert_eq!(
+                vf_cw_iter(&topol, v.into())
+                    .map(|i| i.index())
                     .collect::<Vec<_>>(),
                 fis
             );
