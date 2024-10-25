@@ -215,6 +215,21 @@ mod test {
         topol::{TopolCache, Topology},
     };
 
+    /**
+     * Makes a box with the following topology.
+     * ```text
+     *
+     *      7-----------6
+     *     /|          /|
+     *    / |         / |
+     *   4-----------5  |
+     *   |  |        |  |
+     *   |  3--------|--2
+     *   | /         | /
+     *   |/          |/
+     *   0-----------1
+     * ```
+     */
     fn quad_box() -> Topology {
         let mut topol = Topology::with_capacity(8, 12, 6);
         let verts: Vec<_> = (0..8)
