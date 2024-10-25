@@ -108,6 +108,26 @@ pub(crate) fn voh_cw_iter<'a>(topol: &'a Topology, v: u32) -> impl Iterator<Item
     }
 }
 
+pub(crate) fn vih_ccw_iter<'a>(topol: &'a Topology, v: u32) -> impl Iterator<Item = u32> + use<'a> {
+    let h = topol.vertex_halfedge(v);
+    OutgoingHalfedgeIter::<true> {
+        topol,
+        hstart: h,
+        hcurrent: h,
+    }
+    .map(|h| topol.opposite_halfedge(h))
+}
+
+pub(crate) fn vih_cw_iter<'a>(topol: &'a Topology, v: u32) -> impl Iterator<Item = u32> + use<'a> {
+    let h = topol.vertex_halfedge(v);
+    OutgoingHalfedgeIter::<false> {
+        topol,
+        hstart: h,
+        hcurrent: h,
+    }
+    .map(|h| topol.opposite_halfedge(h))
+}
+
 pub(crate) fn vf_ccw_iter<'a>(topol: &'a Topology, v: u32) -> impl Iterator<Item = u32> + use<'a> {
     voh_ccw_iter(topol, v).filter_map(|h| topol.halfedge_face(h))
 }

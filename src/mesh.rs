@@ -92,6 +92,14 @@ impl Mesh {
         self.topol.face_halfedge(f)
     }
 
+    pub const fn halfedge_edge(&self, h: u32) -> u32 {
+        self.topol.halfedge_edge(h)
+    }
+
+    pub const fn edge_halfedge(&self, e: u32, flag: bool) -> u32 {
+        self.topol.edge_halfedge(e, flag)
+    }
+
     pub fn cw_rotated_halfedge(&self, h: u32) -> u32 {
         self.topol.cw_rotated_halfedge(h)
     }
@@ -106,6 +114,14 @@ impl Mesh {
 
     pub fn voh_cw_iter<'a>(&'a self, v: u32) -> impl Iterator<Item = u32> + use<'a> {
         iterator::voh_cw_iter(&self.topol, v)
+    }
+
+    pub fn vih_ccw_iter<'a>(&'a self, v: u32) -> impl Iterator<Item = u32> + use<'a> {
+        iterator::vih_ccw_iter(&self.topol, v)
+    }
+
+    pub fn vih_cw_iter<'a>(&'a self, v: u32) -> impl Iterator<Item = u32> + use<'a> {
+        iterator::vih_cw_iter(&self.topol, v)
     }
 
     pub fn vf_ccw_iter<'a>(&'a self, v: u32) -> impl Iterator<Item = u32> + use<'a> {

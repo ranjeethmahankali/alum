@@ -104,6 +104,10 @@ impl Topology {
         &mut self.edges[(h >> 1) as usize].halfedges[(h & 1) as usize]
     }
 
+    pub fn vertex_halfedge(&self, v: u32) -> Option<u32> {
+        self.vertex(v).halfedge
+    }
+
     pub fn to_vertex(&self, h: u32) -> u32 {
         self.halfedge(h).vertex
     }
@@ -124,12 +128,16 @@ impl Topology {
         self.halfedge(h).face
     }
 
-    pub fn face_halfedge(&self, f: u32) -> u32 {
-        self.faces[f as usize].halfedge
+    pub const fn halfedge_edge(&self, h: u32) -> u32 {
+        h >> 1
     }
 
-    pub fn vertex_halfedge(&self, v: u32) -> Option<u32> {
-        self.vertex(v).halfedge
+    pub const fn edge_halfedge(&self, e: u32, flag: bool) -> u32 {
+        (e << 1) & if flag { 1 } else { 0 }
+    }
+
+    pub fn face_halfedge(&self, f: u32) -> u32 {
+        self.faces[f as usize].halfedge
     }
 
     pub fn is_boundary_halfedge(&self, h: u32) -> bool {
