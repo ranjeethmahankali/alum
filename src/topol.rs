@@ -303,10 +303,7 @@ impl Topology {
 
     fn adjust_outgoing_halfedge(&mut self, v: VH) {
         let h = iterator::voh_ccw_iter(self, v).find(|h| self.is_boundary_halfedge(*h));
-        match h {
-            Some(h) => self.set_vertex_halfedge(v, h),
-            None => {} // Do nothing.
-        }
+        if let Some(h) = h { self.set_vertex_halfedge(v, h) }
     }
 
     fn new_edge(
@@ -621,7 +618,7 @@ mod test {
     fn t_triangle() {
         let mut topol = Topology::default();
         let mut cache = TopolCache::default();
-        let verts: Vec<_> = (0..3).map(|_| topol.add_vertex()).flatten().collect();
+        let verts: Vec<_> = (0..3).flat_map(|_| topol.add_vertex()).collect();
         assert_eq!(verts, (0..3u32).map(|idx| VH { idx }).collect::<Vec<_>>());
         let face = topol.add_face(&verts, &mut cache).unwrap();
         assert_eq!(topol.num_faces(), 1);
@@ -710,7 +707,7 @@ mod test {
     fn t_quad() {
         let mut topol = Topology::default();
         let mut cache = TopolCache::default();
-        let verts: Vec<_> = (0..4).map(|_| topol.add_vertex()).flatten().collect();
+        let verts: Vec<_> = (0..4).flat_map(|_| topol.add_vertex()).collect();
         assert_eq!(verts, vec![0.into(), 1.into(), 2.into(), 3.into()]);
         let face = topol.add_face(&verts, &mut cache).unwrap();
         assert_eq!(topol.num_faces(), 1);

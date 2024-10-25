@@ -113,7 +113,7 @@ impl<H: Handle, T: TPropData> Property<H, T> {
     pub fn new(container: &mut PropertyContainer) -> Self {
         let prop = Property {
             data: Rc::new(RefCell::new(Vec::new())),
-            _phantom: PhantomData::default(),
+            _phantom: PhantomData,
         };
         container.push_property(prop.generic_ref());
         prop
@@ -122,7 +122,7 @@ impl<H: Handle, T: TPropData> Property<H, T> {
     pub fn with_capacity(n: usize, container: &mut PropertyContainer) -> Self {
         let prop = Property {
             data: Rc::new(RefCell::new(Vec::with_capacity(n))),
-            _phantom: PhantomData::default(),
+            _phantom: PhantomData,
         };
         container.push_property(prop.generic_ref());
         prop
@@ -157,7 +157,7 @@ impl<H: Handle, T: TPropData> Default for Property<H, T> {
     fn default() -> Self {
         Self {
             data: Default::default(),
-            _phantom: PhantomData::default(),
+            _phantom: PhantomData,
         }
     }
 }

@@ -106,87 +106,87 @@ impl Mesh {
         self.topol.ccw_rotated_halfedge(h)
     }
 
-    pub fn voh_ccw_iter<'a>(&'a self, v: VH) -> impl Iterator<Item = HH> + use<'a> {
+    pub fn voh_ccw_iter(&self, v: VH) -> impl Iterator<Item = HH> + use<'_> {
         iterator::voh_ccw_iter(&self.topol, v)
     }
 
-    pub fn voh_cw_iter<'a>(&'a self, v: VH) -> impl Iterator<Item = HH> + use<'a> {
+    pub fn voh_cw_iter(&self, v: VH) -> impl Iterator<Item = HH> + use<'_> {
         iterator::voh_cw_iter(&self.topol, v)
     }
 
-    pub fn vih_ccw_iter<'a>(&'a self, v: VH) -> impl Iterator<Item = HH> + use<'a> {
+    pub fn vih_ccw_iter(&self, v: VH) -> impl Iterator<Item = HH> + use<'_> {
         iterator::vih_ccw_iter(&self.topol, v)
     }
 
-    pub fn vih_cw_iter<'a>(&'a self, v: VH) -> impl Iterator<Item = HH> + use<'a> {
+    pub fn vih_cw_iter(&self, v: VH) -> impl Iterator<Item = HH> + use<'_> {
         iterator::vih_cw_iter(&self.topol, v)
     }
 
-    pub fn vf_ccw_iter<'a>(&'a self, v: VH) -> impl Iterator<Item = FH> + use<'a> {
+    pub fn vf_ccw_iter(&self, v: VH) -> impl Iterator<Item = FH> + use<'_> {
         iterator::vf_ccw_iter(&self.topol, v)
     }
 
-    pub fn vf_cw_iter<'a>(&'a self, v: VH) -> impl Iterator<Item = FH> + use<'a> {
+    pub fn vf_cw_iter(&self, v: VH) -> impl Iterator<Item = FH> + use<'_> {
         iterator::vf_cw_iter(&self.topol, v)
     }
 
-    pub fn vv_ccw_iter<'a>(&'a self, v: VH) -> impl Iterator<Item = VH> + use<'a> {
+    pub fn vv_ccw_iter(&self, v: VH) -> impl Iterator<Item = VH> + use<'_> {
         iterator::vv_ccw_iter(&self.topol, v)
     }
 
-    pub fn vv_cw_iter<'a>(&'a self, v: VH) -> impl Iterator<Item = VH> + use<'a> {
+    pub fn vv_cw_iter(&self, v: VH) -> impl Iterator<Item = VH> + use<'_> {
         iterator::vv_cw_iter(&self.topol, v)
     }
 
-    pub fn ve_ccw_iter<'a>(&'a self, v: VH) -> impl Iterator<Item = EH> + use<'a> {
+    pub fn ve_ccw_iter(&self, v: VH) -> impl Iterator<Item = EH> + use<'_> {
         iterator::ve_ccw_iter(&self.topol, v)
     }
 
-    pub fn ve_cw_iter<'a>(&'a self, v: VH) -> impl Iterator<Item = EH> + use<'a> {
+    pub fn ve_cw_iter(&self, v: VH) -> impl Iterator<Item = EH> + use<'_> {
         iterator::ve_cw_iter(&self.topol, v)
     }
 
-    pub fn ev_iter<'a>(&'a self, e: EH) -> impl Iterator<Item = VH> + use<'a> {
+    pub fn ev_iter(&self, e: EH) -> impl Iterator<Item = VH> + use<'_> {
         iterator::ev_iter(&self.topol, e)
     }
 
-    pub fn eh_iter<'a>(&'a self, e: EH) -> impl Iterator<Item = HH> + use<'a> {
+    pub fn eh_iter(&self, e: EH) -> impl Iterator<Item = HH> + use<'_> {
         iterator::eh_iter(&self.topol, e)
     }
 
-    pub fn ef_iter<'a>(&'a self, e: EH) -> impl Iterator<Item = FH> + use<'a> {
+    pub fn ef_iter(&self, e: EH) -> impl Iterator<Item = FH> + use<'_> {
         iterator::ef_iter(&self.topol, e)
     }
 
-    pub fn fh_ccw_iter<'a>(&'a self, f: FH) -> impl Iterator<Item = HH> + use<'a> {
+    pub fn fh_ccw_iter(&self, f: FH) -> impl Iterator<Item = HH> + use<'_> {
         iterator::fh_ccw_iter(&self.topol, f)
     }
 
-    pub fn fh_cw_iter<'a>(&'a self, f: FH) -> impl Iterator<Item = HH> + use<'a> {
+    pub fn fh_cw_iter(&self, f: FH) -> impl Iterator<Item = HH> + use<'_> {
         iterator::fh_cw_iter(&self.topol, f)
     }
 
-    pub fn fv_ccw_iter<'a>(&'a self, f: FH) -> impl Iterator<Item = VH> + use<'a> {
+    pub fn fv_ccw_iter(&self, f: FH) -> impl Iterator<Item = VH> + use<'_> {
         iterator::fv_ccw_iter(&self.topol, f)
     }
 
-    pub fn fv_cw_iter<'a>(&'a self, f: FH) -> impl Iterator<Item = VH> + use<'a> {
+    pub fn fv_cw_iter(&self, f: FH) -> impl Iterator<Item = VH> + use<'_> {
         iterator::fv_cw_iter(&self.topol, f)
     }
 
-    pub fn fe_ccw_iter<'a>(&'a self, f: FH) -> impl Iterator<Item = EH> + use<'a> {
+    pub fn fe_ccw_iter(&self, f: FH) -> impl Iterator<Item = EH> + use<'_> {
         iterator::fe_ccw_iter(&self.topol, f)
     }
 
-    pub fn fe_cw_iter<'a>(&'a self, f: FH) -> impl Iterator<Item = EH> + use<'a> {
+    pub fn fe_cw_iter(&self, f: FH) -> impl Iterator<Item = EH> + use<'_> {
         iterator::fe_cw_iter(&self.topol, f)
     }
 
-    pub fn ff_ccw_iter<'a>(&'a self, f: FH) -> impl Iterator<Item = FH> + use<'a> {
+    pub fn ff_ccw_iter(&self, f: FH) -> impl Iterator<Item = FH> + use<'_> {
         iterator::ff_ccw_iter(&self.topol, f)
     }
 
-    pub fn ff_cw_iter<'a>(&'a self, f: FH) -> impl Iterator<Item = FH> + use<'a> {
+    pub fn ff_cw_iter(&self, f: FH) -> impl Iterator<Item = FH> + use<'_> {
         iterator::ff_cw_iter(&self.topol, f)
     }
 

@@ -90,15 +90,15 @@ impl<'a> Iterator for FaceHalfedgeIter<'a, false> {
     }
 }
 
-pub(crate) fn vv_ccw_iter<'a>(topol: &'a Topology, v: VH) -> impl Iterator<Item = VH> + use<'a> {
+pub(crate) fn vv_ccw_iter(topol: &Topology, v: VH) -> impl Iterator<Item = VH> + use<'_> {
     voh_ccw_iter(topol, v).map(|h| topol.to_vertex(h))
 }
 
-pub(crate) fn vv_cw_iter<'a>(topol: &'a Topology, v: VH) -> impl Iterator<Item = VH> + use<'a> {
+pub(crate) fn vv_cw_iter(topol: &Topology, v: VH) -> impl Iterator<Item = VH> + use<'_> {
     voh_cw_iter(topol, v).map(|h| topol.to_vertex(h))
 }
 
-pub(crate) fn vih_ccw_iter<'a>(topol: &'a Topology, v: VH) -> impl Iterator<Item = HH> + use<'a> {
+pub(crate) fn vih_ccw_iter(topol: &Topology, v: VH) -> impl Iterator<Item = HH> + use<'_> {
     let h = topol.vertex_halfedge(v);
     OutgoingHalfedgeIter::<true> {
         topol,
@@ -108,7 +108,7 @@ pub(crate) fn vih_ccw_iter<'a>(topol: &'a Topology, v: VH) -> impl Iterator<Item
     .map(|h| topol.opposite_halfedge(h))
 }
 
-pub(crate) fn vih_cw_iter<'a>(topol: &'a Topology, v: VH) -> impl Iterator<Item = HH> + use<'a> {
+pub(crate) fn vih_cw_iter(topol: &Topology, v: VH) -> impl Iterator<Item = HH> + use<'_> {
     let h = topol.vertex_halfedge(v);
     OutgoingHalfedgeIter::<false> {
         topol,
@@ -118,7 +118,7 @@ pub(crate) fn vih_cw_iter<'a>(topol: &'a Topology, v: VH) -> impl Iterator<Item 
     .map(|h| topol.opposite_halfedge(h))
 }
 
-pub(crate) fn voh_ccw_iter<'a>(topol: &'a Topology, v: VH) -> impl Iterator<Item = HH> + use<'a> {
+pub(crate) fn voh_ccw_iter(topol: &Topology, v: VH) -> impl Iterator<Item = HH> + use<'_> {
     let h = topol.vertex_halfedge(v);
     OutgoingHalfedgeIter::<true> {
         topol,
@@ -127,7 +127,7 @@ pub(crate) fn voh_ccw_iter<'a>(topol: &'a Topology, v: VH) -> impl Iterator<Item
     }
 }
 
-pub(crate) fn voh_cw_iter<'a>(topol: &'a Topology, v: VH) -> impl Iterator<Item = HH> + use<'a> {
+pub(crate) fn voh_cw_iter(topol: &Topology, v: VH) -> impl Iterator<Item = HH> + use<'_> {
     let h = topol.vertex_halfedge(v);
     OutgoingHalfedgeIter::<false> {
         topol,
@@ -136,45 +136,45 @@ pub(crate) fn voh_cw_iter<'a>(topol: &'a Topology, v: VH) -> impl Iterator<Item 
     }
 }
 
-pub(crate) fn ve_ccw_iter<'a>(topol: &'a Topology, v: VH) -> impl Iterator<Item = EH> + use<'a> {
+pub(crate) fn ve_ccw_iter(topol: &Topology, v: VH) -> impl Iterator<Item = EH> + use<'_> {
     voh_ccw_iter(topol, v).map(|h| topol.halfedge_edge(h))
 }
 
-pub(crate) fn ve_cw_iter<'a>(topol: &'a Topology, v: VH) -> impl Iterator<Item = EH> + use<'a> {
+pub(crate) fn ve_cw_iter(topol: &Topology, v: VH) -> impl Iterator<Item = EH> + use<'_> {
     voh_cw_iter(topol, v).map(|h| topol.halfedge_edge(h))
 }
 
-pub(crate) fn vf_ccw_iter<'a>(topol: &'a Topology, v: VH) -> impl Iterator<Item = FH> + use<'a> {
+pub(crate) fn vf_ccw_iter(topol: &Topology, v: VH) -> impl Iterator<Item = FH> + use<'_> {
     voh_ccw_iter(topol, v).filter_map(|h| topol.halfedge_face(h))
 }
 
-pub(crate) fn vf_cw_iter<'a>(topol: &'a Topology, v: VH) -> impl Iterator<Item = FH> + use<'a> {
+pub(crate) fn vf_cw_iter(topol: &Topology, v: VH) -> impl Iterator<Item = FH> + use<'_> {
     voh_cw_iter(topol, v).filter_map(|h| topol.halfedge_face(h))
 }
 
-pub(crate) fn ev_iter<'a>(topol: &'a Topology, e: EH) -> impl Iterator<Item = VH> + use<'a> {
+pub(crate) fn ev_iter(topol: &Topology, e: EH) -> impl Iterator<Item = VH> + use<'_> {
     eh_iter(topol, e).map(|h| topol.to_vertex(h))
 }
 
-pub(crate) fn eh_iter<'a>(topol: &'a Topology, e: EH) -> impl Iterator<Item = HH> + use<'a> {
+pub(crate) fn eh_iter(topol: &Topology, e: EH) -> impl Iterator<Item = HH> + use<'_> {
     [false, true]
         .iter()
         .map(move |flag| topol.edge_halfedge(e, *flag))
 }
 
-pub(crate) fn ef_iter<'a>(topol: &'a Topology, e: EH) -> impl Iterator<Item = FH> + use<'a> {
+pub(crate) fn ef_iter(topol: &Topology, e: EH) -> impl Iterator<Item = FH> + use<'_> {
     eh_iter(topol, e).filter_map(|h| topol.halfedge_face(h))
 }
 
-pub(crate) fn fv_ccw_iter<'a>(topol: &'a Topology, f: FH) -> impl Iterator<Item = VH> + use<'a> {
+pub(crate) fn fv_ccw_iter(topol: &Topology, f: FH) -> impl Iterator<Item = VH> + use<'_> {
     fh_ccw_iter(topol, f).map(|h| topol.to_vertex(h))
 }
 
-pub(crate) fn fv_cw_iter<'a>(topol: &'a Topology, f: FH) -> impl Iterator<Item = VH> + use<'a> {
+pub(crate) fn fv_cw_iter(topol: &Topology, f: FH) -> impl Iterator<Item = VH> + use<'_> {
     fh_cw_iter(topol, f).map(|h| topol.to_vertex(h))
 }
 
-pub(crate) fn fh_ccw_iter<'a>(topol: &'a Topology, f: FH) -> impl Iterator<Item = HH> + use<'a> {
+pub(crate) fn fh_ccw_iter(topol: &Topology, f: FH) -> impl Iterator<Item = HH> + use<'_> {
     let h = topol.face_halfedge(f);
     FaceHalfedgeIter::<true> {
         topol,
@@ -183,7 +183,7 @@ pub(crate) fn fh_ccw_iter<'a>(topol: &'a Topology, f: FH) -> impl Iterator<Item 
     }
 }
 
-pub(crate) fn fh_cw_iter<'a>(topol: &'a Topology, f: FH) -> impl Iterator<Item = HH> + use<'a> {
+pub(crate) fn fh_cw_iter(topol: &Topology, f: FH) -> impl Iterator<Item = HH> + use<'_> {
     let h = topol.face_halfedge(f);
     FaceHalfedgeIter::<false> {
         topol,
@@ -192,19 +192,19 @@ pub(crate) fn fh_cw_iter<'a>(topol: &'a Topology, f: FH) -> impl Iterator<Item =
     }
 }
 
-pub(crate) fn fe_ccw_iter<'a>(topol: &'a Topology, f: FH) -> impl Iterator<Item = EH> + use<'a> {
+pub(crate) fn fe_ccw_iter(topol: &Topology, f: FH) -> impl Iterator<Item = EH> + use<'_> {
     fh_ccw_iter(topol, f).map(|h| topol.halfedge_edge(h))
 }
 
-pub(crate) fn fe_cw_iter<'a>(topol: &'a Topology, f: FH) -> impl Iterator<Item = EH> + use<'a> {
+pub(crate) fn fe_cw_iter(topol: &Topology, f: FH) -> impl Iterator<Item = EH> + use<'_> {
     fh_cw_iter(topol, f).map(|h| topol.halfedge_edge(h))
 }
 
-pub(crate) fn ff_ccw_iter<'a>(topol: &'a Topology, f: FH) -> impl Iterator<Item = FH> + use<'a> {
+pub(crate) fn ff_ccw_iter(topol: &Topology, f: FH) -> impl Iterator<Item = FH> + use<'_> {
     fh_ccw_iter(topol, f).filter_map(|h| topol.halfedge_face(topol.opposite_halfedge(h)))
 }
 
-pub(crate) fn ff_cw_iter<'a>(topol: &'a Topology, f: FH) -> impl Iterator<Item = FH> + use<'a> {
+pub(crate) fn ff_cw_iter(topol: &Topology, f: FH) -> impl Iterator<Item = FH> + use<'_> {
     fh_cw_iter(topol, f).filter_map(|h| topol.halfedge_face(topol.opposite_halfedge(h)))
 }
 
