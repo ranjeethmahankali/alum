@@ -279,7 +279,12 @@ mod test {
             (6u32, [7u32, 5, 2]),
             (7u32, [4u32, 6, 3]),
         ] {
-            assert!(vv_ccw_iter(&qbox, vi.into()).eq(vis.iter().map(|i| (*i).into())));
+            assert_eq!(
+                vv_ccw_iter(&qbox, vi.into())
+                    .map(|v| v.index())
+                    .collect::<Vec<_>>(),
+                vis
+            );
         }
     }
 
@@ -296,7 +301,12 @@ mod test {
             (6u32, [7, 2, 5]),
             (7u32, [4, 3, 6]),
         ] {
-            assert!(vv_cw_iter(&qbox, vi.into()).eq(fis.iter().map(|i| (*i).into())));
+            assert_eq!(
+                vv_cw_iter(&qbox, vi.into())
+                    .map(|x| x.index())
+                    .collect::<Vec<_>>(),
+                fis
+            );
         }
     }
 
@@ -339,7 +349,12 @@ mod test {
             (6u32, [5u32, 2, 3]),
             (7u32, [5u32, 3, 4]),
         ] {
-            assert!(vf_ccw_iter(&qbox, vi.into()).eq(fis.iter().map(|i| (*i).into())));
+            assert_eq!(
+                vf_ccw_iter(&qbox, vi.into())
+                    .map(|x| x.index())
+                    .collect::<Vec<_>>(),
+                fis
+            );
         }
     }
 
@@ -356,7 +371,12 @@ mod test {
             (6, [5, 3, 2]),
             (7, [5, 4, 3]),
         ] {
-            assert!(vf_cw_iter(&qbox, vi.into()).eq(fis.iter().map(|i| (*i).into())));
+            assert_eq!(
+                vf_cw_iter(&qbox, vi.into())
+                    .map(|x| x.index())
+                    .collect::<Vec<_>>(),
+                fis
+            );
         }
     }
 
@@ -371,7 +391,12 @@ mod test {
             (4u32, [3, 0, 4, 7]),
             (5u32, [4, 5, 6, 7]),
         ] {
-            assert!(fv_ccw_iter(&qbox, fi.into()).eq(vis.iter().map(|i| (*i).into())));
+            assert_eq!(
+                fv_ccw_iter(&qbox, fi.into())
+                    .map(|x| x.index())
+                    .collect::<Vec<_>>(),
+                vis
+            );
         }
     }
 
@@ -386,7 +411,12 @@ mod test {
             (4u32, [3, 7, 4, 0]),
             (5u32, [4, 7, 6, 5]),
         ] {
-            assert!(fv_cw_iter(&qbox, fi.into()).eq(vis.iter().map(|i| (*i).into())));
+            assert_eq!(
+                fv_cw_iter(&qbox, fi.into())
+                    .map(|x| x.index())
+                    .collect::<Vec<_>>(),
+                vis
+            );
         }
     }
 
@@ -405,7 +435,7 @@ mod test {
                 ff_ccw_iter(&qbox, fi.into())
                     .map(|f| f.index())
                     .collect::<Vec<_>>(),
-                &fis
+                fis
             );
         }
     }
@@ -425,7 +455,7 @@ mod test {
                 ff_cw_iter(&qbox, fi.into())
                     .map(|f| f.index())
                     .collect::<Vec<_>>(),
-                &fis
+                fis
             );
         }
     }
