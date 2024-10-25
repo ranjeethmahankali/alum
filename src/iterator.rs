@@ -211,7 +211,10 @@ pub(crate) fn ff_cw_iter(topol: &Topology, f: FH) -> impl Iterator<Item = FH> + 
 #[cfg(test)]
 mod test {
     use crate::{
-        iterator::{fv_ccw_iter, fv_cw_iter, vf_ccw_iter, vf_cw_iter, vv_ccw_iter, vv_cw_iter},
+        iterator::{
+            fv_ccw_iter, fv_cw_iter, vf_ccw_iter, vf_cw_iter, vih_ccw_iter, vih_cw_iter,
+            voh_ccw_iter, voh_cw_iter, vv_ccw_iter, vv_cw_iter,
+        },
         topol::{Handle, TopolCache, Topology},
     };
 
@@ -264,40 +267,6 @@ mod test {
     }
 
     #[test]
-    fn t_box_vf_ccw_iter() {
-        let qbox = quad_box();
-        for (vi, fis) in [
-            (0u32, [4u32, 0, 1]),
-            (1u32, [2u32, 1, 0]),
-            (2u32, [3u32, 2, 0]),
-            (3u32, [4u32, 3, 0]),
-            (4u32, [5u32, 4, 1]),
-            (5u32, [5u32, 1, 2]),
-            (6u32, [5u32, 2, 3]),
-            (7u32, [5u32, 3, 4]),
-        ] {
-            assert!(vf_ccw_iter(&qbox, vi.into()).eq(fis.iter().map(|i| (*i).into())));
-        }
-    }
-
-    #[test]
-    fn t_box_vf_cw_iter() {
-        let qbox = quad_box();
-        for (vi, fis) in [
-            (0u32, [4u32, 1, 0]),
-            (1, [2, 0, 1]),
-            (2, [3, 0, 2]),
-            (3, [4, 0, 3]),
-            (4, [5, 1, 4]),
-            (5, [5, 2, 1]),
-            (6, [5, 3, 2]),
-            (7, [5, 4, 3]),
-        ] {
-            assert!(vf_cw_iter(&qbox, vi.into()).eq(fis.iter().map(|i| (*i).into())));
-        }
-    }
-
-    #[test]
     fn t_box_vv_ccw_iter() {
         let qbox = quad_box();
         for (vi, vis) in [
@@ -328,6 +297,66 @@ mod test {
             (7u32, [4, 3, 6]),
         ] {
             assert!(vv_cw_iter(&qbox, vi.into()).eq(fis.iter().map(|i| (*i).into())));
+        }
+    }
+
+    #[test]
+    fn t_box_vih_iter() {
+        let qbox = quad_box();
+        for v in qbox.vertex_iter() {
+            assert!(
+                vih_ccw_iter(&qbox, v).all(|h| qbox.to_vertex(h) == v && qbox.from_vertex(h) != v)
+            );
+            assert!(
+                vih_cw_iter(&qbox, v).all(|h| qbox.to_vertex(h) == v && qbox.from_vertex(h) != v)
+            );
+        }
+    }
+
+    #[test]
+    fn t_box_voh_iter() {
+        let qbox = quad_box();
+        for v in qbox.vertex_iter() {
+            assert!(
+                voh_ccw_iter(&qbox, v).all(|h| qbox.from_vertex(h) == v && qbox.to_vertex(h) != v)
+            );
+            assert!(
+                voh_cw_iter(&qbox, v).all(|h| qbox.from_vertex(h) == v && qbox.to_vertex(h) != v)
+            );
+        }
+    }
+
+    #[test]
+    fn t_box_vf_ccw_iter() {
+        let qbox = quad_box();
+        for (vi, fis) in [
+            (0u32, [4u32, 0, 1]),
+            (1u32, [2u32, 1, 0]),
+            (2u32, [3u32, 2, 0]),
+            (3u32, [4u32, 3, 0]),
+            (4u32, [5u32, 4, 1]),
+            (5u32, [5u32, 1, 2]),
+            (6u32, [5u32, 2, 3]),
+            (7u32, [5u32, 3, 4]),
+        ] {
+            assert!(vf_ccw_iter(&qbox, vi.into()).eq(fis.iter().map(|i| (*i).into())));
+        }
+    }
+
+    #[test]
+    fn t_box_vf_cw_iter() {
+        let qbox = quad_box();
+        for (vi, fis) in [
+            (0u32, [4u32, 1, 0]),
+            (1, [2, 0, 1]),
+            (2, [3, 0, 2]),
+            (3, [4, 0, 3]),
+            (4, [5, 1, 4]),
+            (5, [5, 2, 1]),
+            (6, [5, 3, 2]),
+            (7, [5, 4, 3]),
+        ] {
+            assert!(vf_cw_iter(&qbox, vi.into()).eq(fis.iter().map(|i| (*i).into())));
         }
     }
 
