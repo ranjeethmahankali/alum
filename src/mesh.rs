@@ -140,6 +140,26 @@ impl Mesh {
         iterator::vv_cw_iter(&self.topol, v)
     }
 
+    pub fn ve_ccw_iter<'a>(&'a self, v: u32) -> impl Iterator<Item = u32> + use<'a> {
+        iterator::ve_ccw_iter(&self.topol, v)
+    }
+
+    pub fn ve_cw_iter<'a>(&'a self, v: u32) -> impl Iterator<Item = u32> + use<'a> {
+        iterator::ve_cw_iter(&self.topol, v)
+    }
+
+    pub fn ev_iter<'a>(&'a self, e: u32) -> impl Iterator<Item = u32> + use<'a> {
+        iterator::ev_iter(&self.topol, e)
+    }
+
+    pub fn eh_iter<'a>(&'a self, e: u32) -> impl Iterator<Item = u32> + use<'a> {
+        iterator::eh_iter(&self.topol, e)
+    }
+
+    pub fn ef_iter<'a>(&'a self, e: u32) -> impl Iterator<Item = u32> + use<'a> {
+        iterator::ef_iter(&self.topol, e)
+    }
+
     pub fn fh_ccw_iter<'a>(&'a self, f: u32) -> impl Iterator<Item = u32> + use<'a> {
         iterator::fh_ccw_iter(&self.topol, f)
     }
@@ -154,6 +174,22 @@ impl Mesh {
 
     pub fn fv_cw_iter<'a>(&'a self, f: u32) -> impl Iterator<Item = u32> + use<'a> {
         iterator::fv_cw_iter(&self.topol, f)
+    }
+
+    pub fn fe_ccw_iter<'a>(&'a self, f: u32) -> impl Iterator<Item = u32> + use<'a> {
+        iterator::fe_ccw_iter(&self.topol, f)
+    }
+
+    pub fn fe_cw_iter<'a>(&'a self, f: u32) -> impl Iterator<Item = u32> + use<'a> {
+        iterator::fe_cw_iter(&self.topol, f)
+    }
+
+    pub fn ff_ccw_iter<'a>(&'a self, f: u32) -> impl Iterator<Item = u32> + use<'a> {
+        iterator::ff_ccw_iter(&self.topol, f)
+    }
+
+    pub fn ff_cw_iter<'a>(&'a self, f: u32) -> impl Iterator<Item = u32> + use<'a> {
+        iterator::ff_cw_iter(&self.topol, f)
     }
 
     pub fn add_vertex(&mut self, pos: glam::Vec3) -> Result<u32, Error> {
