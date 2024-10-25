@@ -212,8 +212,8 @@ pub(crate) fn ff_cw_iter(topol: &Topology, f: FH) -> impl Iterator<Item = FH> + 
 mod test {
     use crate::{
         iterator::{
-            fv_ccw_iter, fv_cw_iter, vf_ccw_iter, vf_cw_iter, vih_ccw_iter, vih_cw_iter,
-            voh_ccw_iter, voh_cw_iter, vv_ccw_iter, vv_cw_iter,
+            ff_ccw_iter, ff_cw_iter, fv_ccw_iter, fv_cw_iter, vf_ccw_iter, vf_cw_iter,
+            vih_ccw_iter, vih_cw_iter, voh_ccw_iter, voh_cw_iter, vv_ccw_iter, vv_cw_iter,
         },
         topol::{Handle, TopolCache, Topology},
     };
@@ -387,6 +387,46 @@ mod test {
             (5u32, [4, 7, 6, 5]),
         ] {
             assert!(fv_cw_iter(&qbox, fi.into()).eq(vis.iter().map(|i| (*i).into())));
+        }
+    }
+
+    #[test]
+    fn t_box_ff_ccw_iter() {
+        let qbox = quad_box();
+        for (fi, fis) in [
+            (0u32, [1, 4, 3, 2]),
+            (1u32, [4, 0, 2, 5]),
+            (2u32, [1, 0, 3, 5]),
+            (3u32, [2, 0, 4, 5]),
+            (4u32, [3, 0, 1, 5]),
+            (5u32, [4, 1, 2, 3]),
+        ] {
+            assert_eq!(
+                ff_ccw_iter(&qbox, fi.into())
+                    .map(|f| f.index())
+                    .collect::<Vec<_>>(),
+                &fis
+            );
+        }
+    }
+
+    #[test]
+    fn t_box_ff_cw_iter() {
+        let qbox = quad_box();
+        for (fi, fis) in [
+            (0u32, [1, 2, 3, 4]),
+            (1u32, [4, 5, 2, 0]),
+            (2u32, [1, 5, 3, 0]),
+            (3u32, [2, 5, 4, 0]),
+            (4u32, [3, 5, 1, 0]),
+            (5u32, [4, 3, 2, 1]),
+        ] {
+            assert_eq!(
+                ff_cw_iter(&qbox, fi.into())
+                    .map(|f| f.index())
+                    .collect::<Vec<_>>(),
+                &fis
+            );
         }
     }
 }
