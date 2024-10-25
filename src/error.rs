@@ -1,3 +1,5 @@
+use crate::topol::{HH, VH};
+
 #[derive(Debug)]
 pub enum Error {
     // Properties.
@@ -5,8 +7,8 @@ pub enum Error {
     PropertyDoesNotExist,
     OutOfBoundsAccess,
     // Topology.
-    ComplexVertex(u32),
-    ComplexEdge(u32),
+    ComplexVertex(VH),
+    ComplexHalfedge(HH),
     HalfedgeNotFound,
     PatchRelinkingFailed,
 }

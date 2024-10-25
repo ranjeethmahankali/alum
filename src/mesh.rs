@@ -1,16 +1,14 @@
-use std::ops::Range;
-
 use crate::{
     error::Error,
     iterator,
-    property::Property,
-    topol::{TopolCache, Topology},
+    property::VProperty,
+    topol::{TopolCache, Topology, EH, FH, HH, VH},
 };
 
 pub struct Mesh {
     topol: Topology,
     cache: TopolCache,
-    points: Property<glam::Vec3>,
+    points: VProperty<glam::Vec3>,
 }
 
 impl Default for Mesh {
@@ -56,157 +54,157 @@ impl Mesh {
         self.topol.num_faces()
     }
 
-    pub fn vertex_iter(&self) -> Range<u32> {
+    pub fn vertex_iter(&self) -> impl Iterator<Item = VH> {
         self.topol.vertex_iter()
     }
 
-    pub fn halfedge_iter(&self) -> Range<u32> {
+    pub fn halfedge_iter(&self) -> impl Iterator<Item = HH> {
         self.topol.halfedge_iter()
     }
 
-    pub fn edge_iter(&self) -> Range<u32> {
+    pub fn edge_iter(&self) -> impl Iterator<Item = EH> {
         self.topol.edge_iter()
     }
 
-    pub fn face_iter(&self) -> Range<u32> {
+    pub fn face_iter(&self) -> impl Iterator<Item = FH> {
         self.topol.face_iter()
     }
 
-    pub fn is_boundary_edge(&self, e: u32) -> bool {
+    pub fn is_boundary_edge(&self, e: EH) -> bool {
         self.topol.is_boundary_edge(e)
     }
 
-    pub fn point(&self, vi: u32) -> Result<glam::Vec3, Error> {
+    pub fn point(&self, vi: VH) -> Result<glam::Vec3, Error> {
         self.points.get(vi)
     }
 
-    pub fn from_vertex(&self, h: u32) -> u32 {
+    pub fn from_vertex(&self, h: HH) -> VH {
         self.topol.from_vertex(h)
     }
 
-    pub fn halfedge_face(&self, h: u32) -> Option<u32> {
+    pub fn halfedge_face(&self, h: HH) -> Option<FH> {
         self.topol.halfedge_face(h)
     }
 
-    pub fn face_halfedge(&self, f: u32) -> u32 {
+    pub fn face_halfedge(&self, f: FH) -> HH {
         self.topol.face_halfedge(f)
     }
 
-    pub const fn halfedge_edge(&self, h: u32) -> u32 {
+    pub const fn halfedge_edge(&self, h: HH) -> EH {
         self.topol.halfedge_edge(h)
     }
 
-    pub const fn edge_halfedge(&self, e: u32, flag: bool) -> u32 {
+    pub const fn edge_halfedge(&self, e: EH, flag: bool) -> HH {
         self.topol.edge_halfedge(e, flag)
     }
 
-    pub fn cw_rotated_halfedge(&self, h: u32) -> u32 {
+    pub fn cw_rotated_halfedge(&self, h: HH) -> HH {
         self.topol.cw_rotated_halfedge(h)
     }
 
-    pub fn ccw_rotated_halfedge(&self, h: u32) -> u32 {
+    pub fn ccw_rotated_halfedge(&self, h: HH) -> HH {
         self.topol.ccw_rotated_halfedge(h)
     }
 
-    pub fn voh_ccw_iter<'a>(&'a self, v: u32) -> impl Iterator<Item = u32> + use<'a> {
+    pub fn voh_ccw_iter<'a>(&'a self, v: VH) -> impl Iterator<Item = HH> + use<'a> {
         iterator::voh_ccw_iter(&self.topol, v)
     }
 
-    pub fn voh_cw_iter<'a>(&'a self, v: u32) -> impl Iterator<Item = u32> + use<'a> {
+    pub fn voh_cw_iter<'a>(&'a self, v: VH) -> impl Iterator<Item = HH> + use<'a> {
         iterator::voh_cw_iter(&self.topol, v)
     }
 
-    pub fn vih_ccw_iter<'a>(&'a self, v: u32) -> impl Iterator<Item = u32> + use<'a> {
+    pub fn vih_ccw_iter<'a>(&'a self, v: VH) -> impl Iterator<Item = HH> + use<'a> {
         iterator::vih_ccw_iter(&self.topol, v)
     }
 
-    pub fn vih_cw_iter<'a>(&'a self, v: u32) -> impl Iterator<Item = u32> + use<'a> {
+    pub fn vih_cw_iter<'a>(&'a self, v: VH) -> impl Iterator<Item = HH> + use<'a> {
         iterator::vih_cw_iter(&self.topol, v)
     }
 
-    pub fn vf_ccw_iter<'a>(&'a self, v: u32) -> impl Iterator<Item = u32> + use<'a> {
+    pub fn vf_ccw_iter<'a>(&'a self, v: VH) -> impl Iterator<Item = FH> + use<'a> {
         iterator::vf_ccw_iter(&self.topol, v)
     }
 
-    pub fn vf_cw_iter<'a>(&'a self, v: u32) -> impl Iterator<Item = u32> + use<'a> {
+    pub fn vf_cw_iter<'a>(&'a self, v: VH) -> impl Iterator<Item = FH> + use<'a> {
         iterator::vf_cw_iter(&self.topol, v)
     }
 
-    pub fn vv_ccw_iter<'a>(&'a self, v: u32) -> impl Iterator<Item = u32> + use<'a> {
+    pub fn vv_ccw_iter<'a>(&'a self, v: VH) -> impl Iterator<Item = VH> + use<'a> {
         iterator::vv_ccw_iter(&self.topol, v)
     }
 
-    pub fn vv_cw_iter<'a>(&'a self, v: u32) -> impl Iterator<Item = u32> + use<'a> {
+    pub fn vv_cw_iter<'a>(&'a self, v: VH) -> impl Iterator<Item = VH> + use<'a> {
         iterator::vv_cw_iter(&self.topol, v)
     }
 
-    pub fn ve_ccw_iter<'a>(&'a self, v: u32) -> impl Iterator<Item = u32> + use<'a> {
+    pub fn ve_ccw_iter<'a>(&'a self, v: VH) -> impl Iterator<Item = EH> + use<'a> {
         iterator::ve_ccw_iter(&self.topol, v)
     }
 
-    pub fn ve_cw_iter<'a>(&'a self, v: u32) -> impl Iterator<Item = u32> + use<'a> {
+    pub fn ve_cw_iter<'a>(&'a self, v: VH) -> impl Iterator<Item = EH> + use<'a> {
         iterator::ve_cw_iter(&self.topol, v)
     }
 
-    pub fn ev_iter<'a>(&'a self, e: u32) -> impl Iterator<Item = u32> + use<'a> {
+    pub fn ev_iter<'a>(&'a self, e: EH) -> impl Iterator<Item = VH> + use<'a> {
         iterator::ev_iter(&self.topol, e)
     }
 
-    pub fn eh_iter<'a>(&'a self, e: u32) -> impl Iterator<Item = u32> + use<'a> {
+    pub fn eh_iter<'a>(&'a self, e: EH) -> impl Iterator<Item = HH> + use<'a> {
         iterator::eh_iter(&self.topol, e)
     }
 
-    pub fn ef_iter<'a>(&'a self, e: u32) -> impl Iterator<Item = u32> + use<'a> {
+    pub fn ef_iter<'a>(&'a self, e: EH) -> impl Iterator<Item = FH> + use<'a> {
         iterator::ef_iter(&self.topol, e)
     }
 
-    pub fn fh_ccw_iter<'a>(&'a self, f: u32) -> impl Iterator<Item = u32> + use<'a> {
+    pub fn fh_ccw_iter<'a>(&'a self, f: FH) -> impl Iterator<Item = HH> + use<'a> {
         iterator::fh_ccw_iter(&self.topol, f)
     }
 
-    pub fn fh_cw_iter<'a>(&'a self, f: u32) -> impl Iterator<Item = u32> + use<'a> {
+    pub fn fh_cw_iter<'a>(&'a self, f: FH) -> impl Iterator<Item = HH> + use<'a> {
         iterator::fh_cw_iter(&self.topol, f)
     }
 
-    pub fn fv_ccw_iter<'a>(&'a self, f: u32) -> impl Iterator<Item = u32> + use<'a> {
+    pub fn fv_ccw_iter<'a>(&'a self, f: FH) -> impl Iterator<Item = VH> + use<'a> {
         iterator::fv_ccw_iter(&self.topol, f)
     }
 
-    pub fn fv_cw_iter<'a>(&'a self, f: u32) -> impl Iterator<Item = u32> + use<'a> {
+    pub fn fv_cw_iter<'a>(&'a self, f: FH) -> impl Iterator<Item = VH> + use<'a> {
         iterator::fv_cw_iter(&self.topol, f)
     }
 
-    pub fn fe_ccw_iter<'a>(&'a self, f: u32) -> impl Iterator<Item = u32> + use<'a> {
+    pub fn fe_ccw_iter<'a>(&'a self, f: FH) -> impl Iterator<Item = EH> + use<'a> {
         iterator::fe_ccw_iter(&self.topol, f)
     }
 
-    pub fn fe_cw_iter<'a>(&'a self, f: u32) -> impl Iterator<Item = u32> + use<'a> {
+    pub fn fe_cw_iter<'a>(&'a self, f: FH) -> impl Iterator<Item = EH> + use<'a> {
         iterator::fe_cw_iter(&self.topol, f)
     }
 
-    pub fn ff_ccw_iter<'a>(&'a self, f: u32) -> impl Iterator<Item = u32> + use<'a> {
+    pub fn ff_ccw_iter<'a>(&'a self, f: FH) -> impl Iterator<Item = FH> + use<'a> {
         iterator::ff_ccw_iter(&self.topol, f)
     }
 
-    pub fn ff_cw_iter<'a>(&'a self, f: u32) -> impl Iterator<Item = u32> + use<'a> {
+    pub fn ff_cw_iter<'a>(&'a self, f: FH) -> impl Iterator<Item = FH> + use<'a> {
         iterator::ff_cw_iter(&self.topol, f)
     }
 
-    pub fn add_vertex(&mut self, pos: glam::Vec3) -> Result<u32, Error> {
+    pub fn add_vertex(&mut self, pos: glam::Vec3) -> Result<VH, Error> {
         let vi = self.topol.add_vertex()?;
         self.points.set(vi, pos)?;
         Ok(vi)
     }
 
-    pub fn add_face(&mut self, verts: &[u32]) -> Result<u32, Error> {
+    pub fn add_face(&mut self, verts: &[VH]) -> Result<FH, Error> {
         self.topol.add_face(verts, &mut self.cache)
     }
 
-    pub fn add_tri_face(&mut self, v0: u32, v1: u32, v2: u32) -> Result<u32, Error> {
+    pub fn add_tri_face(&mut self, v0: VH, v1: VH, v2: VH) -> Result<FH, Error> {
         self.add_face(&[v0, v1, v2])
     }
 
-    pub fn add_quad_face(&mut self, v0: u32, v1: u32, v2: u32, v3: u32) -> Result<u32, Error> {
+    pub fn add_quad_face(&mut self, v0: VH, v1: VH, v2: VH, v3: VH) -> Result<FH, Error> {
         self.add_face(&[v0, v1, v2, v3])
     }
 }

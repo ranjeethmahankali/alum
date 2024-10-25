@@ -1,9 +1,13 @@
 use std::{
     cell::RefCell,
+    marker::PhantomData,
     rc::{Rc, Weak},
 };
 
-use crate::error::Error;
+use crate::{
+    error::Error,
+    topol::{Handle, EH, FH, HH, VH},
+};
 
 pub struct PropertyContainer {
     props: Vec<Box<dyn GenericProperty>>,
@@ -100,14 +104,16 @@ trait GenericProperty {
     fn len(&self) -> Result<usize, Error>;
 }
 
-pub struct Property<T: TPropData> {
+pub struct Property<H: Handle, T: TPropData> {
     data: Rc<RefCell<Vec<T>>>,
+    _phantom: PhantomData<H>,
 }
 
-impl<T: TPropData> Property<T> {
+impl<H: Handle, T: TPropData> Property<H, T> {
     pub fn new(container: &mut PropertyContainer) -> Self {
         let prop = Property {
             data: Rc::new(RefCell::new(Vec::new())),
+            _phantom: PhantomData::default(),
         };
         container.push_property(prop.generic_ref());
         prop
@@ -116,6 +122,7 @@ impl<T: TPropData> Property<T> {
     pub fn with_capacity(n: usize, container: &mut PropertyContainer) -> Self {
         let prop = Property {
             data: Rc::new(RefCell::new(Vec::with_capacity(n))),
+            _phantom: PhantomData::default(),
         };
         container.push_property(prop.generic_ref());
         prop
@@ -127,32 +134,38 @@ impl<T: TPropData> Property<T> {
         })
     }
 
-    pub fn get(&self, i: u32) -> Result<T, Error> {
+    pub fn get(&self, i: H) -> Result<T, Error> {
         self.data
             .try_borrow()
             .map_err(|_| Error::BorrowedPropertyAccess)?
-            .get(i as usize)
+            .get(i.index() as usize)
             .ok_or(Error::OutOfBoundsAccess)
             .copied()
     }
 
-    pub fn set(&mut self, i: u32, val: T) -> Result<(), Error> {
+    pub fn set(&mut self, i: H, val: T) -> Result<(), Error> {
         let mut buf = self
             .data
             .try_borrow_mut()
             .map_err(|_| Error::BorrowedPropertyAccess)?;
-        buf[i as usize] = val;
+        buf[i.index() as usize] = val;
         Ok(())
     }
 }
 
-impl<T: TPropData> Default for Property<T> {
+impl<H: Handle, T: TPropData> Default for Property<H, T> {
     fn default() -> Self {
         Self {
             data: Default::default(),
+            _phantom: PhantomData::default(),
         }
     }
 }
+
+pub type VProperty<T> = Property<VH, T>;
+pub type HProperty<T> = Property<HH, T>;
+pub type EProperty<T> = Property<EH, T>;
+pub type FProperty<T> = Property<FH, T>;
 
 struct PropertyRef<T: TPropData> {
     data: Weak<RefCell<Vec<T>>>,
