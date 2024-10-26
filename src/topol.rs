@@ -329,7 +329,9 @@ impl Topology {
 
     fn adjust_outgoing_halfedge(&mut self, v: VH) {
         let h = iterator::voh_ccw_iter(self, v).find(|h| self.is_boundary_halfedge(*h));
-        if let Some(h) = h { self.set_vertex_halfedge(v, h) }
+        if let Some(h) = h {
+            self.set_vertex_halfedge(v, h)
+        }
     }
 
     fn new_edge(
@@ -591,7 +593,12 @@ impl Default for Topology {
 
 #[cfg(test)]
 mod test {
-    use crate::topol::{Handle, FH, VH};
+    use arrayvec::ArrayVec;
+
+    use crate::{
+        iterator,
+        topol::{Handle, FH, VH},
+    };
 
     use super::{TopolCache, Topology};
 
@@ -637,6 +644,47 @@ mod test {
         assert_eq!(topol.num_halfedges(), 24);
         assert_eq!(topol.num_edges(), 12);
         assert_eq!(topol.num_faces(), 6);
+        topol
+    }
+
+    fn loop_mesh() -> Topology {
+        /*
+
+                            12---------13---------14---------15
+                           /          /          /          /
+                          /   f5     /   f6     /    f7    /
+                         /          /          /          /
+                        /          /          /          /
+                       8----------9----------10---------11
+                      /          /          /          /
+                     /    f3    /          /    f4    /
+                    /          /          /          /
+                   /          /          /          /
+                  4----------5----------6----------7
+                 /          /          /          /
+                /   f0     /    f1    /    f2    /
+               /          /          /          /
+              /          /          /          /
+             0----------1----------2----------3
+        */
+        let mut topol = Topology::with_capacity(16, 24, 8);
+        let mut cache = TopolCache::default();
+        for _ in 0u32..16 {
+            topol.add_vertex().expect("Unable to add vertex");
+        }
+        for fvi in [
+            [0u32, 1, 5, 4],
+            [1, 2, 6, 5],
+            [2, 3, 7, 6],
+            [4, 5, 9, 8],
+            [6, 7, 11, 10],
+            [8, 9, 13, 12],
+            [9, 10, 14, 13],
+            [10, 11, 15, 14],
+        ] {
+            let vs = fvi.iter().map(|i| (*i).into()).collect::<ArrayVec<VH, 4>>();
+            topol.add_face(&vs, &mut cache).expect("Unable to add face");
+        }
         topol
     }
 
@@ -714,10 +762,7 @@ mod test {
         assert_eq!(topol.num_edges(), 5);
         assert_eq!(topol.num_faces(), 2);
         assert_eq!(
-            topol
-                .edges()
-                .filter(|e| topol.is_boundary_edge(*e))
-                .count(),
+            topol.edges().filter(|e| topol.is_boundary_edge(*e)).count(),
             4
         );
         assert_eq!(
@@ -775,8 +820,120 @@ mod test {
     fn t_box_manifold() {
         let qbox = quad_box();
         assert!(
-            qbox.halfedge_iter().all(|h| !qbox.is_boundary_halfedge(h)),
+            qbox.halfedges().all(|h| !qbox.is_boundary_halfedge(h)),
             "Not expecting any boundary edges"
+        );
+    }
+
+    #[test]
+    fn t_loop_mesh_add_face() {
+        /*
+
+                            12---------13---------14---------15
+                           /          /          /          /
+                          /   f5     /   f6     /    f7    /
+                         /          /          /          /
+                        /          /          /          /
+                       8----------9----------10---------11
+                      /          / v1--v0   /          /
+                     /    f3    /    \  |  /    f4    /
+                    /          /      \ | /          /
+                   /          /        \|/          /
+                  4----------5----------6----------7
+                 /          /          /          /
+                /   f0     /    f1    /    f2    /
+               /          /          /          /
+              /          /          /          /
+             0----------1----------2----------3
+        */
+        let mut mesh = loop_mesh();
+        assert_eq!(
+            mesh.edges().filter(|e| mesh.is_boundary_edge(*e)).count(),
+            16
+        );
+        // Add a floating triangle at v6.
+        let v0 = mesh.add_vertex().expect("Unable to add vertex");
+        let v1 = mesh.add_vertex().expect("Unable to add vertex");
+        let mut cache = TopolCache::default();
+        let f0 = mesh
+            .add_face(&[6.into(), v0, v1], &mut cache)
+            .expect("Unable to add a face");
+        assert_eq!(f0.index(), 8);
+        assert_eq!(
+            iterator::vf_ccw_iter(&mesh, 6.into())
+                .map(|i| i.index())
+                .collect::<Vec<_>>(),
+            [8, 1, 2, 4]
+        );
+        assert_eq!(
+            iterator::vv_ccw_iter(&mesh, 6.into())
+                .map(|v| v.index())
+                .collect::<Vec<_>>(),
+            [10, v0.index(), v1.index(), 5, 2, 7]
+        );
+        assert_eq!(iterator::ve_ccw_iter(&mesh, 6.into()).count(), 6);
+        // Check halfedge connectivity at v6.
+        {
+            let h = mesh
+                .find_halfedge(5.into(), 6.into())
+                .expect("Cannot find halfedge");
+            assert_eq!(mesh.from_vertex(h), 5.into());
+            assert_eq!(mesh.to_vertex(h), 6.into());
+            let h1 = mesh.next_halfedge(h);
+            assert_eq!(
+                h1,
+                mesh.find_halfedge(6.into(), v1)
+                    .expect("Cannot find halfedge")
+            );
+            let h = mesh
+                .find_halfedge(6.into(), 10.into())
+                .expect("Cannot find halfedge");
+            assert_eq!(mesh.from_vertex(h), 6.into());
+            assert_eq!(mesh.to_vertex(h), 10.into());
+            let h = mesh.prev_halfedge(h);
+            assert_eq!(
+                h,
+                mesh.find_halfedge(v0, 6.into())
+                    .expect("Cannot find halfedge")
+            );
+        }
+        assert_eq!(
+            mesh.edges().filter(|e| mesh.is_boundary_edge(*e)).count(),
+            19
+        );
+        // Add another face.
+        let f1 = mesh
+            .add_face(&[5.into(), 6.into(), v1], &mut cache)
+            .expect("Unable to add face");
+        assert_eq!(f1.index(), 9);
+        assert_eq!(mesh.num_edges(), 28);
+        assert_eq!(
+            mesh.edges().filter(|e| mesh.is_boundary_edge(*e)).count(),
+            18
+        );
+        assert_eq!(
+            iterator::vf_ccw_iter(&mesh, 6.into())
+                .map(|f| f.index())
+                .collect::<Vec<_>>(),
+            [8, 9, 1, 2, 4]
+        );
+        assert_eq!(
+            iterator::vf_ccw_iter(&mesh, 5.into())
+                .map(|f| f.index())
+                .collect::<Vec<_>>(),
+            [3, 0, 1, 9]
+        );
+        assert_eq!(
+            iterator::vv_ccw_iter(&mesh, 6.into())
+                .map(|v| v.index())
+                .collect::<Vec<_>>(),
+            [10, v0.index(), v1.index(), 5, 2, 7]
+        );
+        assert_eq!(
+            iterator::vv_ccw_iter(&mesh, 5.into())
+                .map(|v| v.index())
+                .collect::<Vec<_>>(),
+            [v1.index(), 9, 4, 1, 6]
         );
     }
 }
