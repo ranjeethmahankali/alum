@@ -1,315 +1,222 @@
-use std::sync::{Arc, RwLock, Weak};
-
-enum Error {
-    ReadPropertyFailed,
-    WriteToPropertyFailed,
-    PropertyDoesNotExist,
-}
-
-struct Vertex {
-    halfedge: Option<u32>,
-}
-
-struct Halfedge {
-    face: Option<u32>,
-    vertex: u32,
-    next: u32,
-    prev: u32,
-}
-
-struct Edge {
-    halfedges: [Halfedge; 2],
-}
-
-struct Face {
-    halfedge: u32,
-}
+use crate::{
+    error::Error,
+    iterator,
+    property::VProperty,
+    topol::{TopolCache, Topology, EH, FH, HH, VH},
+};
 
 pub struct Mesh {
-    vertices: Vec<Vertex>,
-    edges: Vec<Edge>,
-    faces: Vec<Face>,
-    points: Property<glam::Vec3>,
-    vprops: PropertyContainer,
+    topol: Topology,
+    cache: TopolCache,
+    points: VProperty<glam::Vec3>,
+}
+
+impl Default for Mesh {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Mesh {
     pub fn new() -> Self {
-        let points = Property::<glam::Vec3>::new();
-        let mut vprops = PropertyContainer::new();
-        vprops.push_property(points.generic_ref());
+        let mut topol = Topology::new();
+        let points = topol.create_vertex_prop::<glam::Vec3>();
         Mesh {
-            vertices: Vec::new(),
-            edges: Vec::new(),
-            faces: Vec::new(),
+            topol,
             points,
-            vprops,
+            cache: TopolCache::default(),
         }
     }
 
     pub fn with_capacity(nverts: usize, nedges: usize, nfaces: usize) -> Self {
-        let points = Property::<glam::Vec3>::with_capacity(nverts);
-        let mut vprops = PropertyContainer::new();
-        vprops.push_property(points.generic_ref());
+        let mut topol = Topology::with_capacity(nverts, nedges, nfaces);
+        let points = topol.create_vertex_prop::<glam::Vec3>();
         Mesh {
-            vertices: Vec::with_capacity(nverts),
-            edges: Vec::with_capacity(nedges),
-            faces: Vec::with_capacity(nfaces),
+            topol,
             points,
-            vprops,
+            cache: TopolCache::default(),
         }
     }
 
-    pub fn halfedge(&self, h: u32) -> &Halfedge {
-        &self.edges[(h << 1) as usize].halfedges[(h & 1) as usize]
+    pub fn num_vertices(&self) -> usize {
+        self.topol.num_vertices()
     }
 
-    pub fn is_boundary_halfedge(&self, h: u32) -> bool {
-        self.halfedge(h).face.is_none()
+    pub fn num_edges(&self) -> usize {
+        self.topol.num_edges()
     }
 
-    pub fn is_boundary_vertex(&self, v: u32) -> bool {
-        match self.vertices[v as usize].halfedge {
-            Some(h) => self.is_boundary_halfedge(h),
-            None => true,
-        }
+    pub fn num_halfedges(&self) -> usize {
+        self.topol.num_halfedges()
     }
 
-    pub const fn opposite_halfedge(&self, h: u32) -> u32 {
-        h ^ 1
+    pub fn num_faces(&self) -> usize {
+        self.topol.num_faces()
     }
 
-    pub fn cw_rotated_halfedge(&self, h: u32) -> u32 {
-        self.halfedge(self.opposite_halfedge(h)).next
+    pub fn vertices(&self) -> impl Iterator<Item = VH> {
+        self.topol.vertices()
     }
 
-    pub fn ccw_rotated_halfedge(&self, h: u32) -> u32 {
-        self.opposite_halfedge(self.halfedge(h).prev)
+    pub fn halfedges(&self) -> impl Iterator<Item = HH> {
+        self.topol.halfedges()
     }
 
-    pub fn add_vertex(&mut self, pos: glam::Vec3) -> Result<u32, Error> {
-        let vi = self.vertices.len() as u32;
-        self.vprops.push_value()?;
+    pub fn edges(&self) -> impl Iterator<Item = EH> {
+        self.topol.edges()
+    }
+
+    pub fn faces(&self) -> impl Iterator<Item = FH> {
+        self.topol.faces()
+    }
+
+    pub fn is_manifold_vertex(&self, v: VH) -> bool {
+        self.topol.is_manifold_vertex(v)
+    }
+
+    pub fn is_boundary_edge(&self, e: EH) -> bool {
+        self.topol.is_boundary_edge(e)
+    }
+
+    pub fn vertex_valence(&self, v: VH) -> usize {
+        self.topol.vertex_valence(v)
+    }
+
+    pub fn face_valence(&self, f: FH) -> usize {
+        self.topol.face_valence(f)
+    }
+
+    pub fn point(&self, vi: VH) -> Result<glam::Vec3, Error> {
+        self.points.get(vi)
+    }
+
+    pub fn from_vertex(&self, h: HH) -> VH {
+        self.topol.from_vertex(h)
+    }
+
+    pub fn halfedge_face(&self, h: HH) -> Option<FH> {
+        self.topol.halfedge_face(h)
+    }
+
+    pub fn face_halfedge(&self, f: FH) -> HH {
+        self.topol.face_halfedge(f)
+    }
+
+    pub const fn halfedge_edge(&self, h: HH) -> EH {
+        self.topol.halfedge_edge(h)
+    }
+
+    pub const fn edge_halfedge(&self, e: EH, flag: bool) -> HH {
+        self.topol.edge_halfedge(e, flag)
+    }
+
+    pub fn cw_rotated_halfedge(&self, h: HH) -> HH {
+        self.topol.cw_rotated_halfedge(h)
+    }
+
+    pub fn ccw_rotated_halfedge(&self, h: HH) -> HH {
+        self.topol.ccw_rotated_halfedge(h)
+    }
+
+    pub fn voh_ccw_iter(&self, v: VH) -> impl Iterator<Item = HH> + use<'_> {
+        iterator::voh_ccw_iter(&self.topol, v)
+    }
+
+    pub fn voh_cw_iter(&self, v: VH) -> impl Iterator<Item = HH> + use<'_> {
+        iterator::voh_cw_iter(&self.topol, v)
+    }
+
+    pub fn vih_ccw_iter(&self, v: VH) -> impl Iterator<Item = HH> + use<'_> {
+        iterator::vih_ccw_iter(&self.topol, v)
+    }
+
+    pub fn vih_cw_iter(&self, v: VH) -> impl Iterator<Item = HH> + use<'_> {
+        iterator::vih_cw_iter(&self.topol, v)
+    }
+
+    pub fn vf_ccw_iter(&self, v: VH) -> impl Iterator<Item = FH> + use<'_> {
+        iterator::vf_ccw_iter(&self.topol, v)
+    }
+
+    pub fn vf_cw_iter(&self, v: VH) -> impl Iterator<Item = FH> + use<'_> {
+        iterator::vf_cw_iter(&self.topol, v)
+    }
+
+    pub fn vv_ccw_iter(&self, v: VH) -> impl Iterator<Item = VH> + use<'_> {
+        iterator::vv_ccw_iter(&self.topol, v)
+    }
+
+    pub fn vv_cw_iter(&self, v: VH) -> impl Iterator<Item = VH> + use<'_> {
+        iterator::vv_cw_iter(&self.topol, v)
+    }
+
+    pub fn ve_ccw_iter(&self, v: VH) -> impl Iterator<Item = EH> + use<'_> {
+        iterator::ve_ccw_iter(&self.topol, v)
+    }
+
+    pub fn ve_cw_iter(&self, v: VH) -> impl Iterator<Item = EH> + use<'_> {
+        iterator::ve_cw_iter(&self.topol, v)
+    }
+
+    pub fn ev_iter(&self, e: EH) -> impl Iterator<Item = VH> + use<'_> {
+        iterator::ev_iter(&self.topol, e)
+    }
+
+    pub fn eh_iter(&self, e: EH) -> impl Iterator<Item = HH> + use<'_> {
+        iterator::eh_iter(&self.topol, e)
+    }
+
+    pub fn ef_iter(&self, e: EH) -> impl Iterator<Item = FH> + use<'_> {
+        iterator::ef_iter(&self.topol, e)
+    }
+
+    pub fn fh_ccw_iter(&self, f: FH) -> impl Iterator<Item = HH> + use<'_> {
+        iterator::fh_ccw_iter(&self.topol, f)
+    }
+
+    pub fn fh_cw_iter(&self, f: FH) -> impl Iterator<Item = HH> + use<'_> {
+        iterator::fh_cw_iter(&self.topol, f)
+    }
+
+    pub fn fv_ccw_iter(&self, f: FH) -> impl Iterator<Item = VH> + use<'_> {
+        iterator::fv_ccw_iter(&self.topol, f)
+    }
+
+    pub fn fv_cw_iter(&self, f: FH) -> impl Iterator<Item = VH> + use<'_> {
+        iterator::fv_cw_iter(&self.topol, f)
+    }
+
+    pub fn fe_ccw_iter(&self, f: FH) -> impl Iterator<Item = EH> + use<'_> {
+        iterator::fe_ccw_iter(&self.topol, f)
+    }
+
+    pub fn fe_cw_iter(&self, f: FH) -> impl Iterator<Item = EH> + use<'_> {
+        iterator::fe_cw_iter(&self.topol, f)
+    }
+
+    pub fn ff_ccw_iter(&self, f: FH) -> impl Iterator<Item = FH> + use<'_> {
+        iterator::ff_ccw_iter(&self.topol, f)
+    }
+
+    pub fn ff_cw_iter(&self, f: FH) -> impl Iterator<Item = FH> + use<'_> {
+        iterator::ff_cw_iter(&self.topol, f)
+    }
+
+    pub fn add_vertex(&mut self, pos: glam::Vec3) -> Result<VH, Error> {
+        let vi = self.topol.add_vertex()?;
         self.points.set(vi, pos)?;
-        return Ok(vi);
+        Ok(vi)
     }
 
-    pub fn add_face(&mut self, verts: &[u32]) -> u32 {
-        todo!("Not Implemented");
+    pub fn add_face(&mut self, verts: &[VH]) -> Result<FH, Error> {
+        self.topol.add_face(verts, &mut self.cache)
     }
 
-    pub fn add_tri_face(&mut self, v0: u32, v1: u32, v2: u32) -> u32 {
+    pub fn add_tri_face(&mut self, v0: VH, v1: VH, v2: VH) -> Result<FH, Error> {
         self.add_face(&[v0, v1, v2])
     }
 
-    pub fn add_quad_face(&mut self, v0: u32, v1: u32, v2: u32, v3: u32) -> u32 {
+    pub fn add_quad_face(&mut self, v0: VH, v1: VH, v2: VH, v3: VH) -> Result<FH, Error> {
         self.add_face(&[v0, v1, v2, v3])
-    }
-}
-
-struct PropertyContainer {
-    props: Vec<Box<dyn GenericProperty>>,
-}
-
-impl PropertyContainer {
-    fn new() -> Self {
-        PropertyContainer { props: Vec::new() }
-    }
-
-    fn push_property(&mut self, prop: Box<dyn GenericProperty>) {
-        self.props.push(prop);
-    }
-
-    fn reserve(&mut self, n: usize) -> Result<(), Error> {
-        for prop in self.props.iter_mut() {
-            prop.reserve(n)?;
-        }
-        return Ok(());
-    }
-
-    fn resize(&mut self, n: usize) -> Result<(), Error> {
-        for prop in self.props.iter_mut() {
-            prop.resize(n)?;
-        }
-        return Ok(());
-    }
-
-    fn clear(&mut self) -> Result<(), Error> {
-        for prop in self.props.iter_mut() {
-            prop.clear()?;
-        }
-        return Ok(());
-    }
-
-    fn push_value(&mut self) -> Result<(), Error> {
-        for prop in self.props.iter_mut() {
-            prop.push()?;
-        }
-        return Ok(());
-    }
-
-    fn swap(&mut self, i: usize, j: usize) -> Result<(), Error> {
-        for prop in self.props.iter_mut() {
-            prop.swap(i, j)?;
-        }
-        return Ok(());
-    }
-
-    fn copy(&mut self, src: usize, dst: usize) -> Result<(), Error> {
-        for prop in self.props.iter_mut() {
-            prop.copy(src, dst)?;
-        }
-        return Ok(());
-    }
-
-    fn len(&self) -> Result<usize, Error> {
-        let first = match self.props.first() {
-            Some(first) => first.len()?,
-            None => return Ok(0),
-        };
-        for prop in self.props.iter().skip(1) {
-            assert_eq!(first, prop.len()?);
-        }
-        return Ok(first);
-    }
-}
-
-// 'static lifetime enforces the data stored inside properties is fully owned
-// and doesn't contain any weird references.
-trait TPropData: Default + Clone + Copy + 'static {}
-
-impl TPropData for glam::Vec3 {}
-
-trait GenericProperty {
-    fn reserve(&mut self, n: usize) -> Result<(), Error>;
-
-    fn resize(&mut self, n: usize) -> Result<(), Error>;
-
-    fn clear(&mut self) -> Result<(), Error>;
-
-    fn push(&mut self) -> Result<(), Error>;
-
-    fn swap(&mut self, i: usize, j: usize) -> Result<(), Error>;
-
-    fn copy(&mut self, src: usize, dst: usize) -> Result<(), Error>;
-
-    fn len(&self) -> Result<usize, Error>;
-}
-
-struct Property<T: TPropData> {
-    data: Arc<RwLock<Vec<T>>>,
-}
-
-impl<T: TPropData> Property<T> {
-    fn new() -> Self {
-        Property {
-            data: Arc::new(RwLock::new(Vec::new())),
-        }
-    }
-
-    fn with_capacity(n: usize) -> Self {
-        Property {
-            data: Arc::new(RwLock::new(Vec::with_capacity(n))),
-        }
-    }
-
-    fn generic_ref(&self) -> Box<dyn GenericProperty> {
-        Box::new(PropertyRef {
-            data: Arc::downgrade(&self.data),
-        })
-    }
-
-    fn get(&self, i: u32) -> Result<T, Error> {
-        self.data
-            .read()
-            .map_err(|_| Error::ReadPropertyFailed)?
-            .get(i as usize)
-            .ok_or(Error::ReadPropertyFailed)
-            .copied()
-    }
-
-    fn set(&mut self, i: u32, val: T) -> Result<(), Error> {
-        let mut buf = self
-            .data
-            .write()
-            .map_err(|_| Error::WriteToPropertyFailed)?;
-        buf[i as usize] = val;
-        return Ok(());
-    }
-}
-
-impl<T: TPropData> Default for Property<T> {
-    fn default() -> Self {
-        Self {
-            data: Default::default(),
-        }
-    }
-}
-
-struct PropertyRef<T: TPropData> {
-    data: Weak<RwLock<Vec<T>>>,
-}
-
-impl<T: TPropData> PropertyRef<T> {
-    fn upgrade(&self) -> Result<Arc<RwLock<Vec<T>>>, Error> {
-        self.data.upgrade().ok_or(Error::PropertyDoesNotExist)
-    }
-}
-
-impl<T: TPropData> GenericProperty for PropertyRef<T> {
-    fn reserve(&mut self, n: usize) -> Result<(), Error> {
-        self.upgrade()?
-            .write()
-            .map_err(|_| Error::WriteToPropertyFailed)?
-            .reserve(n); // reserve memory.
-        return Ok(());
-    }
-
-    fn resize(&mut self, n: usize) -> Result<(), Error> {
-        self.upgrade()?
-            .write()
-            .map_err(|_| Error::WriteToPropertyFailed)?
-            .resize(n, T::default());
-        return Ok(());
-    }
-
-    fn clear(&mut self) -> Result<(), Error> {
-        self.upgrade()?
-            .write()
-            .map_err(|_| Error::WriteToPropertyFailed)?
-            .clear();
-        return Ok(());
-    }
-
-    fn push(&mut self) -> Result<(), Error> {
-        self.upgrade()?
-            .write()
-            .map_err(|_| Error::WriteToPropertyFailed)?
-            .push(T::default());
-        return Ok(());
-    }
-
-    fn swap(&mut self, i: usize, j: usize) -> Result<(), Error> {
-        self.upgrade()?
-            .write()
-            .map_err(|_| Error::WriteToPropertyFailed)?
-            .swap(i, j);
-        return Ok(());
-    }
-
-    fn copy(&mut self, src: usize, dst: usize) -> Result<(), Error> {
-        self.upgrade()?
-            .write()
-            .map_err(|_| Error::WriteToPropertyFailed)?
-            .copy_within(src..(src + 1), dst);
-        return Ok(());
-    }
-
-    fn len(&self) -> Result<usize, Error> {
-        Ok(self
-            .upgrade()?
-            .read()
-            .map_err(|_| Error::ReadPropertyFailed)?
-            .len())
     }
 }
