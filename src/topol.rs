@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::{
     error::Error,
     iterator,
@@ -105,6 +107,30 @@ impl Handle for FH {
 impl From<u32> for FH {
     fn from(idx: u32) -> Self {
         FH { idx }
+    }
+}
+
+impl Display for VH {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "VH({})", self.index())
+    }
+}
+
+impl Display for HH {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "HH({})", self.index())
+    }
+}
+
+impl Display for EH {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "EH({})", self.index())
+    }
+}
+
+impl Display for FH {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "FH({})", self.index())
     }
 }
 
