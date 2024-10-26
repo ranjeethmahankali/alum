@@ -304,6 +304,27 @@ impl Topology {
         iterator::voh_ccw_iter(self, from).find(|h| self.to_vertex(*h) == to)
     }
 
+    pub fn is_manifold_vertex(&self, v: VH) -> bool {
+        /* If just the first outgoing halfedge is on the boundary, it just means
+         * the vertex is on the boundary. If the first outgoing halfedge is not
+         * on the boundary, it implies the vertex is in the interior. In both
+         * cases the vertex is manifold. If any outgoing halfedge apart from the
+         * first is on the boundary, it implies there are more than one gaps
+         * when circulating around the vertex, making it non-manifold. For this
+         * reason, we skip the first halfedge and check the rest.
+         */
+        iterator::voh_ccw_iter(self, v)
+            .skip(1)
+            .all(|h| !self.is_boundary_halfedge(h))
+    }
+
+    fn adjust_outgoing_halfedge(&mut self, v: VH) {
+        let h = iterator::voh_ccw_iter(self, v).find(|h| self.is_boundary_halfedge(*h));
+        if let Some(h) = h {
+            self.set_vertex_halfedge(v, h)
+        }
+    }
+
     pub fn add_vertex(&mut self) -> Result<VH, Error> {
         let vi = self.vertices.len() as u32;
         self.vertices.push(Vertex { halfedge: None });
@@ -325,13 +346,6 @@ impl Topology {
     pub fn set_next_halfedge(&mut self, hprev: HH, hnext: HH) {
         self.halfedge_mut(hprev).next = hnext;
         self.halfedge_mut(hnext).prev = hprev;
-    }
-
-    fn adjust_outgoing_halfedge(&mut self, v: VH) {
-        let h = iterator::voh_ccw_iter(self, v).find(|h| self.is_boundary_halfedge(*h));
-        if let Some(h) = h {
-            self.set_vertex_halfedge(v, h)
-        }
     }
 
     fn new_edge(
@@ -583,6 +597,14 @@ impl Topology {
         }
         Ok(fnew)
     }
+
+    pub fn vertex_valence(&self, v: VH) -> usize {
+        iterator::voh_ccw_iter(self, v).count()
+    }
+
+    pub fn face_valence(&self, f: FH) -> usize {
+        iterator::fv_ccw_iter(self, f).count()
+    }
 }
 
 impl Default for Topology {
@@ -826,6 +848,22 @@ mod test {
     }
 
     #[test]
+    fn t_box_vertex_valences() {
+        let qbox = quad_box();
+        for v in qbox.vertices() {
+            assert_eq!(qbox.vertex_valence(v), 3);
+        }
+    }
+
+    #[test]
+    fn t_box_face_valence() {
+        let qbox = quad_box();
+        for f in qbox.faces() {
+            assert_eq!(qbox.face_valence(f), 4);
+        }
+    }
+
+    #[test]
     fn t_loop_mesh_add_face() {
         /*
 
@@ -872,6 +910,13 @@ mod test {
             [10, v0.index(), v1.index(), 5, 2, 7]
         );
         assert_eq!(iterator::ve_ccw_iter(&mesh, 6.into()).count(), 6);
+        assert_eq!(
+            mesh.vertices()
+                .filter(|v| mesh.is_manifold_vertex(*v))
+                .count(),
+            17
+        );
+        assert!(!mesh.is_manifold_vertex(6.into()));
         // Check halfedge connectivity at v6.
         {
             let h = mesh
@@ -935,5 +980,7 @@ mod test {
                 .collect::<Vec<_>>(),
             [v1.index(), 9, 4, 1, 6]
         );
+        assert!(mesh.is_manifold_vertex(6.into()));
+        assert!(mesh.is_manifold_vertex(5.into()));
     }
 }

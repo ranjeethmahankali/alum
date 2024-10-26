@@ -70,8 +70,20 @@ impl Mesh {
         self.topol.faces()
     }
 
+    pub fn is_manifold_vertex(&self, v: VH) -> bool {
+        self.topol.is_manifold_vertex(v)
+    }
+
     pub fn is_boundary_edge(&self, e: EH) -> bool {
         self.topol.is_boundary_edge(e)
+    }
+
+    pub fn vertex_valence(&self, v: VH) -> usize {
+        self.topol.vertex_valence(v)
+    }
+
+    pub fn face_valence(&self, f: FH) -> usize {
+        self.topol.face_valence(f)
     }
 
     pub fn point(&self, vi: VH) -> Result<glam::Vec3, Error> {
