@@ -355,7 +355,7 @@ mod test {
     #[test]
     fn t_box_vih_iter() {
         let qbox = quad_box();
-        for v in qbox.vertex_iter() {
+        for v in qbox.vertices() {
             assert!(
                 vih_ccw_iter(&qbox, v).all(|h| qbox.to_vertex(h) == v && qbox.from_vertex(h) != v)
             );
@@ -368,7 +368,7 @@ mod test {
     #[test]
     fn t_box_voh_iter() {
         let qbox = quad_box();
-        for v in qbox.vertex_iter() {
+        for v in qbox.vertices() {
             assert!(
                 voh_ccw_iter(&qbox, v).all(|h| qbox.from_vertex(h) == v && qbox.to_vertex(h) != v)
             );

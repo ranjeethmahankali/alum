@@ -254,19 +254,19 @@ impl Topology {
         self.num_edges() * 2
     }
 
-    pub fn vertex_iter(&self) -> impl Iterator<Item = VH> {
+    pub fn vertices(&self) -> impl Iterator<Item = VH> {
         (0..(self.num_vertices() as u32)).map(|i| VH { idx: i })
     }
 
-    pub fn halfedge_iter(&self) -> impl Iterator<Item = HH> {
+    pub fn halfedges(&self) -> impl Iterator<Item = HH> {
         (0..(self.num_halfedges() as u32)).map(|i| HH { idx: i })
     }
 
-    pub fn edge_iter(&self) -> impl Iterator<Item = EH> {
+    pub fn edges(&self) -> impl Iterator<Item = EH> {
         (0..(self.num_edges() as u32)).map(|i| EH { idx: i })
     }
 
-    pub fn face_iter(&self) -> impl Iterator<Item = FH> {
+    pub fn faces(&self) -> impl Iterator<Item = FH> {
         (0..(self.num_faces() as u32)).map(|i| FH { idx: i })
     }
 
@@ -626,7 +626,7 @@ mod test {
         assert_eq!(topol.num_halfedges(), 6);
         assert_eq!(topol.num_vertices(), 3);
         assert_eq!(face.index(), 0);
-        for v in topol.vertex_iter() {
+        for v in topol.vertices() {
             let h = topol
                 .vertex_halfedge(v)
                 .expect("Vertex must have an incident halfedge");
@@ -642,14 +642,14 @@ mod test {
         }
         assert_eq!(
             topol
-                .halfedge_iter()
+                .halfedges()
                 .filter(|h| topol.is_boundary_halfedge(*h))
                 .count(),
             3
         );
         assert_eq!(
             topol
-                .halfedge_iter()
+                .halfedges()
                 .filter(|h| !topol.is_boundary_halfedge(*h))
                 .count(),
             3
@@ -689,14 +689,14 @@ mod test {
         assert_eq!(topol.num_faces(), 2);
         assert_eq!(
             topol
-                .edge_iter()
+                .edges()
                 .filter(|e| topol.is_boundary_edge(*e))
                 .count(),
             4
         );
         assert_eq!(
             topol
-                .edge_iter()
+                .edges()
                 .filter(|e| !topol.is_boundary_edge(*e))
                 .count(),
             1
@@ -715,7 +715,7 @@ mod test {
         assert_eq!(topol.num_halfedges(), 8);
         assert_eq!(topol.num_vertices(), 4);
         assert_eq!(face, 0.into());
-        for v in topol.vertex_iter() {
+        for v in topol.vertices() {
             let h = topol
                 .vertex_halfedge(v)
                 .expect("Vertex must have an incident halfedge");
@@ -731,14 +731,14 @@ mod test {
         }
         assert_eq!(
             topol
-                .halfedge_iter()
+                .halfedges()
                 .filter(|h| topol.is_boundary_halfedge(*h))
                 .count(),
             4
         );
         assert_eq!(
             topol
-                .halfedge_iter()
+                .halfedges()
                 .filter(|h| !topol.is_boundary_halfedge(*h))
                 .count(),
             4

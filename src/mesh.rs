@@ -54,20 +54,20 @@ impl Mesh {
         self.topol.num_faces()
     }
 
-    pub fn vertex_iter(&self) -> impl Iterator<Item = VH> {
-        self.topol.vertex_iter()
+    pub fn vertices(&self) -> impl Iterator<Item = VH> {
+        self.topol.vertices()
     }
 
-    pub fn halfedge_iter(&self) -> impl Iterator<Item = HH> {
-        self.topol.halfedge_iter()
+    pub fn halfedges(&self) -> impl Iterator<Item = HH> {
+        self.topol.halfedges()
     }
 
-    pub fn edge_iter(&self) -> impl Iterator<Item = EH> {
-        self.topol.edge_iter()
+    pub fn edges(&self) -> impl Iterator<Item = EH> {
+        self.topol.edges()
     }
 
-    pub fn face_iter(&self) -> impl Iterator<Item = FH> {
-        self.topol.face_iter()
+    pub fn faces(&self) -> impl Iterator<Item = FH> {
+        self.topol.faces()
     }
 
     pub fn is_boundary_edge(&self, e: EH) -> bool {
