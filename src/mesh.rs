@@ -62,6 +62,10 @@ impl Mesh {
         self.topol.reserve(nverts, nedges, nfaces)
     }
 
+    pub fn clear(&mut self) -> Result<(), Error> {
+        self.topol.clear()
+    }
+
     pub fn num_vertices(&self) -> usize {
         self.topol.num_vertices()
     }

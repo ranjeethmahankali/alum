@@ -124,6 +124,19 @@ impl Topology {
         Ok(())
     }
 
+    pub fn clear(&mut self) -> Result<(), Error> {
+        // Elements.
+        self.vertices.clear();
+        self.edges.clear();
+        self.faces.clear();
+        // Properties.
+        self.vprops.clear()?;
+        self.hprops.clear()?;
+        self.eprops.clear()?;
+        self.fprops.clear()?;
+        Ok(())
+    }
+
     pub fn vertex_status<'a>(&'a self, v: VH) -> Result<Ref<'a, Status>, Error> {
         self.vstatus.get(v)
     }
