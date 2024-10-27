@@ -649,20 +649,27 @@ impl Topology {
         ecache: &mut Vec<EH>,
         vcache: &mut Vec<VH>,
     ) -> Result<(), Error> {
-        let f0 = self.halfedge_face(self.edge_halfedge(e, false));
-        let f1 = self.halfedge_face(self.edge_halfedge(e, true));
+        let h0 = self.edge_halfedge(e, false);
+        let h1 = self.edge_halfedge(e, true);
+        let f0 = self.halfedge_face(h0);
+        let f1 = self.halfedge_face(h1);
         if let Some(f) = f0 {
             self.delete_face(f, delete_isolated_vertices, hcache, ecache, vcache)?;
         }
         if let Some(f) = f1 {
             self.delete_face(f, delete_isolated_vertices, hcache, ecache, vcache)?;
         }
-        // We deleted all faces incident on this edge. So the edge must already be deleted.
-        debug_assert!(self.edge_status(e)?.deleted());
-        debug_assert!(self
-            .halfedge_status(self.edge_halfedge(e, false))?
-            .deleted());
-        debug_assert!(self.halfedge_status(self.edge_halfedge(e, true))?.deleted());
+        /* If either face was valid, the edge is deleted inside the call to
+         * delete_face. Otherwise we have to mark them deleted here. */
+        if f0.is_none() && f1.is_none() {
+            self.edge_status_mut(e)?.set_deleted(true);
+            {
+                let mut hstatus = self.hstatus.try_borrow_mut()?;
+                let hstatus: &mut Vec<Status> = &mut hstatus;
+                hstatus[h0.index() as usize].set_deleted(true);
+                hstatus[h1.index() as usize].set_deleted(true);
+            }
+        }
         Ok(())
     }
 
