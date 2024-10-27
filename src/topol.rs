@@ -1,6 +1,5 @@
-use std::fmt::Display;
-
 use crate::{
+    element::{Edge, Face, Halfedge, Handle, Vertex, EH, FH, HH, VH},
     error::Error,
     iterator,
     property::{PropertyContainer, TPropData, VProperty},
@@ -38,125 +37,6 @@ impl TopolCache {
     }
 }
 
-pub trait Handle {
-    fn index(&self) -> u32;
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct VH {
-    idx: u32,
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct HH {
-    idx: u32,
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct EH {
-    idx: u32,
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct FH {
-    idx: u32,
-}
-
-impl Handle for VH {
-    fn index(&self) -> u32 {
-        self.idx
-    }
-}
-
-impl From<u32> for VH {
-    fn from(idx: u32) -> Self {
-        VH { idx }
-    }
-}
-
-impl Handle for HH {
-    fn index(&self) -> u32 {
-        self.idx
-    }
-}
-
-impl From<u32> for HH {
-    fn from(idx: u32) -> Self {
-        HH { idx }
-    }
-}
-
-impl Handle for EH {
-    fn index(&self) -> u32 {
-        self.idx
-    }
-}
-
-impl From<u32> for EH {
-    fn from(idx: u32) -> Self {
-        EH { idx }
-    }
-}
-
-impl Handle for FH {
-    fn index(&self) -> u32 {
-        self.idx
-    }
-}
-
-impl From<u32> for FH {
-    fn from(idx: u32) -> Self {
-        FH { idx }
-    }
-}
-
-impl Display for VH {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "VH({})", self.index())
-    }
-}
-
-impl Display for HH {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "HH({})", self.index())
-    }
-}
-
-impl Display for EH {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "EH({})", self.index())
-    }
-}
-
-impl Display for FH {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "FH({})", self.index())
-    }
-}
-
-#[derive(Debug)]
-pub(crate) struct Vertex {
-    halfedge: Option<HH>,
-}
-
-#[derive(Debug)]
-pub(crate) struct Halfedge {
-    face: Option<FH>,
-    vertex: VH,
-    next: HH,
-    prev: HH,
-}
-
-#[derive(Debug)]
-pub(crate) struct Edge {
-    halfedges: [Halfedge; 2],
-}
-
-#[derive(Debug)]
-pub(crate) struct Face {
-    halfedge: HH,
-}
-
 pub(crate) struct Topology {
     vertices: Vec<Vertex>,
     edges: Vec<Edge>,
@@ -191,15 +71,15 @@ impl Topology {
     }
 
     fn vertex(&self, v: VH) -> &Vertex {
-        &self.vertices[v.idx as usize]
+        &self.vertices[v.index() as usize]
     }
 
     fn halfedge(&self, h: HH) -> &Halfedge {
-        &self.edges[(h.idx >> 1) as usize].halfedges[(h.idx & 1) as usize]
+        &self.edges[(h.index() >> 1) as usize].halfedges[(h.index() & 1) as usize]
     }
 
     fn halfedge_mut(&mut self, h: HH) -> &mut Halfedge {
-        &mut self.edges[(h.idx >> 1) as usize].halfedges[(h.idx & 1) as usize]
+        &mut self.edges[(h.index() >> 1) as usize].halfedges[(h.index() & 1) as usize]
     }
 
     pub fn vertex_halfedge(&self, v: VH) -> Option<HH> {
@@ -226,18 +106,16 @@ impl Topology {
         self.halfedge(h).face
     }
 
-    pub const fn halfedge_edge(&self, h: HH) -> EH {
-        EH { idx: h.idx >> 1 }
+    pub fn halfedge_edge(&self, h: HH) -> EH {
+        (h.index() >> 1).into()
     }
 
-    pub const fn edge_halfedge(&self, e: EH, flag: bool) -> HH {
-        HH {
-            idx: (e.idx << 1) & if flag { 1 } else { 0 },
-        }
+    pub fn edge_halfedge(&self, e: EH, flag: bool) -> HH {
+        ((e.index() << 1) & if flag { 1 } else { 0 }).into()
     }
 
     pub fn face_halfedge(&self, f: FH) -> HH {
-        self.faces[f.idx as usize].halfedge
+        self.faces[f.index() as usize].halfedge
     }
 
     pub fn is_boundary_halfedge(&self, h: HH) -> bool {
@@ -245,19 +123,19 @@ impl Topology {
     }
 
     pub fn is_boundary_edge(&self, e: EH) -> bool {
-        let h = HH { idx: e.idx << 1 };
+        let h = (e.index() << 1).into();
         self.is_boundary_halfedge(h) || self.is_boundary_halfedge(self.opposite_halfedge(h))
     }
 
     pub fn is_boundary_vertex(&self, v: VH) -> bool {
-        match self.vertices[v.idx as usize].halfedge {
+        match self.vertices[v.index() as usize].halfedge {
             Some(h) => self.is_boundary_halfedge(h),
             None => true,
         }
     }
 
-    pub const fn opposite_halfedge(&self, h: HH) -> HH {
-        HH { idx: h.idx ^ 1 }
+    pub fn opposite_halfedge(&self, h: HH) -> HH {
+        (h.index() ^ 1).into()
     }
 
     pub fn cw_rotated_halfedge(&self, h: HH) -> HH {
@@ -281,19 +159,19 @@ impl Topology {
     }
 
     pub fn vertices(&self) -> impl Iterator<Item = VH> {
-        (0..(self.num_vertices() as u32)).map(|i| VH { idx: i })
+        (0..(self.num_vertices() as u32)).map(|i| i.into())
     }
 
     pub fn halfedges(&self) -> impl Iterator<Item = HH> {
-        (0..(self.num_halfedges() as u32)).map(|i| HH { idx: i })
+        (0..(self.num_halfedges() as u32)).map(|i| i.into())
     }
 
     pub fn edges(&self) -> impl Iterator<Item = EH> {
-        (0..(self.num_edges() as u32)).map(|i| EH { idx: i })
+        (0..(self.num_edges() as u32)).map(|i| i.into())
     }
 
     pub fn faces(&self) -> impl Iterator<Item = FH> {
-        (0..(self.num_faces() as u32)).map(|i| FH { idx: i })
+        (0..(self.num_faces() as u32)).map(|i| i.into())
     }
 
     pub fn num_faces(&self) -> usize {
@@ -329,18 +207,18 @@ impl Topology {
         let vi = self.vertices.len() as u32;
         self.vertices.push(Vertex { halfedge: None });
         self.vprops.push_value()?;
-        Ok(VH { idx: vi })
+        Ok(vi.into())
     }
 
     fn new_face(&mut self, halfedge: HH) -> Result<FH, Error> {
         let fi = self.faces.len() as u32;
         self.fprops.push_value()?;
         self.faces.push(Face { halfedge });
-        Ok(FH { idx: fi })
+        Ok(fi.into())
     }
 
     pub fn set_vertex_halfedge(&mut self, v: VH, h: HH) {
-        self.vertices[v.idx as usize].halfedge = Some(h);
+        self.vertices[v.index() as usize].halfedge = Some(h);
     }
 
     pub fn set_next_halfedge(&mut self, hprev: HH, hnext: HH) {
@@ -483,7 +361,7 @@ impl Topology {
                     TentativeEdge::Old(innernext),
                 ) => {
                     let innernext = *innernext;
-                    let innerprev = (*innerprev).into();
+                    let innerprev = innerprev.into();
                     let outernext = self.opposite_halfedge(innerprev);
                     let boundprev = self.prev_halfedge(innernext);
                     cache.next_cache.push((boundprev, outernext));
@@ -502,7 +380,7 @@ impl Topology {
                     },
                 ) => {
                     let innerprev = *innerprev;
-                    let innernext = (*innernext).into();
+                    let innernext = innernext.into();
                     let outerprev = self.opposite_halfedge(innernext);
                     let boundnext = self.next_halfedge(innerprev);
                     cache.next_cache.push((outerprev, boundnext));
@@ -525,8 +403,8 @@ impl Topology {
                         ..
                     },
                 ) => {
-                    let innerprev = (*innerprev).into();
-                    let innernext = (*innernext).into();
+                    let innerprev = innerprev.into();
+                    let innernext = innernext.into();
                     let outernext = self.opposite_halfedge(innerprev);
                     let outerprev = self.opposite_halfedge(innernext);
                     if let Some(boundnext) = self.vertex_halfedge(v) {
@@ -572,7 +450,7 @@ impl Topology {
                         opp_next.expect(ERR),
                     );
                     assert_eq!(*index >> 1, ei, "Failed to create an edge loop");
-                    (*index).into()
+                    index.into()
                 }
             };
             cache.halfedges.push(h);
@@ -580,7 +458,7 @@ impl Topology {
         // Create the face.
         let fnew = self.new_face(match cache.tentative.last().expect(ERR) {
             TentativeEdge::Old(index) => *index,
-            TentativeEdge::New { index, .. } => (*index).into(),
+            TentativeEdge::New { index, .. } => index.into(),
         })?;
         for h in &cache.halfedges {
             self.halfedge_mut(*h).face = Some(fnew);
@@ -619,7 +497,7 @@ mod test {
 
     use crate::{
         iterator,
-        topol::{Handle, FH, VH},
+        topol::{Handle, VH},
     };
 
     use super::{TopolCache, Topology};
@@ -704,7 +582,7 @@ mod test {
             [9, 10, 14, 13],
             [10, 11, 15, 14],
         ] {
-            let vs = fvi.iter().map(|i| (*i).into()).collect::<ArrayVec<VH, 4>>();
+            let vs = fvi.iter().map(|i| i.into()).collect::<ArrayVec<VH, 4>>();
             topol.add_face(&vs, &mut cache).expect("Unable to add face");
         }
         topol
@@ -715,7 +593,7 @@ mod test {
         let mut topol = Topology::default();
         let mut cache = TopolCache::default();
         let verts: Vec<_> = (0..3).flat_map(|_| topol.add_vertex()).collect();
-        assert_eq!(verts, (0..3u32).map(|idx| VH { idx }).collect::<Vec<_>>());
+        assert_eq!(verts, (0..3u32).map(|idx| idx.into()).collect::<Vec<_>>());
         let face = topol.add_face(&verts, &mut cache).unwrap();
         assert_eq!(topol.num_faces(), 1);
         assert_eq!(topol.num_edges(), 3);
@@ -774,10 +652,7 @@ mod test {
         ];
         assert_eq!(
             faces,
-            [0u32, 1]
-                .iter()
-                .map(|idx| FH { idx: *idx })
-                .collect::<Vec<_>>()
+            [0u32, 1].iter().map(|idx| idx.into()).collect::<Vec<_>>()
         );
         assert_eq!(topol.num_vertices(), 4);
         assert_eq!(topol.num_halfedges(), 10);

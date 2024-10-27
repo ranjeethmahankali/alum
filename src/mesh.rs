@@ -1,8 +1,9 @@
 use crate::{
+    element::{EH, FH, HH, VH},
     error::Error,
     iterator,
     property::VProperty,
-    topol::{TopolCache, Topology, EH, FH, HH, VH},
+    topol::{TopolCache, Topology},
 };
 
 pub struct Mesh {
@@ -102,11 +103,11 @@ impl Mesh {
         self.topol.face_halfedge(f)
     }
 
-    pub const fn halfedge_edge(&self, h: HH) -> EH {
+    pub fn halfedge_edge(&self, h: HH) -> EH {
         self.topol.halfedge_edge(h)
     }
 
-    pub const fn edge_halfedge(&self, e: EH, flag: bool) -> HH {
+    pub fn edge_halfedge(&self, e: EH, flag: bool) -> HH {
         self.topol.edge_halfedge(e, flag)
     }
 

@@ -1,4 +1,7 @@
-use crate::topol::{Topology, EH, FH, HH, VH};
+use crate::{
+    element::{EH, FH, HH, VH},
+    topol::Topology,
+};
 
 struct OutgoingHalfedgeIter<'a, const CCW: bool> {
     topol: &'a Topology,
@@ -211,11 +214,12 @@ pub(crate) fn ff_cw_iter(topol: &Topology, f: FH) -> impl Iterator<Item = FH> + 
 #[cfg(test)]
 mod test {
     use crate::{
+        element::{Handle, VH},
         iterator::{
             ff_ccw_iter, ff_cw_iter, fv_ccw_iter, fv_cw_iter, vf_ccw_iter, vf_cw_iter,
             vih_ccw_iter, vih_cw_iter, voh_ccw_iter, voh_cw_iter, vv_ccw_iter, vv_cw_iter,
         },
-        topol::{Handle, TopolCache, Topology, VH},
+        topol::{TopolCache, Topology},
     };
     use arrayvec::ArrayVec;
 

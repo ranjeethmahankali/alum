@@ -5,8 +5,8 @@ use std::{
 };
 
 use crate::{
+    element::{Handle, EH, FH, HH, VH},
     error::Error,
-    topol::{Handle, EH, FH, HH, VH},
 };
 
 pub struct PropertyContainer {
