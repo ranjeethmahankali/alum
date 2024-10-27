@@ -7,21 +7,22 @@ use crate::{
     property::{EProperty, FProperty, HProperty, TPropData, VProperty},
     status::Status,
     topol::{TopolCache, Topology},
+    vector::TVec3,
 };
 
-pub struct PolyMeshT<VecT: TPropData> {
+pub struct PolyMeshT<VecT: TVec3> {
     topol: Topology,
     points: VProperty<VecT>,
     cache: TopolCache,
 }
 
-impl<VecT: TPropData> Default for PolyMeshT<VecT> {
+impl<VecT: TVec3> Default for PolyMeshT<VecT> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<VecT: TPropData> PolyMeshT<VecT> {
+impl<VecT: TVec3> PolyMeshT<VecT> {
     pub fn new() -> Self {
         let mut topol = Topology::new();
         let points = topol.create_vertex_prop();
@@ -82,6 +83,10 @@ impl<VecT: TPropData> PolyMeshT<VecT> {
         self.topol.num_faces()
     }
 
+    pub(crate) fn topology(&self) -> &Topology {
+        &self.topol
+    }
+
     pub fn vertices(&self) -> impl Iterator<Item = VH> {
         self.topol.vertices()
     }
@@ -136,6 +141,10 @@ impl<VecT: TPropData> PolyMeshT<VecT> {
 
     pub fn set_point(&mut self, v: VH, pos: VecT) -> Result<(), Error> {
         self.points.set(v, pos)
+    }
+
+    pub fn points(&self) -> &VProperty<VecT> {
+        &self.points
     }
 
     pub fn vertex_status(&self, v: VH) -> Result<Ref<'_, Status>, Error> {
