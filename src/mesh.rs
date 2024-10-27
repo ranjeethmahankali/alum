@@ -9,23 +9,23 @@ use crate::{
     topol::{TopolCache, Topology},
 };
 
-pub struct Mesh {
+pub struct PolyMeshT<VecT: TPropData> {
     topol: Topology,
-    points: VProperty<glam::Vec3>,
+    points: VProperty<VecT>,
     cache: TopolCache,
 }
 
-impl Default for Mesh {
+impl<VecT: TPropData> Default for PolyMeshT<VecT> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl Mesh {
+impl<VecT: TPropData> PolyMeshT<VecT> {
     pub fn new() -> Self {
         let mut topol = Topology::new();
         let points = topol.create_vertex_prop();
-        Mesh {
+        PolyMeshT {
             topol,
             points,
             cache: TopolCache::default(),
@@ -35,7 +35,7 @@ impl Mesh {
     pub fn with_capacity(nverts: usize, nedges: usize, nfaces: usize) -> Self {
         let mut topol = Topology::with_capacity(nverts, nedges, nfaces);
         let points = VProperty::with_capacity(nverts, &mut topol.vprops);
-        Mesh {
+        PolyMeshT {
             topol,
             points,
             cache: TopolCache::default(),
@@ -130,11 +130,11 @@ impl Mesh {
         self.topol.face_valence(f)
     }
 
-    pub fn point(&self, vi: VH) -> Result<glam::Vec3, Error> {
+    pub fn point(&self, vi: VH) -> Result<VecT, Error> {
         Ok(*(self.points.get(vi)?))
     }
 
-    pub fn set_point(&mut self, v: VH, pos: glam::Vec3) -> Result<(), Error> {
+    pub fn set_point(&mut self, v: VH, pos: VecT) -> Result<(), Error> {
         self.points.set(v, pos)
     }
 
@@ -198,91 +198,91 @@ impl Mesh {
         self.topol.ccw_rotated_halfedge(h)
     }
 
-    pub fn voh_ccw_iter(&self, v: VH) -> impl Iterator<Item = HH> + use<'_> {
+    pub fn voh_ccw_iter(&self, v: VH) -> impl Iterator<Item = HH> + use<'_, VecT> {
         iterator::voh_ccw_iter(&self.topol, v)
     }
 
-    pub fn voh_cw_iter(&self, v: VH) -> impl Iterator<Item = HH> + use<'_> {
+    pub fn voh_cw_iter(&self, v: VH) -> impl Iterator<Item = HH> + use<'_, VecT> {
         iterator::voh_cw_iter(&self.topol, v)
     }
 
-    pub fn vih_ccw_iter(&self, v: VH) -> impl Iterator<Item = HH> + use<'_> {
+    pub fn vih_ccw_iter(&self, v: VH) -> impl Iterator<Item = HH> + use<'_, VecT> {
         iterator::vih_ccw_iter(&self.topol, v)
     }
 
-    pub fn vih_cw_iter(&self, v: VH) -> impl Iterator<Item = HH> + use<'_> {
+    pub fn vih_cw_iter(&self, v: VH) -> impl Iterator<Item = HH> + use<'_, VecT> {
         iterator::vih_cw_iter(&self.topol, v)
     }
 
-    pub fn vf_ccw_iter(&self, v: VH) -> impl Iterator<Item = FH> + use<'_> {
+    pub fn vf_ccw_iter(&self, v: VH) -> impl Iterator<Item = FH> + use<'_, VecT> {
         iterator::vf_ccw_iter(&self.topol, v)
     }
 
-    pub fn vf_cw_iter(&self, v: VH) -> impl Iterator<Item = FH> + use<'_> {
+    pub fn vf_cw_iter(&self, v: VH) -> impl Iterator<Item = FH> + use<'_, VecT> {
         iterator::vf_cw_iter(&self.topol, v)
     }
 
-    pub fn vv_ccw_iter(&self, v: VH) -> impl Iterator<Item = VH> + use<'_> {
+    pub fn vv_ccw_iter(&self, v: VH) -> impl Iterator<Item = VH> + use<'_, VecT> {
         iterator::vv_ccw_iter(&self.topol, v)
     }
 
-    pub fn vv_cw_iter(&self, v: VH) -> impl Iterator<Item = VH> + use<'_> {
+    pub fn vv_cw_iter(&self, v: VH) -> impl Iterator<Item = VH> + use<'_, VecT> {
         iterator::vv_cw_iter(&self.topol, v)
     }
 
-    pub fn ve_ccw_iter(&self, v: VH) -> impl Iterator<Item = EH> + use<'_> {
+    pub fn ve_ccw_iter(&self, v: VH) -> impl Iterator<Item = EH> + use<'_, VecT> {
         iterator::ve_ccw_iter(&self.topol, v)
     }
 
-    pub fn ve_cw_iter(&self, v: VH) -> impl Iterator<Item = EH> + use<'_> {
+    pub fn ve_cw_iter(&self, v: VH) -> impl Iterator<Item = EH> + use<'_, VecT> {
         iterator::ve_cw_iter(&self.topol, v)
     }
 
-    pub fn ev_iter(&self, e: EH) -> impl Iterator<Item = VH> + use<'_> {
+    pub fn ev_iter(&self, e: EH) -> impl Iterator<Item = VH> + use<'_, VecT> {
         iterator::ev_iter(&self.topol, e)
     }
 
-    pub fn eh_iter(&self, e: EH) -> impl Iterator<Item = HH> + use<'_> {
+    pub fn eh_iter(&self, e: EH) -> impl Iterator<Item = HH> + use<'_, VecT> {
         iterator::eh_iter(&self.topol, e)
     }
 
-    pub fn ef_iter(&self, e: EH) -> impl Iterator<Item = FH> + use<'_> {
+    pub fn ef_iter(&self, e: EH) -> impl Iterator<Item = FH> + use<'_, VecT> {
         iterator::ef_iter(&self.topol, e)
     }
 
-    pub fn fh_ccw_iter(&self, f: FH) -> impl Iterator<Item = HH> + use<'_> {
+    pub fn fh_ccw_iter(&self, f: FH) -> impl Iterator<Item = HH> + use<'_, VecT> {
         iterator::fh_ccw_iter(&self.topol, f)
     }
 
-    pub fn fh_cw_iter(&self, f: FH) -> impl Iterator<Item = HH> + use<'_> {
+    pub fn fh_cw_iter(&self, f: FH) -> impl Iterator<Item = HH> + use<'_, VecT> {
         iterator::fh_cw_iter(&self.topol, f)
     }
 
-    pub fn fv_ccw_iter(&self, f: FH) -> impl Iterator<Item = VH> + use<'_> {
+    pub fn fv_ccw_iter(&self, f: FH) -> impl Iterator<Item = VH> + use<'_, VecT> {
         iterator::fv_ccw_iter(&self.topol, f)
     }
 
-    pub fn fv_cw_iter(&self, f: FH) -> impl Iterator<Item = VH> + use<'_> {
+    pub fn fv_cw_iter(&self, f: FH) -> impl Iterator<Item = VH> + use<'_, VecT> {
         iterator::fv_cw_iter(&self.topol, f)
     }
 
-    pub fn fe_ccw_iter(&self, f: FH) -> impl Iterator<Item = EH> + use<'_> {
+    pub fn fe_ccw_iter(&self, f: FH) -> impl Iterator<Item = EH> + use<'_, VecT> {
         iterator::fe_ccw_iter(&self.topol, f)
     }
 
-    pub fn fe_cw_iter(&self, f: FH) -> impl Iterator<Item = EH> + use<'_> {
+    pub fn fe_cw_iter(&self, f: FH) -> impl Iterator<Item = EH> + use<'_, VecT> {
         iterator::fe_cw_iter(&self.topol, f)
     }
 
-    pub fn ff_ccw_iter(&self, f: FH) -> impl Iterator<Item = FH> + use<'_> {
+    pub fn ff_ccw_iter(&self, f: FH) -> impl Iterator<Item = FH> + use<'_, VecT> {
         iterator::ff_ccw_iter(&self.topol, f)
     }
 
-    pub fn ff_cw_iter(&self, f: FH) -> impl Iterator<Item = FH> + use<'_> {
+    pub fn ff_cw_iter(&self, f: FH) -> impl Iterator<Item = FH> + use<'_, VecT> {
         iterator::ff_cw_iter(&self.topol, f)
     }
 
-    pub fn add_vertex(&mut self, pos: glam::Vec3) -> Result<VH, Error> {
+    pub fn add_vertex(&mut self, pos: VecT) -> Result<VH, Error> {
         let vi = self.topol.add_vertex()?;
         self.points.set(vi, pos)?;
         Ok(vi)
