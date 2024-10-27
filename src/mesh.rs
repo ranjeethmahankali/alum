@@ -1,4 +1,4 @@
-use std::cell::Ref;
+use std::cell::{Ref, RefMut};
 
 use crate::{
     element::{EH, FH, HH, VH},
@@ -122,16 +122,32 @@ impl Mesh {
         self.topol.vertex_status(v)
     }
 
+    pub fn vertex_status_mut<'a>(&'a mut self, v: VH) -> Result<RefMut<'a, Status>, Error> {
+        self.topol.vertex_status_mut(v)
+    }
+
     pub fn halfedge_status<'a>(&'a self, h: HH) -> Result<Ref<'a, Status>, Error> {
         self.topol.halfedge_status(h)
+    }
+
+    pub fn halfedge_status_mut<'a>(&'a mut self, h: HH) -> Result<RefMut<'a, Status>, Error> {
+        self.topol.halfedge_status_mut(h)
     }
 
     pub fn edge_status<'a>(&'a self, e: EH) -> Result<Ref<'a, Status>, Error> {
         self.topol.edge_status(e)
     }
 
+    pub fn edge_status_mut<'a>(&'a mut self, e: EH) -> Result<RefMut<'a, Status>, Error> {
+        self.topol.edge_status_mut(e)
+    }
+
     pub fn face_status<'a>(&'a self, f: FH) -> Result<Ref<'a, Status>, Error> {
         self.topol.face_status(f)
+    }
+
+    pub fn face_status_mut<'a>(&'a mut self, f: FH) -> Result<RefMut<'a, Status>, Error> {
+        self.topol.face_status_mut(f)
     }
 
     pub fn from_vertex(&self, h: HH) -> VH {
