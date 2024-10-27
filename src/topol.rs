@@ -236,7 +236,7 @@ impl Topology {
     }
 
     pub fn edge_halfedge(&self, e: EH, flag: bool) -> HH {
-        ((e.index() << 1) + if flag { 1 } else { 0 }).into()
+        ((e.index() << 1) | if flag { 1 } else { 0 }).into()
     }
 
     pub fn face_halfedge(&self, f: FH) -> HH {
