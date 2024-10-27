@@ -1,4 +1,4 @@
-use std::cell::Ref;
+use std::cell::{Ref, RefMut};
 
 use crate::{
     element::{EH, FH, HH, VH},
@@ -122,16 +122,32 @@ impl Mesh {
         self.topol.vertex_status(v)
     }
 
+    pub fn vertex_status_mut<'a>(&'a mut self, v: VH) -> Result<RefMut<'a, Status>, Error> {
+        self.topol.vertex_status_mut(v)
+    }
+
     pub fn halfedge_status<'a>(&'a self, h: HH) -> Result<Ref<'a, Status>, Error> {
         self.topol.halfedge_status(h)
+    }
+
+    pub fn halfedge_status_mut<'a>(&'a mut self, h: HH) -> Result<RefMut<'a, Status>, Error> {
+        self.topol.halfedge_status_mut(h)
     }
 
     pub fn edge_status<'a>(&'a self, e: EH) -> Result<Ref<'a, Status>, Error> {
         self.topol.edge_status(e)
     }
 
+    pub fn edge_status_mut<'a>(&'a mut self, e: EH) -> Result<RefMut<'a, Status>, Error> {
+        self.topol.edge_status_mut(e)
+    }
+
     pub fn face_status<'a>(&'a self, f: FH) -> Result<Ref<'a, Status>, Error> {
         self.topol.face_status(f)
+    }
+
+    pub fn face_status_mut<'a>(&'a mut self, f: FH) -> Result<RefMut<'a, Status>, Error> {
+        self.topol.face_status_mut(f)
     }
 
     pub fn from_vertex(&self, h: HH) -> VH {
@@ -262,5 +278,34 @@ impl Mesh {
 
     pub fn add_quad_face(&mut self, v0: VH, v1: VH, v2: VH, v3: VH) -> Result<FH, Error> {
         self.add_face(&[v0, v1, v2, v3])
+    }
+
+    pub fn delete_vertex(&mut self, delete_isolated_vertices: bool, v: VH) -> Result<(), Error> {
+        self.topol
+            .delete_vertex(v, delete_isolated_vertices, &mut self.cache)
+    }
+
+    pub fn delete_face(&mut self, f: FH, delete_isolated_vertices: bool) -> Result<(), Error> {
+        self.topol.delete_face(
+            f,
+            delete_isolated_vertices,
+            &mut self.cache.halfedges,
+            &mut self.cache.edges,
+            &mut self.cache.vertices,
+        )
+    }
+
+    pub fn delete_edge(&mut self, e: EH, delete_isolated_vertices: bool) -> Result<(), Error> {
+        self.topol.delete_edge(
+            e,
+            delete_isolated_vertices,
+            &mut self.cache.halfedges,
+            &mut self.cache.edges,
+            &mut self.cache.vertices,
+        )
+    }
+
+    pub fn garbage_collection(&mut self) -> Result<(), Error> {
+        self.topol.garbage_collection(&mut self.cache)
     }
 }

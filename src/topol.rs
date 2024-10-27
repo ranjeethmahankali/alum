@@ -1,4 +1,4 @@
-use std::cell::Ref;
+use std::cell::{Ref, RefMut};
 
 use crate::{
     element::{Edge, Face, Halfedge, Handle, Vertex, EH, FH, HH, VH},
@@ -27,7 +27,10 @@ pub(crate) struct TopolCache {
     needs_adjust: Vec<bool>,
     next_cache: Vec<(HH, HH)>,
     tentative: Vec<TentativeEdge>,
-    halfedges: Vec<HH>,
+    pub(crate) halfedges: Vec<HH>,
+    pub(crate) faces: Vec<FH>,
+    pub(crate) edges: Vec<EH>,
+    pub(crate) vertices: Vec<VH>,
 }
 
 impl TopolCache {
@@ -37,6 +40,9 @@ impl TopolCache {
         self.next_cache.clear();
         self.tentative.clear();
         self.halfedges.clear();
+        self.faces.clear();
+        self.edges.clear();
+        self.vertices.clear();
     }
 }
 
@@ -141,16 +147,32 @@ impl Topology {
         self.vstatus.get(v)
     }
 
+    pub fn vertex_status_mut<'a>(&'a mut self, v: VH) -> Result<RefMut<'a, Status>, Error> {
+        self.vstatus.get_mut(v)
+    }
+
     pub fn halfedge_status<'a>(&'a self, h: HH) -> Result<Ref<'a, Status>, Error> {
         self.hstatus.get(h)
+    }
+
+    pub fn halfedge_status_mut<'a>(&'a mut self, h: HH) -> Result<RefMut<'a, Status>, Error> {
+        self.hstatus.get_mut(h)
     }
 
     pub fn edge_status<'a>(&'a self, e: EH) -> Result<Ref<'a, Status>, Error> {
         self.estatus.get(e)
     }
 
+    pub fn edge_status_mut<'a>(&'a mut self, e: EH) -> Result<RefMut<'a, Status>, Error> {
+        self.estatus.get_mut(e)
+    }
+
     pub fn face_status<'a>(&'a self, f: FH) -> Result<Ref<'a, Status>, Error> {
         self.fstatus.get(f)
+    }
+
+    pub fn face_status_mut<'a>(&'a mut self, f: FH) -> Result<RefMut<'a, Status>, Error> {
+        self.fstatus.get_mut(f)
     }
 
     pub fn create_vertex_prop<T: TPropData>(&mut self) -> VProperty<T> {
@@ -171,6 +193,10 @@ impl Topology {
 
     fn vertex(&self, v: VH) -> &Vertex {
         &self.vertices[v.index() as usize]
+    }
+
+    fn vertex_mut(&mut self, v: VH) -> &mut Vertex {
+        &mut self.vertices[v.index() as usize]
     }
 
     fn halfedge(&self, h: HH) -> &Halfedge {
@@ -210,7 +236,7 @@ impl Topology {
     }
 
     pub fn edge_halfedge(&self, e: EH, flag: bool) -> HH {
-        ((e.index() << 1) & if flag { 1 } else { 0 }).into()
+        ((e.index() << 1) + if flag { 1 } else { 0 }).into()
     }
 
     pub fn face_halfedge(&self, f: FH) -> HH {
@@ -347,6 +373,10 @@ impl Topology {
         self.fprops.push_value()?;
         self.faces.push(Face { halfedge });
         Ok(fi.into())
+    }
+
+    pub fn set_halfedge_face(&mut self, h: HH, f: FH) {
+        self.halfedge_mut(h).face = Some(f);
     }
 
     pub fn set_vertex_halfedge(&mut self, v: VH, h: HH) {
@@ -585,6 +615,262 @@ impl Topology {
 
     pub fn face_valence(&self, f: FH) -> usize {
         iterator::fv_ccw_iter(self, f).count()
+    }
+
+    pub fn delete_vertex(
+        &mut self,
+        v: VH,
+        delete_isolated_vertices: bool,
+        cache: &mut TopolCache,
+    ) -> Result<(), Error> {
+        /* Deleting faces changes the local topology. So we cannot delete them
+         * as we iterate over them. Instead we collect them into cache and then
+         * delete them. */
+        cache.faces.clear();
+        cache.faces.extend(iterator::vf_ccw_iter(self, v));
+        for f in &cache.faces {
+            self.delete_face(
+                *f,
+                delete_isolated_vertices,
+                &mut cache.halfedges,
+                &mut cache.edges,
+                &mut cache.vertices,
+            )?;
+        }
+        self.vertex_status_mut(v)?.set_deleted(true);
+        Ok(())
+    }
+
+    pub fn delete_edge(
+        &mut self,
+        e: EH,
+        delete_isolated_vertices: bool,
+        hcache: &mut Vec<HH>,
+        ecache: &mut Vec<EH>,
+        vcache: &mut Vec<VH>,
+    ) -> Result<(), Error> {
+        let f0 = self.halfedge_face(self.edge_halfedge(e, false));
+        let f1 = self.halfedge_face(self.edge_halfedge(e, true));
+        if let Some(f) = f0 {
+            self.delete_face(f, delete_isolated_vertices, hcache, ecache, vcache)?;
+        }
+        if let Some(f) = f1 {
+            self.delete_face(f, delete_isolated_vertices, hcache, ecache, vcache)?;
+        }
+        // We deleted all faces incident on this edge. So the edge must already be deleted.
+        debug_assert!(self.edge_status(e)?.deleted());
+        debug_assert!(self
+            .halfedge_status(self.edge_halfedge(e, false))?
+            .deleted());
+        debug_assert!(self.halfedge_status(self.edge_halfedge(e, true))?.deleted());
+        Ok(())
+    }
+
+    pub fn delete_face(
+        &mut self,
+        f: FH,
+        delete_isolated_vertices: bool,
+        hcache: &mut Vec<HH>,
+        ecache: &mut Vec<EH>,
+        vcache: &mut Vec<VH>,
+    ) -> Result<(), Error> {
+        {
+            let mut fs = self.face_status_mut(f)?;
+            // Check if the face was already deleted.
+            if fs.deleted() {
+                return Err(Error::DeletedFace(f));
+            }
+            fs.set_deleted(true); // Mark face deleted.
+        }
+        // Collect neighborhood topology.
+        ecache.clear();
+        vcache.clear();
+        hcache.clear();
+        hcache.extend(iterator::fh_ccw_iter(self, f));
+        for h in hcache.drain(..) {
+            self.halfedge_mut(h).face = None; // Disconnect from face.
+            if self.is_boundary_halfedge(self.opposite_halfedge(h)) {
+                ecache.push(self.halfedge_edge(h));
+            }
+            vcache.push(self.to_vertex(h));
+        }
+        // Delete collected topology.
+        for e in ecache.drain(..) {
+            let h0 = self.edge_halfedge(e, false);
+            let v0 = self.to_vertex(h0);
+            let next0 = self.next_halfedge(h0);
+            let prev0 = self.prev_halfedge(h0);
+            let h1 = self.edge_halfedge(e, true);
+            let v1 = self.to_vertex(h1);
+            let next1 = self.next_halfedge(h1);
+            let prev1 = self.prev_halfedge(h1);
+            // Adjust halfedge links and mark edge and halfedges deleted.
+            self.set_next_halfedge(prev0, next1);
+            self.set_next_halfedge(prev1, next0);
+            self.edge_status_mut(e)?.set_deleted(true);
+            {
+                let mut hstatus = self.hstatus.try_borrow_mut()?;
+                let hstatus: &mut Vec<Status> = &mut hstatus;
+                hstatus[h0.index() as usize].set_deleted(true);
+                hstatus[h1.index() as usize].set_deleted(true);
+            }
+            // Update vertices.
+            if self.vertex_halfedge(v0) == Some(h1) {
+                // Isolated?
+                if next0 == h1 {
+                    if delete_isolated_vertices {
+                        self.vertex_status_mut(v0)?.set_deleted(true);
+                    }
+                    self.vertex_mut(v0).halfedge = None;
+                } else {
+                    self.set_vertex_halfedge(v0, next0);
+                }
+            }
+            if self.vertex_halfedge(v1) == Some(h0) {
+                // Isolated?
+                if next1 == h0 {
+                    if delete_isolated_vertices {
+                        self.vertex_status_mut(v1)?.set_deleted(true);
+                    }
+                    self.vertex_mut(v1).halfedge = None;
+                } else {
+                    self.set_vertex_halfedge(v1, next1);
+                }
+            }
+        }
+        // Update outgoing halfedges.
+        for v in vcache.drain(..) {
+            self.adjust_outgoing_halfedge(v);
+        }
+        Ok(())
+    }
+
+    pub fn garbage_collection(&mut self, cache: &mut TopolCache) -> Result<(), Error> {
+        // Setup mapping.
+        let vmap = &mut cache.vertices;
+        vmap.clear();
+        vmap.reserve(self.num_vertices());
+        vmap.extend(self.vertices());
+        let hmap = &mut cache.halfedges;
+        hmap.clear();
+        hmap.reserve(self.num_halfedges());
+        hmap.extend(self.halfedges());
+        let fmap = &mut cache.faces;
+        fmap.clear();
+        fmap.reserve(self.num_faces());
+        fmap.extend(self.faces());
+        // Remove vertices.
+        if self.num_vertices() > 0 {
+            let mut left = 0usize;
+            let mut right = self.num_vertices() - 1;
+            let newlen = loop {
+                // Find first deleted and last un-deleted.
+                // Use scope to borrow the status vector.
+                {
+                    let status = self.vstatus.try_borrow()?;
+                    let status: &Vec<Status> = &status;
+                    while !status[left].deleted() && left < right {
+                        left += 1;
+                    }
+                    while status[right].deleted() && left < right {
+                        right -= 1;
+                    }
+                    if left >= right {
+                        break left + if status[left].deleted() { 0 } else { 1 };
+                    }
+                }
+                // Swap.
+                self.vertices.swap(left, right);
+                vmap.swap(left, right);
+                self.vprops.swap(left, right)?;
+            };
+            self.vertices.truncate(newlen);
+            self.vprops.resize(self.num_vertices())?;
+        }
+        // Remove edges.
+        if self.num_edges() > 0 {
+            let mut left = 0usize;
+            let mut right = self.num_edges() - 1;
+            let newlen = loop {
+                // Find first deleted and last un-deleted.
+                // Use scope to borrow the status vector.
+                {
+                    let status = self.estatus.try_borrow()?;
+                    let status: &Vec<Status> = &status;
+                    while !status[left].deleted() && left < right {
+                        left += 1;
+                    }
+                    while status[right].deleted() && left < right {
+                        right -= 1;
+                    }
+                    if left >= right {
+                        break left + if status[left].deleted() { 0 } else { 1 };
+                    }
+                }
+                // Swap.
+                self.edges.swap(left, right);
+                hmap.swap(2 * left, 2 * right);
+                hmap.swap(2 * left + 1, 2 * right + 1);
+                self.eprops.swap(left, right)?;
+                self.hprops.swap(2 * left, 2 * right)?;
+                self.hprops.swap(2 * left + 1, 2 * right + 1)?;
+            };
+            self.edges.truncate(newlen);
+            self.eprops.resize(self.num_edges())?;
+            self.hprops.resize(self.num_halfedges())?;
+        }
+        // Remove faces.
+        if self.num_faces() > 0 {
+            let mut left = 0usize;
+            let mut right = self.num_faces() - 1;
+            let newlen = loop {
+                // Find first deleted and last un-deleted.
+                // Use scope to borrow the status vector.
+                {
+                    let status = self.fstatus.try_borrow()?;
+                    let status: &Vec<Status> = &status;
+                    while !status[left].deleted() && left < right {
+                        left += 1;
+                    }
+                    while status[right].deleted() && left < right {
+                        right -= 1;
+                    }
+                    if left >= right {
+                        break left + if status[left].deleted() { 0 } else { 1 };
+                    }
+                }
+                // Swap.
+                self.faces.swap(left, right);
+                fmap.swap(left, right);
+                self.fprops.swap(left, right)?;
+            };
+            self.faces.truncate(newlen);
+            self.fprops.resize(self.num_faces())?;
+        }
+        // Update handles of vertices.
+        for v in self.vertices.iter_mut() {
+            if let Some(h) = v.halfedge {
+                v.halfedge = Some(hmap[h.index() as usize]);
+            }
+        }
+        // Update edges vertices.
+        for e in self.edges.iter_mut() {
+            for h in e.halfedges.iter_mut() {
+                h.vertex = vmap[h.vertex.index() as usize];
+            }
+        }
+        // Update halfedge connectivity.
+        for h in self.halfedges() {
+            self.set_next_halfedge(h, hmap[self.next_halfedge(h).index() as usize]);
+            if let Some(f) = self.halfedge_face(h) {
+                self.set_halfedge_face(h, fmap[f.index() as usize]);
+            }
+        }
+        // Update handles of faces.
+        for f in self.faces.iter_mut() {
+            f.halfedge = hmap[f.halfedge.index() as usize];
+        }
+        Ok(())
     }
 }
 
@@ -980,6 +1266,124 @@ mod test {
         assert_eq!(
             qbox.num_faces(),
             qbox.fprops.len().expect("Cannot read length of property")
+        );
+    }
+
+    #[test]
+    fn t_quad_box_delete_face() {
+        let mut qbox = quad_box();
+        let mut cache = TopolCache::default();
+        qbox.delete_face(
+            5.into(),
+            true,
+            &mut cache.halfedges,
+            &mut cache.edges,
+            &mut cache.vertices,
+        )
+        .expect("Cannot delete face");
+        assert!(qbox
+            .face_status(5.into())
+            .expect("Cannot read face status")
+            .deleted());
+        qbox.garbage_collection(&mut cache)
+            .expect("Cannot garbage collect mesh");
+        assert_eq!(qbox.num_faces(), 5);
+        assert_eq!(qbox.num_edges(), 12);
+        assert_eq!(qbox.num_vertices(), 8);
+        for v in qbox.vertices() {
+            assert_eq!(qbox.is_boundary_vertex(v), v.index() > 3);
+        }
+        assert_eq!(
+            4,
+            qbox.edges().filter(|e| qbox.is_boundary_edge(*e)).count()
+        );
+        assert_eq!(
+            4,
+            qbox.vertices()
+                .filter(|v| qbox.is_boundary_vertex(*v))
+                .count()
+        );
+    }
+
+    #[test]
+    fn t_quad_box_delete_edge() {
+        let mut qbox = quad_box();
+        let mut cache = TopolCache::default();
+        qbox.delete_edge(
+            qbox.halfedge_edge(
+                qbox.find_halfedge(5.into(), 6.into())
+                    .expect("Cannot find halfedge"),
+            ),
+            true,
+            &mut cache.halfedges,
+            &mut cache.edges,
+            &mut cache.vertices,
+        )
+        .expect("Cannot delete edge");
+        assert_eq!(
+            11,
+            qbox.edges()
+                .filter(|e| !qbox
+                    .edge_status(*e)
+                    .expect("Cannot read edge status")
+                    .deleted())
+                .count()
+        );
+        assert_eq!(
+            4,
+            qbox.faces()
+                .filter(|f| !qbox
+                    .face_status(*f)
+                    .expect("Cannot read face status")
+                    .deleted())
+                .count()
+        );
+        qbox.garbage_collection(&mut cache)
+            .expect("Failed to garbage collect");
+        assert_eq!(qbox.num_faces(), 4);
+        assert_eq!(qbox.num_edges(), 11);
+        assert_eq!(qbox.num_vertices(), 8);
+        assert_eq!(
+            6,
+            qbox.edges().filter(|e| qbox.is_boundary_edge(*e)).count()
+        );
+        assert_eq!(
+            6,
+            qbox.vertices()
+                .filter(|v| qbox.is_boundary_vertex(*v))
+                .count()
+        );
+    }
+
+    #[test]
+    fn t_quad_box_delete_vertex() {
+        let mut qbox = quad_box();
+        let mut cache = TopolCache::default();
+        qbox.delete_vertex(5.into(), true, &mut cache)
+            .expect("Cannot delete face");
+        for v in qbox.vertices() {
+            assert_eq!(
+                qbox.vertex_status(v)
+                    .expect("Cannot read vertex status")
+                    .deleted(),
+                v.index() == 5
+            );
+        }
+        qbox.garbage_collection(&mut cache)
+            .expect("Garbage collection failed");
+        assert_eq!(qbox.num_vertices(), 7);
+        assert_eq!(qbox.num_edges(), 9);
+        assert_eq!(qbox.num_halfedges(), 18);
+        assert_eq!(qbox.num_faces(), 3);
+        assert_eq!(
+            6,
+            qbox.edges().filter(|e| qbox.is_boundary_edge(*e)).count()
+        );
+        assert_eq!(
+            6,
+            qbox.vertices()
+                .filter(|v| qbox.is_boundary_vertex(*v))
+                .count()
         );
     }
 }
