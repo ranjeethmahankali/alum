@@ -118,6 +118,10 @@ impl Mesh {
         Ok(*(self.points.get(vi)?))
     }
 
+    pub fn set_point(&mut self, v: VH, pos: glam::Vec3) -> Result<(), Error> {
+        self.points.set(v, pos)
+    }
+
     pub fn vertex_status<'a>(&'a self, v: VH) -> Result<Ref<'a, Status>, Error> {
         self.topol.vertex_status(v)
     }
