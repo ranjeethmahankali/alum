@@ -279,4 +279,8 @@ impl Mesh {
     pub fn add_quad_face(&mut self, v0: VH, v1: VH, v2: VH, v3: VH) -> Result<FH, Error> {
         self.add_face(&[v0, v1, v2, v3])
     }
+
+    pub fn delete_vertex(&mut self, v: VH) -> Result<(), Error> {
+        self.topol.delete_vertex(v, &mut self.cache)
+    }
 }

@@ -28,6 +28,9 @@ pub(crate) struct TopolCache {
     next_cache: Vec<(HH, HH)>,
     tentative: Vec<TentativeEdge>,
     halfedges: Vec<HH>,
+    faces: Vec<FH>,
+    edges: Vec<EH>,
+    vertices: Vec<VH>,
 }
 
 impl TopolCache {
@@ -37,6 +40,9 @@ impl TopolCache {
         self.next_cache.clear();
         self.tentative.clear();
         self.halfedges.clear();
+        self.faces.clear();
+        self.edges.clear();
+        self.vertices.clear();
     }
 }
 
@@ -601,6 +607,27 @@ impl Topology {
 
     pub fn face_valence(&self, f: FH) -> usize {
         iterator::fv_ccw_iter(self, f).count()
+    }
+
+    pub fn delete_vertex(&mut self, v: VH, cache: &mut TopolCache) -> Result<(), Error> {
+        /* Deleting faces changes the local topology. So we cannot delete them
+         * as we iterate over them. Instead we collect them into cache and then
+         * delete them. */
+        cache.faces.clear();
+        cache.faces.extend(iterator::vf_ccw_iter(self, v));
+        for f in &cache.faces {
+            self.delete_face(*f, &mut cache.edges, &mut cache.vertices);
+        }
+        self.vertex_status_mut(v)?.set_deleted(true);
+        Ok(())
+    }
+
+    pub fn _delete_edge(&mut self, _e: EH) {
+        todo!()
+    }
+
+    pub fn delete_face(&mut self, _f: FH, _ecache: &mut Vec<EH>, _vcache: &mut Vec<VH>) {
+        todo!()
     }
 }
 
