@@ -616,17 +616,41 @@ impl Topology {
         cache.faces.clear();
         cache.faces.extend(iterator::vf_ccw_iter(self, v));
         for f in &cache.faces {
-            self.delete_face(*f, &mut cache.edges, &mut cache.vertices);
+            self.delete_face(*f, &mut cache.edges, &mut cache.vertices)?;
         }
         self.vertex_status_mut(v)?.set_deleted(true);
         Ok(())
     }
 
-    pub fn _delete_edge(&mut self, _e: EH) {
-        todo!()
+    pub fn _delete_edge(
+        &mut self,
+        e: EH,
+        ecache: &mut Vec<EH>,
+        vcache: &mut Vec<VH>,
+    ) -> Result<(), Error> {
+        let f0 = self.halfedge_face(self.edge_halfedge(e, false));
+        let f1 = self.halfedge_face(self.edge_halfedge(e, true));
+        if let Some(f) = f0 {
+            self.delete_face(f, ecache, vcache)?;
+        }
+        if let Some(f) = f1 {
+            self.delete_face(f, ecache, vcache)?;
+        }
+        // We deleted all faces incident on this edge. So the edge must already be deleted.
+        debug_assert!(self.edge_status(e)?.deleted());
+        debug_assert!(self
+            .halfedge_status(self.edge_halfedge(e, false))?
+            .deleted());
+        debug_assert!(self.halfedge_status(self.edge_halfedge(e, true))?.deleted());
+        Ok(())
     }
 
-    pub fn delete_face(&mut self, _f: FH, _ecache: &mut Vec<EH>, _vcache: &mut Vec<VH>) {
+    pub fn delete_face(
+        &mut self,
+        _f: FH,
+        _ecache: &mut Vec<EH>,
+        _vcache: &mut Vec<VH>,
+    ) -> Result<(), Error> {
         todo!()
     }
 }
