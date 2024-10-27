@@ -58,6 +58,10 @@ impl Mesh {
         self.topol.create_face_prop()
     }
 
+    pub fn reserve(&mut self, nverts: usize, nedges: usize, nfaces: usize) -> Result<(), Error> {
+        self.topol.reserve(nverts, nedges, nfaces)
+    }
+
     pub fn num_vertices(&self) -> usize {
         self.topol.num_vertices()
     }

@@ -111,6 +111,19 @@ impl Topology {
         }
     }
 
+    pub fn reserve(&mut self, nverts: usize, nedges: usize, nfaces: usize) -> Result<(), Error> {
+        // Elements.
+        self.vertices.reserve(nverts);
+        self.edges.reserve(nedges);
+        self.faces.reserve(nfaces);
+        // Properties.
+        self.vprops.reserve(nverts)?;
+        self.hprops.reserve(nedges * 2)?;
+        self.eprops.reserve(nedges)?;
+        self.fprops.reserve(nfaces)?;
+        Ok(())
+    }
+
     pub fn vertex_status<'a>(&'a self, v: VH) -> Result<Ref<'a, Status>, Error> {
         self.vstatus.get(v)
     }
