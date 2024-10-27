@@ -1,4 +1,4 @@
-use crate::element::{HH, VH};
+use crate::element::{FH, HH, VH};
 
 #[derive(Debug)]
 pub enum Error {
@@ -11,4 +11,5 @@ pub enum Error {
     ComplexHalfedge(HH),
     HalfedgeNotFound,
     PatchRelinkingFailed,
+    DeletedFace(FH),
 }

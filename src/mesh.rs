@@ -280,7 +280,8 @@ impl Mesh {
         self.add_face(&[v0, v1, v2, v3])
     }
 
-    pub fn delete_vertex(&mut self, v: VH) -> Result<(), Error> {
-        self.topol.delete_vertex(v, &mut self.cache)
+    pub fn delete_vertex(&mut self, delete_isolated_vertices: bool, v: VH) -> Result<(), Error> {
+        self.topol
+            .delete_vertex(v, delete_isolated_vertices, &mut self.cache)
     }
 }

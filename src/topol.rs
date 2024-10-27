@@ -195,6 +195,10 @@ impl Topology {
         &self.vertices[v.index() as usize]
     }
 
+    fn vertex_mut(&mut self, v: VH) -> &mut Vertex {
+        &mut self.vertices[v.index() as usize]
+    }
+
     fn halfedge(&self, h: HH) -> &Halfedge {
         &self.edges[(h.index() >> 1) as usize].halfedges[(h.index() & 1) as usize]
     }
@@ -609,14 +613,25 @@ impl Topology {
         iterator::fv_ccw_iter(self, f).count()
     }
 
-    pub fn delete_vertex(&mut self, v: VH, cache: &mut TopolCache) -> Result<(), Error> {
+    pub fn delete_vertex(
+        &mut self,
+        v: VH,
+        delete_isolated_vertices: bool,
+        cache: &mut TopolCache,
+    ) -> Result<(), Error> {
         /* Deleting faces changes the local topology. So we cannot delete them
          * as we iterate over them. Instead we collect them into cache and then
          * delete them. */
         cache.faces.clear();
         cache.faces.extend(iterator::vf_ccw_iter(self, v));
         for f in &cache.faces {
-            self.delete_face(*f, &mut cache.edges, &mut cache.vertices)?;
+            self.delete_face(
+                *f,
+                delete_isolated_vertices,
+                &mut cache.halfedges,
+                &mut cache.edges,
+                &mut cache.vertices,
+            )?;
         }
         self.vertex_status_mut(v)?.set_deleted(true);
         Ok(())
@@ -625,16 +640,18 @@ impl Topology {
     pub fn _delete_edge(
         &mut self,
         e: EH,
+        delete_isolated_vertices: bool,
+        hcache: &mut Vec<HH>,
         ecache: &mut Vec<EH>,
         vcache: &mut Vec<VH>,
     ) -> Result<(), Error> {
         let f0 = self.halfedge_face(self.edge_halfedge(e, false));
         let f1 = self.halfedge_face(self.edge_halfedge(e, true));
         if let Some(f) = f0 {
-            self.delete_face(f, ecache, vcache)?;
+            self.delete_face(f, delete_isolated_vertices, hcache, ecache, vcache)?;
         }
         if let Some(f) = f1 {
-            self.delete_face(f, ecache, vcache)?;
+            self.delete_face(f, delete_isolated_vertices, hcache, ecache, vcache)?;
         }
         // We deleted all faces incident on this edge. So the edge must already be deleted.
         debug_assert!(self.edge_status(e)?.deleted());
@@ -647,11 +664,81 @@ impl Topology {
 
     pub fn delete_face(
         &mut self,
-        _f: FH,
-        _ecache: &mut Vec<EH>,
-        _vcache: &mut Vec<VH>,
+        f: FH,
+        delete_isolated_vertices: bool,
+        hcache: &mut Vec<HH>,
+        ecache: &mut Vec<EH>,
+        vcache: &mut Vec<VH>,
     ) -> Result<(), Error> {
-        todo!()
+        {
+            let mut fs = self.face_status_mut(f)?;
+            // Check if the face was already deleted.
+            if fs.deleted() {
+                return Err(Error::DeletedFace(f));
+            }
+            fs.set_deleted(true); // Mark face deleted.
+        }
+        // Collect neighborhood topology.
+        ecache.clear();
+        vcache.clear();
+        hcache.clear();
+        hcache.extend(iterator::fh_ccw_iter(self, f));
+        for h in hcache.drain(..) {
+            self.halfedge_mut(h).face = None; // Disconnect from face.
+            if self.is_boundary_halfedge(self.opposite_halfedge(h)) {
+                ecache.push(self.halfedge_edge(h));
+            }
+            vcache.push(self.to_vertex(h));
+        }
+        // Delete collected topology.
+        for e in ecache.drain(..) {
+            let h0 = self.edge_halfedge(e, false);
+            let v0 = self.to_vertex(h0);
+            let next0 = self.next_halfedge(h0);
+            let prev0 = self.prev_halfedge(h0);
+            let h1 = self.edge_halfedge(e, true);
+            let v1 = self.to_vertex(h1);
+            let next1 = self.next_halfedge(h1);
+            let prev1 = self.prev_halfedge(h1);
+            // Adjust halfedge links and mark edge and halfedges deleted.
+            self.set_next_halfedge(prev0, next1);
+            self.set_next_halfedge(prev1, next0);
+            self.edge_status_mut(e)?.set_deleted(true);
+            {
+                let mut hstatus = self.hstatus.try_borrow_mut()?;
+                let hstatus: &mut Vec<Status> = &mut hstatus;
+                hstatus[h0.index() as usize].set_deleted(true);
+                hstatus[h1.index() as usize].set_deleted(true);
+            }
+            // Update vertices.
+            if self.vertex_halfedge(v0) == Some(h1) {
+                // Isolated?
+                if next0 == h1 {
+                    if delete_isolated_vertices {
+                        self.vertex_status_mut(v0)?.set_deleted(true);
+                    }
+                    self.vertex_mut(v0).halfedge = None;
+                } else {
+                    self.set_vertex_halfedge(v0, next0);
+                }
+            }
+            if self.vertex_halfedge(v1) == Some(h0) {
+                // Isolated?
+                if next1 == h0 {
+                    if delete_isolated_vertices {
+                        self.vertex_status_mut(v1)?.set_deleted(true);
+                    }
+                    self.vertex_mut(v1).halfedge = None;
+                } else {
+                    self.set_vertex_halfedge(v1, next1);
+                }
+            }
+        }
+        // Update outgoing halfedges.
+        for v in vcache.drain(..) {
+            self.adjust_outgoing_halfedge(v);
+        }
+        Ok(())
     }
 }
 
