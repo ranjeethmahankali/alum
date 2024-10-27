@@ -1,5 +1,5 @@
 use std::{
-    cell::RefCell,
+    cell::{Ref, RefCell, RefMut},
     marker::PhantomData,
     rc::{Rc, Weak},
 };
@@ -134,21 +134,30 @@ impl<H: Handle, T: TPropData> Property<H, T> {
         })
     }
 
-    pub fn get(&self, i: H) -> Result<T, Error> {
+    pub fn try_borrow<'a>(&'a self) -> Result<Ref<'a, Vec<T>>, Error> {
         self.data
             .try_borrow()
-            .map_err(|_| Error::BorrowedPropertyAccess)?
-            .get(i.index() as usize)
-            .ok_or(Error::OutOfBoundsAccess)
-            .copied()
+            .map_err(|_| Error::BorrowedPropertyAccess)
+    }
+
+    pub fn try_borrow_mut<'a>(&'a mut self) -> Result<RefMut<'a, Vec<T>>, Error> {
+        self.data
+            .try_borrow_mut()
+            .map_err(|_| Error::BorrowedPropertyAccess)
+    }
+
+    pub fn get<'a>(&'a self, i: H) -> Result<Ref<'a, T>, Error> {
+        Ok(Ref::map(self.try_borrow()?, |v| &v[i.index() as usize]))
+    }
+
+    pub fn get_mut<'a>(&'a mut self, i: H) -> Result<RefMut<'a, T>, Error> {
+        Ok(RefMut::map(self.try_borrow_mut()?, |v| {
+            &mut v[i.index() as usize]
+        }))
     }
 
     pub fn set(&mut self, i: H, val: T) -> Result<(), Error> {
-        let mut buf = self
-            .data
-            .try_borrow_mut()
-            .map_err(|_| Error::BorrowedPropertyAccess)?;
-        buf[i.index() as usize] = val;
+        (*self.get_mut(i)?) = val;
         Ok(())
     }
 }

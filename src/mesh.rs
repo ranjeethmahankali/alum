@@ -87,7 +87,7 @@ impl Mesh {
     }
 
     pub fn point(&self, vi: VH) -> Result<glam::Vec3, Error> {
-        self.points.get(vi)
+        Ok(*(self.points.get(vi)?))
     }
 
     pub fn from_vertex(&self, h: HH) -> VH {
