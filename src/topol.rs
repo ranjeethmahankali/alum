@@ -27,10 +27,10 @@ pub(crate) struct TopolCache {
     needs_adjust: Vec<bool>,
     next_cache: Vec<(HH, HH)>,
     tentative: Vec<TentativeEdge>,
-    halfedges: Vec<HH>,
-    faces: Vec<FH>,
-    edges: Vec<EH>,
-    vertices: Vec<VH>,
+    pub(crate) halfedges: Vec<HH>,
+    pub(crate) faces: Vec<FH>,
+    pub(crate) edges: Vec<EH>,
+    pub(crate) vertices: Vec<VH>,
 }
 
 impl TopolCache {
@@ -373,6 +373,10 @@ impl Topology {
         self.fprops.push_value()?;
         self.faces.push(Face { halfedge });
         Ok(fi.into())
+    }
+
+    pub fn set_halfedge_face(&mut self, h: HH, f: FH) {
+        self.halfedge_mut(h).face = Some(f);
     }
 
     pub fn set_vertex_halfedge(&mut self, v: VH, h: HH) {
@@ -737,6 +741,134 @@ impl Topology {
         // Update outgoing halfedges.
         for v in vcache.drain(..) {
             self.adjust_outgoing_halfedge(v);
+        }
+        Ok(())
+    }
+
+    pub fn garbage_collection(&mut self, cache: &mut TopolCache) -> Result<(), Error> {
+        // Setup mapping.
+        let vmap = &mut cache.vertices;
+        vmap.clear();
+        vmap.reserve(self.num_vertices());
+        vmap.extend(self.vertices());
+        let hmap = &mut cache.halfedges;
+        hmap.clear();
+        hmap.reserve(self.num_halfedges());
+        hmap.extend(self.halfedges());
+        let fmap = &mut cache.faces;
+        fmap.clear();
+        fmap.reserve(self.num_faces());
+        fmap.extend(self.faces());
+        // Remove vertices.
+        if self.num_vertices() > 0 {
+            let mut left = 0usize;
+            let mut right = self.num_vertices() - 1;
+            let newlen = loop {
+                // Find first deleted and last un-deleted.
+                // Use scope to borrow the status vector.
+                {
+                    let status = self.vstatus.try_borrow()?;
+                    let status: &Vec<Status> = &status;
+                    while !status[left].deleted() && left < right {
+                        left += 1;
+                    }
+                    while status[right].deleted() && left < right {
+                        right -= 1;
+                    }
+                    if left >= right {
+                        break if status[left].deleted() { left } else { right };
+                    }
+                }
+                // Swap.
+                self.vertices.swap(left, right);
+                vmap.swap(left, right);
+                self.vprops.swap(left, right)?;
+            };
+            self.vertices.truncate(newlen);
+            self.vprops.resize(self.num_vertices())?;
+        }
+        // Remove edges.
+        if self.num_edges() > 0 {
+            let mut left = 0usize;
+            let mut right = self.num_edges() - 1;
+            let newlen = loop {
+                // Find first deleted and last un-deleted.
+                // Use scope to borrow the status vector.
+                {
+                    let status = self.estatus.try_borrow()?;
+                    let status: &Vec<Status> = &status;
+                    while !status[left].deleted() && left < right {
+                        left += 1;
+                    }
+                    while status[right].deleted() && left < right {
+                        right -= 1;
+                    }
+                    if left >= right {
+                        break if status[left].deleted() { left } else { right };
+                    }
+                }
+                // Swap.
+                self.edges.swap(left, right);
+                hmap.swap(2 * left, 2 * right);
+                hmap.swap(2 * left + 1, 2 * right + 1);
+                self.eprops.swap(left, right)?;
+                self.hprops.swap(2 * left, 2 * right)?;
+                self.hprops.swap(2 * left + 1, 2 * right + 1)?;
+            };
+            self.edges.truncate(newlen);
+            self.eprops.resize(self.num_edges())?;
+            self.hprops.resize(self.num_halfedges())?;
+        }
+        // Remove faces.
+        if self.num_faces() > 0 {
+            let mut left = 0usize;
+            let mut right = self.num_faces() - 1;
+            let newlen = loop {
+                // Find first deleted and last un-deleted.
+                // Use scope to borrow the status vector.
+                {
+                    let status = self.fstatus.try_borrow()?;
+                    let status: &Vec<Status> = &status;
+                    while !status[left].deleted() && left < right {
+                        left += 1;
+                    }
+                    while status[right].deleted() && left < right {
+                        right -= 1;
+                    }
+                    if left >= right {
+                        break if status[left].deleted() { left } else { right };
+                    }
+                }
+                // Swap.
+                self.faces.swap(left, right);
+                fmap.swap(left, right);
+                self.fprops.swap(left, right)?;
+            };
+            self.faces.truncate(newlen);
+            self.fprops.resize(self.num_faces())?;
+        }
+        // Update handles of vertices.
+        for v in self.vertices.iter_mut() {
+            if let Some(h) = v.halfedge {
+                v.halfedge = Some(hmap[h.index() as usize]);
+            }
+        }
+        // Update edges vertices.
+        for e in self.edges.iter_mut() {
+            for h in e.halfedges.iter_mut() {
+                h.vertex = vmap[h.vertex.index() as usize];
+            }
+        }
+        // Update halfedge connectivity.
+        for h in self.halfedges() {
+            self.set_next_halfedge(h, hmap[self.next_halfedge(h).index() as usize]);
+            if let Some(f) = self.halfedge_face(h) {
+                self.set_halfedge_face(h, fmap[f.index() as usize]);
+            }
+        }
+        // Update handles of faces.
+        for f in self.faces.iter_mut() {
+            f.halfedge = hmap[f.halfedge.index() as usize];
         }
         Ok(())
     }

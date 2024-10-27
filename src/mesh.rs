@@ -284,4 +284,18 @@ impl Mesh {
         self.topol
             .delete_vertex(v, delete_isolated_vertices, &mut self.cache)
     }
+
+    pub fn delete_face(&mut self, f: FH, delete_isolated_vertices: bool) -> Result<(), Error> {
+        self.topol.delete_face(
+            f,
+            delete_isolated_vertices,
+            &mut self.cache.halfedges,
+            &mut self.cache.edges,
+            &mut self.cache.vertices,
+        )
+    }
+
+    pub fn garbage_collection(&mut self) -> Result<(), Error> {
+        self.topol.garbage_collection(&mut self.cache)
+    }
 }
