@@ -2,7 +2,7 @@ use crate::{
     element::{Edge, Face, Halfedge, Handle, Vertex, EH, FH, HH, VH},
     error::Error,
     iterator,
-    property::{PropertyContainer, TPropData, VProperty},
+    property::{EProperty, FProperty, HProperty, PropertyContainer, TPropData, VProperty},
 };
 
 enum TentativeEdge {
@@ -42,6 +42,8 @@ pub(crate) struct Topology {
     edges: Vec<Edge>,
     faces: Vec<Face>,
     vprops: PropertyContainer,
+    hprops: PropertyContainer,
+    eprops: PropertyContainer,
     fprops: PropertyContainer,
 }
 
@@ -52,6 +54,8 @@ impl Topology {
             edges: Vec::new(),
             faces: Vec::new(),
             vprops: PropertyContainer::new(),
+            hprops: PropertyContainer::new(),
+            eprops: PropertyContainer::new(),
             fprops: PropertyContainer::new(),
         }
     }
@@ -62,12 +66,26 @@ impl Topology {
             edges: Vec::with_capacity(nedges),
             faces: Vec::with_capacity(nfaces),
             vprops: PropertyContainer::new(),
+            hprops: PropertyContainer::new(),
+            eprops: PropertyContainer::new(),
             fprops: PropertyContainer::new(),
         }
     }
 
     pub fn create_vertex_prop<T: TPropData>(&mut self) -> VProperty<T> {
         VProperty::<T>::new(&mut self.vprops)
+    }
+
+    pub fn create_halfedge_prop<T: TPropData>(&mut self) -> HProperty<T> {
+        HProperty::<T>::new(&mut self.hprops)
+    }
+
+    pub fn create_edge_prop<T: TPropData>(&mut self) -> EProperty<T> {
+        EProperty::<T>::new(&mut self.eprops)
+    }
+
+    pub fn create_face_prop<T: TPropData>(&mut self) -> FProperty<T> {
+        FProperty::<T>::new(&mut self.fprops)
     }
 
     fn vertex(&self, v: VH) -> &Vertex {
@@ -205,25 +223,9 @@ impl Topology {
 
     pub fn add_vertex(&mut self) -> Result<VH, Error> {
         let vi = self.vertices.len() as u32;
-        self.vertices.push(Vertex { halfedge: None });
         self.vprops.push_value()?;
+        self.vertices.push(Vertex { halfedge: None });
         Ok(vi.into())
-    }
-
-    fn new_face(&mut self, halfedge: HH) -> Result<FH, Error> {
-        let fi = self.faces.len() as u32;
-        self.fprops.push_value()?;
-        self.faces.push(Face { halfedge });
-        Ok(fi.into())
-    }
-
-    pub fn set_vertex_halfedge(&mut self, v: VH, h: HH) {
-        self.vertices[v.index() as usize].halfedge = Some(h);
-    }
-
-    pub fn set_next_halfedge(&mut self, hprev: HH, hnext: HH) {
-        self.halfedge_mut(hprev).next = hnext;
-        self.halfedge_mut(hnext).prev = hprev;
     }
 
     fn new_edge(
@@ -234,8 +236,12 @@ impl Topology {
         next: HH,
         opp_prev: HH,
         opp_next: HH,
-    ) -> u32 {
+    ) -> Result<u32, Error> {
         let ei = self.edges.len() as u32;
+        self.eprops.push_value()?;
+        for _ in 0..2 {
+            self.hprops.push_value()?;
+        }
         self.edges.push(Edge {
             halfedges: [
                 Halfedge {
@@ -252,7 +258,23 @@ impl Topology {
                 },
             ],
         });
-        ei
+        Ok(ei)
+    }
+
+    fn new_face(&mut self, halfedge: HH) -> Result<FH, Error> {
+        let fi = self.faces.len() as u32;
+        self.fprops.push_value()?;
+        self.faces.push(Face { halfedge });
+        Ok(fi.into())
+    }
+
+    pub fn set_vertex_halfedge(&mut self, v: VH, h: HH) {
+        self.vertices[v.index() as usize].halfedge = Some(h);
+    }
+
+    pub fn set_next_halfedge(&mut self, hprev: HH, hnext: HH) {
+        self.halfedge_mut(hprev).next = hnext;
+        self.halfedge_mut(hnext).prev = hprev;
     }
 
     pub fn add_face(&mut self, verts: &[VH], cache: &mut TopolCache) -> Result<FH, Error> {
@@ -448,7 +470,7 @@ impl Topology {
                         next.expect(ERR),
                         opp_prev.expect(ERR),
                         opp_next.expect(ERR),
-                    );
+                    )?;
                     assert_eq!(*index >> 1, ei, "Failed to create an edge loop");
                     index.into()
                 }

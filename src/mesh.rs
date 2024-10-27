@@ -1,15 +1,22 @@
+use std::cell::Ref;
+
 use crate::{
     element::{EH, FH, HH, VH},
     error::Error,
     iterator,
-    property::VProperty,
+    property::{EProperty, FProperty, HProperty, VProperty},
+    status::Status,
     topol::{TopolCache, Topology},
 };
 
 pub struct Mesh {
     topol: Topology,
-    cache: TopolCache,
     points: VProperty<glam::Vec3>,
+    vstatus: VProperty<Status>,
+    hstatus: HProperty<Status>,
+    estatus: EProperty<Status>,
+    fstatus: FProperty<Status>,
+    cache: TopolCache,
 }
 
 impl Default for Mesh {
@@ -21,20 +28,40 @@ impl Default for Mesh {
 impl Mesh {
     pub fn new() -> Self {
         let mut topol = Topology::new();
-        let points = topol.create_vertex_prop::<glam::Vec3>();
+        let (points, vstatus, hstatus, estatus, fstatus) = (
+            topol.create_vertex_prop(),
+            topol.create_vertex_prop(),
+            topol.create_halfedge_prop(),
+            topol.create_edge_prop(),
+            topol.create_face_prop(),
+        );
         Mesh {
             topol,
             points,
+            vstatus,
+            hstatus,
+            estatus,
+            fstatus,
             cache: TopolCache::default(),
         }
     }
 
     pub fn with_capacity(nverts: usize, nedges: usize, nfaces: usize) -> Self {
         let mut topol = Topology::with_capacity(nverts, nedges, nfaces);
-        let points = topol.create_vertex_prop::<glam::Vec3>();
+        let (points, vstatus, hstatus, estatus, fstatus) = (
+            topol.create_vertex_prop(),
+            topol.create_vertex_prop(),
+            topol.create_halfedge_prop(),
+            topol.create_edge_prop(),
+            topol.create_face_prop(),
+        );
         Mesh {
             topol,
             points,
+            vstatus,
+            hstatus,
+            estatus,
+            fstatus,
             cache: TopolCache::default(),
         }
     }
@@ -89,6 +116,22 @@ impl Mesh {
 
     pub fn point(&self, vi: VH) -> Result<glam::Vec3, Error> {
         Ok(*(self.points.get(vi)?))
+    }
+
+    pub fn vertex_status<'a>(&'a self, v: VH) -> Result<Ref<'a, Status>, Error> {
+        self.vstatus.get(v)
+    }
+
+    pub fn halfedge_status<'a>(&'a self, h: HH) -> Result<Ref<'a, Status>, Error> {
+        self.hstatus.get(h)
+    }
+
+    pub fn edge_status<'a>(&'a self, e: EH) -> Result<Ref<'a, Status>, Error> {
+        self.estatus.get(e)
+    }
+
+    pub fn face_status<'a>(&'a self, f: FH) -> Result<Ref<'a, Status>, Error> {
+        self.fstatus.get(f)
     }
 
     pub fn from_vertex(&self, h: HH) -> VH {

@@ -1,3 +1,5 @@
+use crate::property::TPropData;
+
 const DELETED: u8 = 1 << 0;
 const LOCKED: u8 = 1 << 1;
 const SELECTED: u8 = 1 << 2;
@@ -11,6 +13,8 @@ const UNUSED: u8 = 1 << 7;
 pub struct Status {
     flags: u8,
 }
+
+impl TPropData for Status {}
 
 impl Default for Status {
     fn default() -> Self {
