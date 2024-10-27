@@ -191,6 +191,22 @@ impl Topology {
         FProperty::<T>::new(&mut self.fprops)
     }
 
+    pub fn is_valid_vertex(&self, v: VH) -> bool {
+        (v.index() as usize) < self.num_vertices()
+    }
+
+    pub fn is_valid_halfedge(&self, h: HH) -> bool {
+        (h.index() as usize) < self.num_halfedges()
+    }
+
+    pub fn is_valid_edge(&self, e: EH) -> bool {
+        (e.index() as usize) < self.num_edges()
+    }
+
+    pub fn is_valid_face(&self, f: FH) -> bool {
+        (f.index() as usize) < self.num_faces()
+    }
+
     fn vertex(&self, v: VH) -> &Vertex {
         &self.vertices[v.index() as usize]
     }

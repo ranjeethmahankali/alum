@@ -98,6 +98,22 @@ impl Mesh {
         self.topol.faces()
     }
 
+    pub fn is_valid_vertex(&self, v: VH) -> bool {
+        self.topol.is_valid_vertex(v)
+    }
+
+    pub fn is_valid_halfedge(&self, h: HH) -> bool {
+        self.topol.is_valid_halfedge(h)
+    }
+
+    pub fn is_valid_edge(&self, e: EH) -> bool {
+        self.topol.is_valid_edge(e)
+    }
+
+    pub fn is_valid_face(&self, f: FH) -> bool {
+        self.topol.is_valid_face(f)
+    }
+
     pub fn is_manifold_vertex(&self, v: VH) -> bool {
         self.topol.is_manifold_vertex(v)
     }
