@@ -961,4 +961,25 @@ mod test {
         assert!(mesh.is_manifold_vertex(6.into()));
         assert!(mesh.is_manifold_vertex(5.into()));
     }
+
+    #[test]
+    fn t_quad_box_prop_len() {
+        let qbox = quad_box();
+        assert_eq!(
+            qbox.num_vertices(),
+            qbox.vprops.len().expect("Cannot read length of property")
+        );
+        assert_eq!(
+            qbox.num_halfedges(),
+            qbox.hprops.len().expect("Cannot read length of property")
+        );
+        assert_eq!(
+            qbox.num_edges(),
+            qbox.eprops.len().expect("Cannot read length of property")
+        );
+        assert_eq!(
+            qbox.num_faces(),
+            qbox.fprops.len().expect("Cannot read length of property")
+        );
+    }
 }
