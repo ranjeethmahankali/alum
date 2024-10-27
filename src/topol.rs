@@ -601,9 +601,9 @@ impl Topology {
             self.set_next_halfedge(prev, next);
         }
         // Adjust vertices' halfedge handles.
-        for i in 0..verts.len() {
+        for (i, vert) in verts.iter().enumerate() {
             if cache.needs_adjust[i] {
-                self.adjust_outgoing_halfedge(verts[i]);
+                self.adjust_outgoing_halfedge(*vert);
             }
         }
         Ok(fnew)
