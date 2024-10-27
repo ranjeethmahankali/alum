@@ -1293,6 +1293,16 @@ mod test {
         for v in qbox.vertices() {
             assert_eq!(qbox.is_boundary_vertex(v), v.index() > 3);
         }
+        assert_eq!(
+            4,
+            qbox.edges().filter(|e| qbox.is_boundary_edge(*e)).count()
+        );
+        assert_eq!(
+            4,
+            qbox.vertices()
+                .filter(|v| qbox.is_boundary_vertex(*v))
+                .count()
+        );
     }
 
     #[test]
@@ -1333,6 +1343,16 @@ mod test {
         assert_eq!(qbox.num_faces(), 4);
         assert_eq!(qbox.num_edges(), 11);
         assert_eq!(qbox.num_vertices(), 8);
+        assert_eq!(
+            6,
+            qbox.edges().filter(|e| qbox.is_boundary_edge(*e)).count()
+        );
+        assert_eq!(
+            6,
+            qbox.vertices()
+                .filter(|v| qbox.is_boundary_vertex(*v))
+                .count()
+        );
     }
 
     #[test]
@@ -1355,5 +1375,15 @@ mod test {
         assert_eq!(qbox.num_edges(), 9);
         assert_eq!(qbox.num_halfedges(), 18);
         assert_eq!(qbox.num_faces(), 3);
+        assert_eq!(
+            6,
+            qbox.edges().filter(|e| qbox.is_boundary_edge(*e)).count()
+        );
+        assert_eq!(
+            6,
+            qbox.vertices()
+                .filter(|v| qbox.is_boundary_vertex(*v))
+                .count()
+        );
     }
 }
