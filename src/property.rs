@@ -318,5 +318,12 @@ mod test {
         );
         container.garbage_collection();
         assert_eq!(container.num_props(), 0);
+        let mut _prop = Some(VProperty::<u8>::new(&mut container));
+        assert_eq!(container.num_props(), 1);
+        _prop = None;
+        assert_eq!(container.num_props(), 1);
+        assert!(!container.props[0].is_valid());
+        container.garbage_collection();
+        assert_eq!(container.num_props(), 0);
     }
 }
