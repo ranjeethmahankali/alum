@@ -48,10 +48,10 @@ pub(crate) struct Topology {
     hstatus: HProperty<Status>,
     estatus: EProperty<Status>,
     fstatus: FProperty<Status>,
-    vprops: PropertyContainer,
-    hprops: PropertyContainer,
-    eprops: PropertyContainer,
-    fprops: PropertyContainer,
+    pub(crate) vprops: PropertyContainer,
+    pub(crate) hprops: PropertyContainer,
+    pub(crate) eprops: PropertyContainer,
+    pub(crate) fprops: PropertyContainer,
 }
 
 impl Topology {

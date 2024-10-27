@@ -34,7 +34,7 @@ impl Mesh {
 
     pub fn with_capacity(nverts: usize, nedges: usize, nfaces: usize) -> Self {
         let mut topol = Topology::with_capacity(nverts, nedges, nfaces);
-        let points = topol.create_vertex_prop(); // TODO: Create this property with the proper capacity.
+        let points = VProperty::with_capacity(nverts, &mut topol.vprops);
         Mesh {
             topol,
             points,
