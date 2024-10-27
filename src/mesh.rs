@@ -4,7 +4,7 @@ use crate::{
     element::{EH, FH, HH, VH},
     error::Error,
     iterator,
-    property::{EProperty, FProperty, HProperty, VProperty},
+    property::{EProperty, FProperty, HProperty, TPropData, VProperty},
     status::Status,
     topol::{TopolCache, Topology},
 };
@@ -12,10 +12,6 @@ use crate::{
 pub struct Mesh {
     topol: Topology,
     points: VProperty<glam::Vec3>,
-    vstatus: VProperty<Status>,
-    hstatus: HProperty<Status>,
-    estatus: EProperty<Status>,
-    fstatus: FProperty<Status>,
     cache: TopolCache,
 }
 
@@ -28,42 +24,38 @@ impl Default for Mesh {
 impl Mesh {
     pub fn new() -> Self {
         let mut topol = Topology::new();
-        let (points, vstatus, hstatus, estatus, fstatus) = (
-            topol.create_vertex_prop(),
-            topol.create_vertex_prop(),
-            topol.create_halfedge_prop(),
-            topol.create_edge_prop(),
-            topol.create_face_prop(),
-        );
+        let points = topol.create_vertex_prop();
         Mesh {
             topol,
             points,
-            vstatus,
-            hstatus,
-            estatus,
-            fstatus,
             cache: TopolCache::default(),
         }
     }
 
     pub fn with_capacity(nverts: usize, nedges: usize, nfaces: usize) -> Self {
         let mut topol = Topology::with_capacity(nverts, nedges, nfaces);
-        let (points, vstatus, hstatus, estatus, fstatus) = (
-            topol.create_vertex_prop(),
-            topol.create_vertex_prop(),
-            topol.create_halfedge_prop(),
-            topol.create_edge_prop(),
-            topol.create_face_prop(),
-        );
+        let points = topol.create_vertex_prop(); // TODO: Create this property with the proper capacity.
         Mesh {
             topol,
             points,
-            vstatus,
-            hstatus,
-            estatus,
-            fstatus,
             cache: TopolCache::default(),
         }
+    }
+
+    pub fn create_vertex_prop<T: TPropData>(&mut self) -> VProperty<T> {
+        self.topol.create_vertex_prop()
+    }
+
+    pub fn create_halfedge_prop<T: TPropData>(&mut self) -> HProperty<T> {
+        self.topol.create_halfedge_prop()
+    }
+
+    pub fn create_edge_prop<T: TPropData>(&mut self) -> EProperty<T> {
+        self.topol.create_edge_prop()
+    }
+
+    pub fn create_face_prop<T: TPropData>(&mut self) -> FProperty<T> {
+        self.topol.create_face_prop()
     }
 
     pub fn num_vertices(&self) -> usize {
@@ -119,19 +111,19 @@ impl Mesh {
     }
 
     pub fn vertex_status<'a>(&'a self, v: VH) -> Result<Ref<'a, Status>, Error> {
-        self.vstatus.get(v)
+        self.topol.vertex_status(v)
     }
 
     pub fn halfedge_status<'a>(&'a self, h: HH) -> Result<Ref<'a, Status>, Error> {
-        self.hstatus.get(h)
+        self.topol.halfedge_status(h)
     }
 
     pub fn edge_status<'a>(&'a self, e: EH) -> Result<Ref<'a, Status>, Error> {
-        self.estatus.get(e)
+        self.topol.edge_status(e)
     }
 
     pub fn face_status<'a>(&'a self, f: FH) -> Result<Ref<'a, Status>, Error> {
-        self.fstatus.get(f)
+        self.topol.face_status(f)
     }
 
     pub fn from_vertex(&self, h: HH) -> VH {

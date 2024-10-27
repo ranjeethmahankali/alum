@@ -1,8 +1,11 @@
+use std::cell::Ref;
+
 use crate::{
     element::{Edge, Face, Halfedge, Handle, Vertex, EH, FH, HH, VH},
     error::Error,
     iterator,
     property::{EProperty, FProperty, HProperty, PropertyContainer, TPropData, VProperty},
+    status::Status,
 };
 
 enum TentativeEdge {
@@ -41,6 +44,10 @@ pub(crate) struct Topology {
     vertices: Vec<Vertex>,
     edges: Vec<Edge>,
     faces: Vec<Face>,
+    vstatus: VProperty<Status>,
+    hstatus: HProperty<Status>,
+    estatus: EProperty<Status>,
+    fstatus: FProperty<Status>,
     vprops: PropertyContainer,
     hprops: PropertyContainer,
     eprops: PropertyContainer,
@@ -49,27 +56,75 @@ pub(crate) struct Topology {
 
 impl Topology {
     pub fn new() -> Self {
+        let (mut vprops, mut hprops, mut eprops, mut fprops) = (
+            PropertyContainer::default(),
+            PropertyContainer::default(),
+            PropertyContainer::default(),
+            PropertyContainer::default(),
+        );
+        let (vstatus, hstatus, estatus, fstatus) = (
+            VProperty::new(&mut vprops),
+            HProperty::new(&mut hprops),
+            EProperty::new(&mut eprops),
+            FProperty::new(&mut fprops),
+        );
         Topology {
             vertices: Vec::new(),
             edges: Vec::new(),
             faces: Vec::new(),
-            vprops: PropertyContainer::new(),
-            hprops: PropertyContainer::new(),
-            eprops: PropertyContainer::new(),
-            fprops: PropertyContainer::new(),
+            vstatus,
+            hstatus,
+            estatus,
+            fstatus,
+            vprops,
+            hprops,
+            eprops,
+            fprops,
         }
     }
 
     pub fn with_capacity(nverts: usize, nedges: usize, nfaces: usize) -> Self {
+        let (mut vprops, mut hprops, mut eprops, mut fprops) = (
+            PropertyContainer::default(),
+            PropertyContainer::default(),
+            PropertyContainer::default(),
+            PropertyContainer::default(),
+        );
+        let (vstatus, hstatus, estatus, fstatus) = (
+            VProperty::with_capacity(nverts, &mut vprops),
+            HProperty::with_capacity(nedges * 2, &mut hprops),
+            EProperty::with_capacity(nedges, &mut eprops),
+            FProperty::with_capacity(nfaces, &mut fprops),
+        );
         Topology {
             vertices: Vec::with_capacity(nverts),
             edges: Vec::with_capacity(nedges),
             faces: Vec::with_capacity(nfaces),
-            vprops: PropertyContainer::new(),
-            hprops: PropertyContainer::new(),
-            eprops: PropertyContainer::new(),
-            fprops: PropertyContainer::new(),
+            vstatus,
+            hstatus,
+            estatus,
+            fstatus,
+            vprops,
+            hprops,
+            eprops,
+            fprops,
         }
+    }
+
+    pub fn vertex_status<'a>(&'a self, v: VH) -> Result<Ref<'a, Status>, Error> {
+        self.vstatus.get(v)
+    }
+
+    pub fn halfedge_status<'a>(&'a self, h: HH) -> Result<Ref<'a, Status>, Error> {
+        self.hstatus.get(h)
+    }
+
+    pub fn edge_status<'a>(&'a self, e: EH) -> Result<Ref<'a, Status>, Error> {
+        self.estatus.get(e)
+    }
+
+    pub fn face_status<'a>(&'a self, f: FH) -> Result<Ref<'a, Status>, Error> {
+        self.fstatus.get(f)
     }
 
     pub fn create_vertex_prop<T: TPropData>(&mut self) -> VProperty<T> {
