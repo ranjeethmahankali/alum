@@ -1,4 +1,4 @@
-use crate::topol::{HH, VH};
+use crate::element::{HH, VH};
 
 #[derive(Debug)]
 pub enum Error {

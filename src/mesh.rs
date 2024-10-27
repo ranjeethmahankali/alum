@@ -1,14 +1,18 @@
+use std::cell::Ref;
+
 use crate::{
+    element::{EH, FH, HH, VH},
     error::Error,
     iterator,
-    property::VProperty,
-    topol::{TopolCache, Topology, EH, FH, HH, VH},
+    property::{EProperty, FProperty, HProperty, TPropData, VProperty},
+    status::Status,
+    topol::{TopolCache, Topology},
 };
 
 pub struct Mesh {
     topol: Topology,
-    cache: TopolCache,
     points: VProperty<glam::Vec3>,
+    cache: TopolCache,
 }
 
 impl Default for Mesh {
@@ -20,7 +24,7 @@ impl Default for Mesh {
 impl Mesh {
     pub fn new() -> Self {
         let mut topol = Topology::new();
-        let points = topol.create_vertex_prop::<glam::Vec3>();
+        let points = topol.create_vertex_prop();
         Mesh {
             topol,
             points,
@@ -30,12 +34,36 @@ impl Mesh {
 
     pub fn with_capacity(nverts: usize, nedges: usize, nfaces: usize) -> Self {
         let mut topol = Topology::with_capacity(nverts, nedges, nfaces);
-        let points = topol.create_vertex_prop::<glam::Vec3>();
+        let points = VProperty::with_capacity(nverts, &mut topol.vprops);
         Mesh {
             topol,
             points,
             cache: TopolCache::default(),
         }
+    }
+
+    pub fn create_vertex_prop<T: TPropData>(&mut self) -> VProperty<T> {
+        self.topol.create_vertex_prop()
+    }
+
+    pub fn create_halfedge_prop<T: TPropData>(&mut self) -> HProperty<T> {
+        self.topol.create_halfedge_prop()
+    }
+
+    pub fn create_edge_prop<T: TPropData>(&mut self) -> EProperty<T> {
+        self.topol.create_edge_prop()
+    }
+
+    pub fn create_face_prop<T: TPropData>(&mut self) -> FProperty<T> {
+        self.topol.create_face_prop()
+    }
+
+    pub fn reserve(&mut self, nverts: usize, nedges: usize, nfaces: usize) -> Result<(), Error> {
+        self.topol.reserve(nverts, nedges, nfaces)
+    }
+
+    pub fn clear(&mut self) -> Result<(), Error> {
+        self.topol.clear()
     }
 
     pub fn num_vertices(&self) -> usize {
@@ -87,7 +115,23 @@ impl Mesh {
     }
 
     pub fn point(&self, vi: VH) -> Result<glam::Vec3, Error> {
-        self.points.get(vi)
+        Ok(*(self.points.get(vi)?))
+    }
+
+    pub fn vertex_status<'a>(&'a self, v: VH) -> Result<Ref<'a, Status>, Error> {
+        self.topol.vertex_status(v)
+    }
+
+    pub fn halfedge_status<'a>(&'a self, h: HH) -> Result<Ref<'a, Status>, Error> {
+        self.topol.halfedge_status(h)
+    }
+
+    pub fn edge_status<'a>(&'a self, e: EH) -> Result<Ref<'a, Status>, Error> {
+        self.topol.edge_status(e)
+    }
+
+    pub fn face_status<'a>(&'a self, f: FH) -> Result<Ref<'a, Status>, Error> {
+        self.topol.face_status(f)
     }
 
     pub fn from_vertex(&self, h: HH) -> VH {
@@ -102,11 +146,11 @@ impl Mesh {
         self.topol.face_halfedge(f)
     }
 
-    pub const fn halfedge_edge(&self, h: HH) -> EH {
+    pub fn halfedge_edge(&self, h: HH) -> EH {
         self.topol.halfedge_edge(h)
     }
 
-    pub const fn edge_halfedge(&self, e: EH, flag: bool) -> HH {
+    pub fn edge_halfedge(&self, e: EH, flag: bool) -> HH {
         self.topol.edge_halfedge(e, flag)
     }
 
