@@ -10,17 +10,13 @@ const TAGGED2: u8 = 1 << 6;
 const UNUSED: u8 = 1 << 7;
 
 #[derive(Clone, Copy)]
+#[derive(Default)]
 pub struct Status {
     flags: u8,
 }
 
 impl TPropData for Status {}
 
-impl Default for Status {
-    fn default() -> Self {
-        Self { flags: 0 }
-    }
-}
 
 impl Status {
     fn check(&self, i: u8) -> bool {

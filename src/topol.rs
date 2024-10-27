@@ -143,35 +143,35 @@ impl Topology {
         Ok(())
     }
 
-    pub fn vertex_status<'a>(&'a self, v: VH) -> Result<Ref<'a, Status>, Error> {
+    pub fn vertex_status(&self, v: VH) -> Result<Ref<'_, Status>, Error> {
         self.vstatus.get(v)
     }
 
-    pub fn vertex_status_mut<'a>(&'a mut self, v: VH) -> Result<RefMut<'a, Status>, Error> {
+    pub fn vertex_status_mut(&mut self, v: VH) -> Result<RefMut<'_, Status>, Error> {
         self.vstatus.get_mut(v)
     }
 
-    pub fn halfedge_status<'a>(&'a self, h: HH) -> Result<Ref<'a, Status>, Error> {
+    pub fn halfedge_status(&self, h: HH) -> Result<Ref<'_, Status>, Error> {
         self.hstatus.get(h)
     }
 
-    pub fn halfedge_status_mut<'a>(&'a mut self, h: HH) -> Result<RefMut<'a, Status>, Error> {
+    pub fn halfedge_status_mut(&mut self, h: HH) -> Result<RefMut<'_, Status>, Error> {
         self.hstatus.get_mut(h)
     }
 
-    pub fn edge_status<'a>(&'a self, e: EH) -> Result<Ref<'a, Status>, Error> {
+    pub fn edge_status(&self, e: EH) -> Result<Ref<'_, Status>, Error> {
         self.estatus.get(e)
     }
 
-    pub fn edge_status_mut<'a>(&'a mut self, e: EH) -> Result<RefMut<'a, Status>, Error> {
+    pub fn edge_status_mut(&mut self, e: EH) -> Result<RefMut<'_, Status>, Error> {
         self.estatus.get_mut(e)
     }
 
-    pub fn face_status<'a>(&'a self, f: FH) -> Result<Ref<'a, Status>, Error> {
+    pub fn face_status(&self, f: FH) -> Result<Ref<'_, Status>, Error> {
         self.fstatus.get(f)
     }
 
-    pub fn face_status_mut<'a>(&'a mut self, f: FH) -> Result<RefMut<'a, Status>, Error> {
+    pub fn face_status_mut(&mut self, f: FH) -> Result<RefMut<'_, Status>, Error> {
         self.fstatus.get_mut(f)
     }
 
