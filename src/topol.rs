@@ -641,7 +641,7 @@ impl Topology {
         Ok(())
     }
 
-    pub fn _delete_edge(
+    pub fn delete_edge(
         &mut self,
         e: EH,
         delete_isolated_vertices: bool,
@@ -1299,7 +1299,7 @@ mod test {
     fn t_quad_box_delete_edge() {
         let mut qbox = quad_box();
         let mut cache = TopolCache::default();
-        qbox._delete_edge(
+        qbox.delete_edge(
             qbox.halfedge_edge(
                 qbox.find_halfedge(5.into(), 6.into())
                     .expect("Cannot find halfedge"),

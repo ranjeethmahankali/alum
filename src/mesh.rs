@@ -295,6 +295,16 @@ impl Mesh {
         )
     }
 
+    pub fn delete_edge(&mut self, e: EH, delete_isolated_vertices: bool) -> Result<(), Error> {
+        self.topol.delete_edge(
+            e,
+            delete_isolated_vertices,
+            &mut self.cache.halfedges,
+            &mut self.cache.edges,
+            &mut self.cache.vertices,
+        )
+    }
+
     pub fn garbage_collection(&mut self) -> Result<(), Error> {
         self.topol.garbage_collection(&mut self.cache)
     }
