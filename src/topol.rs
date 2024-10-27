@@ -877,6 +877,11 @@ impl Topology {
         for f in self.faces.iter_mut() {
             f.halfedge = hmap[f.halfedge.index() as usize];
         }
+        // Clean up properties.
+        self.vprops.garbage_collection();
+        self.hprops.garbage_collection();
+        self.eprops.garbage_collection();
+        self.fprops.garbage_collection();
         Ok(())
     }
 }
