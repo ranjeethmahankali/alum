@@ -776,7 +776,7 @@ impl Topology {
                         right -= 1;
                     }
                     if left >= right {
-                        break if status[left].deleted() { left } else { right };
+                        break left + if status[left].deleted() { 0 } else { 1 };
                     }
                 }
                 // Swap.
@@ -804,7 +804,7 @@ impl Topology {
                         right -= 1;
                     }
                     if left >= right {
-                        break if status[left].deleted() { left } else { right };
+                        break left + if status[left].deleted() { 0 } else { 1 };
                     }
                 }
                 // Swap.
@@ -836,7 +836,7 @@ impl Topology {
                         right -= 1;
                     }
                     if left >= right {
-                        break if status[left].deleted() { left } else { right };
+                        break left + if status[left].deleted() { 0 } else { 1 };
                     }
                 }
                 // Swap.
@@ -1267,5 +1267,93 @@ mod test {
             qbox.num_faces(),
             qbox.fprops.len().expect("Cannot read length of property")
         );
+    }
+
+    #[test]
+    fn t_quad_box_delete_face() {
+        let mut qbox = quad_box();
+        let mut cache = TopolCache::default();
+        qbox.delete_face(
+            5.into(),
+            true,
+            &mut cache.halfedges,
+            &mut cache.edges,
+            &mut cache.vertices,
+        )
+        .expect("Cannot delete face");
+        assert!(qbox
+            .face_status(5.into())
+            .expect("Cannot read face status")
+            .deleted());
+        qbox.garbage_collection(&mut cache)
+            .expect("Cannot garbage collect mesh");
+        assert_eq!(qbox.num_faces(), 5);
+        assert_eq!(qbox.num_edges(), 12);
+        assert_eq!(qbox.num_vertices(), 8);
+        for v in qbox.vertices() {
+            assert_eq!(qbox.is_boundary_vertex(v), v.index() > 3);
+        }
+    }
+
+    #[test]
+    fn t_quad_box_delete_edge() {
+        let mut qbox = quad_box();
+        let mut cache = TopolCache::default();
+        qbox._delete_edge(
+            qbox.halfedge_edge(
+                qbox.find_halfedge(5.into(), 6.into())
+                    .expect("Cannot find halfedge"),
+            ),
+            true,
+            &mut cache.halfedges,
+            &mut cache.edges,
+            &mut cache.vertices,
+        )
+        .expect("Cannot delete edge");
+        assert_eq!(
+            11,
+            qbox.edges()
+                .filter(|e| !qbox
+                    .edge_status(*e)
+                    .expect("Cannot read edge status")
+                    .deleted())
+                .count()
+        );
+        assert_eq!(
+            4,
+            qbox.faces()
+                .filter(|f| !qbox
+                    .face_status(*f)
+                    .expect("Cannot read face status")
+                    .deleted())
+                .count()
+        );
+        qbox.garbage_collection(&mut cache)
+            .expect("Failed to garbage collect");
+        assert_eq!(qbox.num_faces(), 4);
+        assert_eq!(qbox.num_edges(), 11);
+        assert_eq!(qbox.num_vertices(), 8);
+    }
+
+    #[test]
+    fn t_quad_box_delete_vertex() {
+        let mut qbox = quad_box();
+        let mut cache = TopolCache::default();
+        qbox.delete_vertex(5.into(), true, &mut cache)
+            .expect("Cannot delete face");
+        for v in qbox.vertices() {
+            assert_eq!(
+                qbox.vertex_status(v)
+                    .expect("Cannot read vertex status")
+                    .deleted(),
+                v.index() == 5
+            );
+        }
+        qbox.garbage_collection(&mut cache)
+            .expect("Garbage collection failed");
+        assert_eq!(qbox.num_vertices(), 7);
+        assert_eq!(qbox.num_edges(), 9);
+        assert_eq!(qbox.num_halfedges(), 18);
+        assert_eq!(qbox.num_faces(), 3);
     }
 }
