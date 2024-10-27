@@ -76,7 +76,7 @@ impl PropertyContainer {
             None => return Ok(0),
         };
         for prop in self.props.iter().skip(1) {
-            assert_eq!(first, prop.len()?);
+            debug_assert_eq!(first, prop.len()?);
         }
         Ok(first)
     }
