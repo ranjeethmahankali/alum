@@ -42,34 +42,32 @@ where
     VecT: Add<Output = VecT> + Sub<Output = VecT> + Div<VecT::Scalar, Output = VecT>,
 {
     pub fn calc_face_normal(&self, f: FH) -> Result<VecT, Error> {
-        let nverts = self.face_valence(f);
+        // Use newell's method to compute the normal.
+        let (nverts, x, y, z) = {
+            // Borrow points inside the scope to limit their lifetime.
+            let points = self.points().try_borrow()?;
+            let points: &Vec<VecT> = &points;
+            iterator::fh_ccw_iter(self.topology(), f).fold(
+                (0usize, 0.0.into(), 0.0.into(), 0.0.into()),
+                |(nverts, x, y, z): (usize, VecT::Scalar, VecT::Scalar, VecT::Scalar), h| {
+                    let (a, b) = {
+                        let pc = points[self.from_vertex(h).index() as usize];
+                        let pn = points[self.to_vertex(h).index() as usize];
+                        (pc - pn, pc + pn)
+                    };
+                    (
+                        nverts + 1,
+                        x + a.y() * b.z(),
+                        y + a.z() * b.x(),
+                        z + a.x() * b.y(),
+                    )
+                },
+            )
+        };
         if nverts < 3 {
             // Guard against degenerate cases.
             return Ok(VecT::new(0.0.into(), 0.0.into(), 0.0.into()));
         }
-        // Use newell's method to compute the normal.
-        let (x, y, z) = {
-            // Borrow points inside the scope to limit their lifetime.
-            let points = self.points().try_borrow()?;
-            let points: &Vec<VecT> = &points;
-            iterator::fv_ccw_iter(self.topology(), f)
-                .chain(iterator::fv_ccw_iter(self.topology(), f))
-                .skip(1)
-                .zip(iterator::fv_ccw_iter(self.topology(), f))
-                .take(nverts)
-                .fold(
-                    (0.0.into(), 0.0.into(), 0.0.into()),
-                    |(x, y, z): (VecT::Scalar, VecT::Scalar, VecT::Scalar), (next, curr)| {
-                        // http://www.opengl.org/wiki/Calculating_a_Surface_Normal
-                        let (a, b) = {
-                            let pc = points[curr.index() as usize];
-                            let pn = points[next.index() as usize];
-                            (pc - pn, pc + pn)
-                        };
-                        (x + a.y() * b.z(), y + a.z() * b.x(), z + a.x() * b.y())
-                    },
-                )
-        };
         Ok(VecT::new(x, y, z).normalized())
     }
 

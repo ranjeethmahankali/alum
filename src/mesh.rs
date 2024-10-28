@@ -1,7 +1,7 @@
 use std::cell::{Ref, RefMut};
 
 use crate::{
-    element::{EH, FH, HH, VH},
+    element::{Handle, EH, FH, HH, VH},
     error::Error,
     iterator,
     property::{EProperty, FProperty, HProperty, TPropData, VProperty},
@@ -179,6 +179,10 @@ impl<VecT: TVec3> PolyMeshT<VecT> {
         self.topol.face_status_mut(f)
     }
 
+    pub fn to_vertex(&self, h: HH) -> VH {
+        self.topol.to_vertex(h)
+    }
+
     pub fn from_vertex(&self, h: HH) -> VH {
         self.topol.from_vertex(h)
     }
@@ -295,6 +299,22 @@ impl<VecT: TVec3> PolyMeshT<VecT> {
         let vi = self.topol.add_vertex()?;
         self.points.set(vi, pos)?;
         Ok(vi)
+    }
+
+    pub fn add_vertices(&mut self, pos: &[VecT], dst: &mut [VH]) -> Result<(), Error> {
+        if pos.len() != dst.len() {
+            return Err(Error::MismatchedArrayLengths(pos.len(), dst.len()));
+        }
+        self.topol.add_vertices(dst)?;
+        let verts: &[VH] = dst; // Make immutable.
+        {
+            let mut points = self.points.try_borrow_mut()?;
+            let points: &mut [VecT] = &mut points;
+            for (i, v) in verts.iter().enumerate() {
+                points[v.index() as usize] = pos[i];
+            }
+        }
+        Ok(())
     }
 
     pub fn add_face(&mut self, verts: &[VH]) -> Result<FH, Error> {

@@ -162,12 +162,12 @@ impl Debug for FH {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub(crate) struct Vertex {
     pub(crate) halfedge: Option<HH>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub(crate) struct Halfedge {
     pub(crate) face: Option<FH>,
     pub(crate) vertex: VH,
@@ -175,12 +175,12 @@ pub(crate) struct Halfedge {
     pub(crate) prev: HH,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub(crate) struct Edge {
     pub(crate) halfedges: [Halfedge; 2],
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub(crate) struct Face {
     pub(crate) halfedge: HH,
 }

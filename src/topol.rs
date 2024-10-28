@@ -351,6 +351,18 @@ impl Topology {
         Ok(vi.into())
     }
 
+    pub fn add_vertices(&mut self, verts: &mut [VH]) -> Result<(), Error> {
+        let nverts = self.vertices.len() as u32;
+        let vis = nverts..(nverts + (verts.len() as u32));
+        self.vprops.push_values(verts.len())?;
+        self.vertices
+            .resize(self.vertices.len() + verts.len(), Vertex { halfedge: None });
+        for (vi, dst) in vis.zip(verts.iter_mut()) {
+            *dst = vi.into();
+        }
+        Ok(())
+    }
+
     fn new_edge(
         &mut self,
         from: VH,

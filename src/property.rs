@@ -56,6 +56,13 @@ impl PropertyContainer {
         Ok(())
     }
 
+    pub fn push_values(&mut self, num: usize) -> Result<(), Error> {
+        for prop in self.props.iter_mut() {
+            prop.push_many(num)?;
+        }
+        Ok(())
+    }
+
     pub fn swap(&mut self, i: usize, j: usize) -> Result<(), Error> {
         for prop in self.props.iter_mut() {
             prop.swap(i, j)?;
@@ -126,6 +133,8 @@ trait GenericProperty {
     fn clear(&mut self) -> Result<(), Error>;
 
     fn push(&mut self) -> Result<(), Error>;
+
+    fn push_many(&mut self, num: usize) -> Result<(), Error>;
 
     fn swap(&mut self, i: usize, j: usize) -> Result<(), Error>;
 
@@ -248,6 +257,16 @@ impl<T: TPropData> GenericProperty for PropertyRef<T> {
             .try_borrow_mut()
             .map_err(|_| Error::BorrowedPropertyAccess)?
             .push(T::default());
+        Ok(())
+    }
+
+    fn push_many(&mut self, num: usize) -> Result<(), Error> {
+        let buf = self.upgrade()?;
+        let mut buf = buf
+            .try_borrow_mut()
+            .map_err(|_| Error::BorrowedPropertyAccess)?;
+        let buf: &mut Vec<T> = &mut buf;
+        buf.resize(buf.len() + num, T::default());
         Ok(())
     }
 

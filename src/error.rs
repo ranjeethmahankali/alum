@@ -12,4 +12,5 @@ pub enum Error {
     HalfedgeNotFound,
     PatchRelinkingFailed,
     DeletedFace(FH),
+    MismatchedArrayLengths(usize, usize),
 }

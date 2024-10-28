@@ -7,3 +7,4 @@ pub mod vector;
 
 mod iterator;
 mod topol;
+pub mod primitive;
