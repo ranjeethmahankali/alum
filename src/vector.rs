@@ -31,6 +31,32 @@ pub trait TVec3: TPropData {
     }
 }
 
+impl TVec3 for glam::Vec3 {
+    type Scalar = f32;
+
+    fn new(x: Self::Scalar, y: Self::Scalar, z: Self::Scalar) -> Self {
+        glam::vec3(x, y, z)
+    }
+
+    fn x(&self) -> Self::Scalar {
+        self[0]
+    }
+
+    fn y(&self) -> Self::Scalar {
+        self[1]
+    }
+
+    fn z(&self) -> Self::Scalar {
+        self[2]
+    }
+
+    fn length(&self) -> Self::Scalar {
+        glam::Vec3::length(self.clone())
+    }
+}
+
+type PolyMeshF32 = PolyMeshT<glam::Vec3>;
+
 impl<VecT: TVec3> PolyMeshT<VecT>
 where
     VecT::Scalar: From<f64>
@@ -86,6 +112,7 @@ where
 
 #[cfg(test)]
 mod test {
+    use crate::vector::PolyMeshF32;
 
     #[test]
     fn t_dodecahedron_face_normals() {
@@ -99,6 +126,7 @@ mod test {
 
     #[test]
     fn t_box_centroid() {
+        let qbox = PolyMeshF32::quad_box(glam::vec3(0., 0., 0.), glam::vec3(1., 1., 1.));
         todo!()
     }
 }
