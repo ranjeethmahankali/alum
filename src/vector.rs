@@ -46,7 +46,7 @@ pub trait TVec3: TPropData {
 
     fn normalized(&self) -> Self
     where
-        Self::Scalar: Div<Output = Self::Scalar> + TPropData + TScalar + PartialOrd,
+        Self::Scalar: TScalar + TPropData + Div<Output = Self::Scalar> + PartialOrd,
     {
         let norm = self.length();
         if norm > Self::Scalar::from_f64(0.0) {
@@ -88,12 +88,12 @@ impl TVec3 for glam::Vec3 {
 impl<VecT> PolyMeshT<VecT>
 where
     VecT::Scalar: TScalar
-        + TPropData
         + Mul<Output = VecT::Scalar>
         + Add<Output = VecT::Scalar>
-        + PartialOrd
-        + Div<Output = VecT::Scalar>,
-    VecT: TVec3 + Add<Output = VecT> + Sub<Output = VecT> + Div<VecT::Scalar, Output = VecT>,
+        + TPropData
+        + Div<Output = VecT::Scalar>
+        + PartialOrd,
+    VecT: TVec3 + Add<Output = VecT> + Sub<Output = VecT>,
 {
     pub fn calc_face_normal_locked(&self, f: FH) -> Result<VecT, Error> {
         let points = self.points().try_borrow()?;
@@ -135,7 +135,13 @@ where
         }
         VecT::new(x, y, z).normalized()
     }
+}
 
+impl<VecT> PolyMeshT<VecT>
+where
+    VecT::Scalar: TScalar + Add<Output = VecT::Scalar>,
+    VecT: TVec3 + Add<Output = VecT> + Div<VecT::Scalar, Output = VecT>,
+{
     pub fn calc_face_centroid_locked(&self, f: FH) -> Result<VecT, Error> {
         let points = self.points().try_borrow()?;
         Ok(self.calc_face_centroid(f, &points))
@@ -160,7 +166,12 @@ where
         );
         total / denom
     }
+}
 
+impl<VecT> PolyMeshT<VecT>
+where
+    VecT: TVec3 + Sub<Output = VecT>,
+{
     pub fn calc_halfedge_vector_locked(&self, h: HH) -> Result<VecT, Error> {
         let points = self.points().try_borrow()?;
         Ok(self.calc_halfedge_vector(h, &points))
