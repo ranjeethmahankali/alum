@@ -7,6 +7,32 @@ use crate::{
 };
 use std::ops::{Add, Div, Mul, Sub};
 
+pub trait TScalar {
+    fn from_f64(val: f64) -> Self;
+
+    fn from_f32(val: f32) -> Self;
+}
+
+impl TScalar for f32 {
+    fn from_f64(val: f64) -> Self {
+        val as f32
+    }
+
+    fn from_f32(val: f32) -> Self {
+        val
+    }
+}
+
+impl TScalar for f64 {
+    fn from_f64(val: f64) -> Self {
+        val
+    }
+
+    fn from_f32(val: f32) -> Self {
+        val as f64
+    }
+}
+
 pub trait TVec3: TPropData {
     type Scalar;
 
@@ -20,13 +46,17 @@ pub trait TVec3: TPropData {
 
     fn normalized(&self) -> Self
     where
-        Self::Scalar: Div<Output = Self::Scalar> + TPropData + From<f64> + PartialOrd,
+        Self::Scalar: Div<Output = Self::Scalar> + TPropData + TScalar + PartialOrd,
     {
         let norm = self.length();
-        if norm > Self::Scalar::from(0.0) {
+        if norm > Self::Scalar::from_f64(0.0) {
             Self::new(self.x() / norm, self.y() / norm, self.z() / norm)
         } else {
-            Self::new(0.0.into(), 0.0.into(), 0.0.into())
+            Self::new(
+                Self::Scalar::from_f64(0.0),
+                Self::Scalar::from_f64(0.0),
+                Self::Scalar::from_f64(0.0),
+            )
         }
     }
 }
@@ -55,11 +85,9 @@ impl TVec3 for glam::Vec3 {
     }
 }
 
-type PolyMeshF32 = PolyMeshT<glam::Vec3>;
-
 impl<VecT: TVec3> PolyMeshT<VecT>
 where
-    VecT::Scalar: From<f64>
+    VecT::Scalar: TScalar
         + TPropData
         + Mul<Output = VecT::Scalar>
         + Add<Output = VecT::Scalar>
@@ -74,7 +102,12 @@ where
             let points = self.points().try_borrow()?;
             let points: &Vec<VecT> = &points;
             iterator::fh_ccw_iter(self.topology(), f).fold(
-                (0usize, 0.0.into(), 0.0.into(), 0.0.into()),
+                (
+                    0usize,
+                    VecT::Scalar::from_f64(0.0),
+                    VecT::Scalar::from_f64(0.0),
+                    VecT::Scalar::from_f64(0.0),
+                ),
                 |(nverts, x, y, z): (usize, VecT::Scalar, VecT::Scalar, VecT::Scalar), h| {
                     let (a, b) = {
                         let pc = points[self.from_vertex(h).index() as usize];
@@ -92,7 +125,11 @@ where
         };
         if nverts < 3 {
             // Guard against degenerate cases.
-            return Ok(VecT::new(0.0.into(), 0.0.into(), 0.0.into()));
+            return Ok(VecT::new(
+                VecT::Scalar::from_f64(0.0),
+                VecT::Scalar::from_f64(0.0),
+                VecT::Scalar::from_f64(0.0),
+            ));
         }
         Ok(VecT::new(x, y, z).normalized())
     }
@@ -101,9 +138,19 @@ where
         let points = self.points().try_borrow()?;
         let points: &Vec<VecT> = &points;
         let (denom, total) = iterator::fv_ccw_iter(self.topology(), f).fold(
-            (0.0.into(), VecT::new(0.0.into(), 0.0.into(), 0.0.into())),
+            (
+                VecT::Scalar::from_f64(0.0),
+                VecT::new(
+                    VecT::Scalar::from_f64(0.0),
+                    VecT::Scalar::from_f64(0.0),
+                    VecT::Scalar::from_f64(0.0),
+                ),
+            ),
             |(denom, total): (VecT::Scalar, VecT), v: VH| {
-                (denom + 1.0.into(), total + points[v.index() as usize])
+                (
+                    denom + VecT::Scalar::from_f64(1.0),
+                    total + points[v.index() as usize],
+                )
             },
         );
         Ok(total / denom)
@@ -112,21 +159,49 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::vector::PolyMeshF32;
+    use crate::mesh::PolyMeshF32;
 
     #[test]
-    fn t_dodecahedron_face_normals() {
-        todo!()
+    fn t_quad_box_face_normals() {
+        let qbox = PolyMeshF32::quad_box(glam::vec3(0., 0., 0.), glam::vec3(1., 1., 1.))
+            .expect("Cannot create a box primitive");
+        assert_eq!(
+            qbox.faces()
+                .map(|f| {
+                    qbox.calc_face_normal(f)
+                        .expect("Cannot compute face centroid")
+                })
+                .collect::<Vec<_>>(),
+            &[
+                glam::vec3(0.0, 0.0, -1.0),
+                glam::vec3(0.0, -1.0, 0.0),
+                glam::vec3(1.0, 0.0, 0.0),
+                glam::vec3(0.0, 1.0, 0.0),
+                glam::vec3(-1.0, 0.0, 0.0),
+                glam::vec3(0.0, 0.0, 1.0),
+            ]
+        );
     }
 
     #[test]
-    fn t_dodecahedron_vertex_normals() {
-        todo!()
-    }
-
-    #[test]
-    fn t_box_centroid() {
-        let qbox = PolyMeshF32::quad_box(glam::vec3(0., 0., 0.), glam::vec3(1., 1., 1.));
-        todo!()
+    fn t_box_face_centroids() {
+        let qbox = PolyMeshF32::quad_box(glam::vec3(0., 0., 0.), glam::vec3(1., 1., 1.))
+            .expect("Cannot create a box primitive");
+        assert_eq!(
+            qbox.faces()
+                .map(|f| {
+                    qbox.calc_face_centroid(f)
+                        .expect("Cannot compute face centroid")
+                })
+                .collect::<Vec<_>>(),
+            &[
+                glam::vec3(0.5, 0.5, 0.0),
+                glam::vec3(0.5, 0.0, 0.5),
+                glam::vec3(1.0, 0.5, 0.5),
+                glam::vec3(0.5, 1.0, 0.5),
+                glam::vec3(0.0, 0.5, 0.5),
+                glam::vec3(0.5, 0.5, 1.0),
+            ]
+        );
     }
 }

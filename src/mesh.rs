@@ -16,6 +16,8 @@ pub struct PolyMeshT<VecT: TVec3> {
     cache: TopolCache,
 }
 
+pub type PolyMeshF32 = PolyMeshT<glam::Vec3>;
+
 impl<VecT: TVec3> Default for PolyMeshT<VecT> {
     fn default() -> Self {
         Self::new()
