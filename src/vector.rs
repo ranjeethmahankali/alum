@@ -1,5 +1,5 @@
 use crate::{
-    element::{Handle, FH, VH},
+    element::{Handle, FH, HH, VH},
     error::Error,
     iterator,
     mesh::PolyMeshT,
@@ -100,7 +100,7 @@ where
         let (nverts, x, y, z) = {
             // Borrow points inside the scope to limit their lifetime.
             let points = self.points().try_borrow()?;
-            let points: &Vec<VecT> = &points;
+            let points: &[VecT] = &points;
             iterator::fh_ccw_iter(self.topology(), f).fold(
                 (
                     0usize,
@@ -136,7 +136,7 @@ where
 
     pub fn calc_face_centroid(&self, f: FH) -> Result<VecT, Error> {
         let points = self.points().try_borrow()?;
-        let points: &Vec<VecT> = &points;
+        let points: &[VecT] = &points;
         let (denom, total) = iterator::fv_ccw_iter(self.topology(), f).fold(
             (
                 VecT::Scalar::from_f64(0.0),
@@ -155,6 +155,13 @@ where
         );
         Ok(total / denom)
     }
+
+    pub fn calc_halfedge_vector(&self, h: HH) -> Result<VecT, Error> {
+        let points = self.points().try_borrow()?;
+        let points: &[VecT] = &points;
+        Ok(points[self.to_vertex(h).index() as usize]
+            - points[self.from_vertex(h).index() as usize])
+    }
 }
 
 #[cfg(test)]
@@ -162,7 +169,7 @@ mod test {
     use crate::mesh::PolyMeshF32;
 
     #[test]
-    fn t_quad_box_face_normals() {
+    fn t_box_face_normals() {
         let qbox = PolyMeshF32::quad_box(glam::vec3(0., 0., 0.), glam::vec3(1., 1., 1.))
             .expect("Cannot create a box primitive");
         assert_eq!(
@@ -201,6 +208,46 @@ mod test {
                 glam::vec3(0.5, 1.0, 0.5),
                 glam::vec3(0.0, 0.5, 0.5),
                 glam::vec3(0.5, 0.5, 1.0),
+            ]
+        );
+    }
+
+    #[test]
+    fn t_box_edge_vectors() {
+        let qbox = PolyMeshF32::quad_box(glam::vec3(0., 0., 0.), glam::vec3(1., 1., 1.))
+            .expect("Cannot create a box primitive");
+        assert_eq!(
+            qbox.halfedges()
+                .map(|h| {
+                    qbox.calc_halfedge_vector(h)
+                        .expect("Cannot compute halfedge vector")
+                })
+                .collect::<Vec<_>>(),
+            &[
+                glam::vec3(0.0, 1.0, 0.0),
+                glam::vec3(0.0, -1.0, 0.0),
+                glam::vec3(1.0, 0.0, 0.0),
+                glam::vec3(-1.0, 0.0, 0.0),
+                glam::vec3(0.0, -1.0, 0.0),
+                glam::vec3(0.0, 1.0, 0.0),
+                glam::vec3(-1.0, 0.0, 0.0),
+                glam::vec3(1.0, 0.0, 0.0),
+                glam::vec3(0.0, 0.0, 1.0),
+                glam::vec3(0.0, 0.0, -1.0),
+                glam::vec3(-1.0, 0.0, 0.0),
+                glam::vec3(1.0, 0.0, 0.0),
+                glam::vec3(0.0, 0.0, -1.0),
+                glam::vec3(0.0, 0.0, 1.0),
+                glam::vec3(0.0, 0.0, 1.0),
+                glam::vec3(0.0, 0.0, -1.0),
+                glam::vec3(0.0, -1.0, 0.0),
+                glam::vec3(0.0, 1.0, 0.0),
+                glam::vec3(0.0, 0.0, 1.0),
+                glam::vec3(0.0, 0.0, -1.0),
+                glam::vec3(1.0, 0.0, 0.0),
+                glam::vec3(-1.0, 0.0, 0.0),
+                glam::vec3(0.0, 1.0, 0.0),
+                glam::vec3(0.0, -1.0, 0.0)
             ]
         );
     }
