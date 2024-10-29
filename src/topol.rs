@@ -143,35 +143,35 @@ impl Topology {
         Ok(())
     }
 
-    pub fn vertex_status<'a>(&'a self, v: VH) -> Result<Ref<'a, Status>, Error> {
+    pub fn vertex_status(&self, v: VH) -> Result<Ref<'_, Status>, Error> {
         self.vstatus.get(v)
     }
 
-    pub fn vertex_status_mut<'a>(&'a mut self, v: VH) -> Result<RefMut<'a, Status>, Error> {
+    pub fn vertex_status_mut(&mut self, v: VH) -> Result<RefMut<'_, Status>, Error> {
         self.vstatus.get_mut(v)
     }
 
-    pub fn halfedge_status<'a>(&'a self, h: HH) -> Result<Ref<'a, Status>, Error> {
+    pub fn halfedge_status(&self, h: HH) -> Result<Ref<'_, Status>, Error> {
         self.hstatus.get(h)
     }
 
-    pub fn halfedge_status_mut<'a>(&'a mut self, h: HH) -> Result<RefMut<'a, Status>, Error> {
+    pub fn halfedge_status_mut(&mut self, h: HH) -> Result<RefMut<'_, Status>, Error> {
         self.hstatus.get_mut(h)
     }
 
-    pub fn edge_status<'a>(&'a self, e: EH) -> Result<Ref<'a, Status>, Error> {
+    pub fn edge_status(&self, e: EH) -> Result<Ref<'_, Status>, Error> {
         self.estatus.get(e)
     }
 
-    pub fn edge_status_mut<'a>(&'a mut self, e: EH) -> Result<RefMut<'a, Status>, Error> {
+    pub fn edge_status_mut(&mut self, e: EH) -> Result<RefMut<'_, Status>, Error> {
         self.estatus.get_mut(e)
     }
 
-    pub fn face_status<'a>(&'a self, f: FH) -> Result<Ref<'a, Status>, Error> {
+    pub fn face_status(&self, f: FH) -> Result<Ref<'_, Status>, Error> {
         self.fstatus.get(f)
     }
 
-    pub fn face_status_mut<'a>(&'a mut self, f: FH) -> Result<RefMut<'a, Status>, Error> {
+    pub fn face_status_mut(&mut self, f: FH) -> Result<RefMut<'_, Status>, Error> {
         self.fstatus.get_mut(f)
     }
 
@@ -189,6 +189,22 @@ impl Topology {
 
     pub fn create_face_prop<T: TPropData>(&mut self) -> FProperty<T> {
         FProperty::<T>::new(&mut self.fprops)
+    }
+
+    pub fn is_valid_vertex(&self, v: VH) -> bool {
+        (v.index() as usize) < self.num_vertices()
+    }
+
+    pub fn is_valid_halfedge(&self, h: HH) -> bool {
+        (h.index() as usize) < self.num_halfedges()
+    }
+
+    pub fn is_valid_edge(&self, e: EH) -> bool {
+        (e.index() as usize) < self.num_edges()
+    }
+
+    pub fn is_valid_face(&self, f: FH) -> bool {
+        (f.index() as usize) < self.num_faces()
     }
 
     fn vertex(&self, v: VH) -> &Vertex {
@@ -236,7 +252,7 @@ impl Topology {
     }
 
     pub fn edge_halfedge(&self, e: EH, flag: bool) -> HH {
-        ((e.index() << 1) + if flag { 1 } else { 0 }).into()
+        ((e.index() << 1) | if flag { 1 } else { 0 }).into()
     }
 
     pub fn face_halfedge(&self, f: FH) -> HH {
@@ -333,6 +349,18 @@ impl Topology {
         self.vprops.push_value()?;
         self.vertices.push(Vertex { halfedge: None });
         Ok(vi.into())
+    }
+
+    pub fn add_vertices(&mut self, verts: &mut [VH]) -> Result<(), Error> {
+        let nverts = self.vertices.len() as u32;
+        let vis = nverts..(nverts + (verts.len() as u32));
+        self.vprops.push_values(verts.len())?;
+        self.vertices
+            .resize(self.vertices.len() + verts.len(), Vertex { halfedge: None });
+        for (vi, dst) in vis.zip(verts.iter_mut()) {
+            *dst = vi.into();
+        }
+        Ok(())
     }
 
     fn new_edge(
@@ -601,9 +629,9 @@ impl Topology {
             self.set_next_halfedge(prev, next);
         }
         // Adjust vertices' halfedge handles.
-        for i in 0..verts.len() {
+        for (i, vert) in verts.iter().enumerate() {
             if cache.needs_adjust[i] {
-                self.adjust_outgoing_halfedge(verts[i]);
+                self.adjust_outgoing_halfedge(*vert);
             }
         }
         Ok(fnew)
@@ -649,20 +677,27 @@ impl Topology {
         ecache: &mut Vec<EH>,
         vcache: &mut Vec<VH>,
     ) -> Result<(), Error> {
-        let f0 = self.halfedge_face(self.edge_halfedge(e, false));
-        let f1 = self.halfedge_face(self.edge_halfedge(e, true));
+        let h0 = self.edge_halfedge(e, false);
+        let h1 = self.edge_halfedge(e, true);
+        let f0 = self.halfedge_face(h0);
+        let f1 = self.halfedge_face(h1);
         if let Some(f) = f0 {
             self.delete_face(f, delete_isolated_vertices, hcache, ecache, vcache)?;
         }
         if let Some(f) = f1 {
             self.delete_face(f, delete_isolated_vertices, hcache, ecache, vcache)?;
         }
-        // We deleted all faces incident on this edge. So the edge must already be deleted.
-        debug_assert!(self.edge_status(e)?.deleted());
-        debug_assert!(self
-            .halfedge_status(self.edge_halfedge(e, false))?
-            .deleted());
-        debug_assert!(self.halfedge_status(self.edge_halfedge(e, true))?.deleted());
+        /* If either face was valid, the edge is deleted inside the call to
+         * delete_face. Otherwise we have to mark them deleted here. */
+        if f0.is_none() && f1.is_none() {
+            self.edge_status_mut(e)?.set_deleted(true);
+            {
+                let mut hstatus = self.hstatus.try_borrow_mut()?;
+                let hstatus: &mut Vec<Status> = &mut hstatus;
+                hstatus[h0.index() as usize].set_deleted(true);
+                hstatus[h1.index() as usize].set_deleted(true);
+            }
+        }
         Ok(())
     }
 
@@ -870,6 +905,11 @@ impl Topology {
         for f in self.faces.iter_mut() {
             f.halfedge = hmap[f.halfedge.index() as usize];
         }
+        // Clean up properties.
+        self.vprops.garbage_collection();
+        self.hprops.garbage_collection();
+        self.eprops.garbage_collection();
+        self.fprops.garbage_collection();
         Ok(())
     }
 }
