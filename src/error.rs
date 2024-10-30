@@ -13,4 +13,6 @@ pub enum Error {
     PatchRelinkingFailed,
     DeletedFace(FH),
     MismatchedArrayLengths(usize, usize),
+    // Obj.
+    ObjLoadFailed(String),
 }
