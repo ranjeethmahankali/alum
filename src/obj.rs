@@ -86,5 +86,9 @@ mod test {
         assert_eq!(2503, mesh.num_vertices());
         assert_eq!(7473, mesh.num_edges());
         assert_eq!(4968, mesh.num_faces());
+        assert_eq!(
+            42,
+            mesh.edges().filter(|e| mesh.is_boundary_edge(*e)).count()
+        );
     }
 }
