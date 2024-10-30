@@ -15,4 +15,5 @@ pub enum Error {
     MismatchedArrayLengths(usize, usize),
     // Obj.
     ObjLoadFailed(String),
+    IncorrectNumberOfCoordinates(usize),
 }

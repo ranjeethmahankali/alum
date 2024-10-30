@@ -26,10 +26,15 @@ where
             });
         let nedges = nfaces * 3 / 2; // Estimate.
         let mut outmesh = PolyMeshT::<VecT>::with_capacity(nverts, nedges, nfaces);
+        let mut voffset = 0u32;
         let mut positions = Vec::new();
         let mut vertices = Vec::new();
         for model in models {
             let mesh = model.mesh;
+            if mesh.positions.len() % 3 != 0 {
+                return Err(Error::IncorrectNumberOfCoordinates(mesh.positions.len()));
+            }
+            let nverts = (mesh.positions.len() / 3) as u32;
             positions.clear();
             positions.extend(mesh.positions.chunks(3).map(|triplet| {
                 VecT::new(
@@ -49,11 +54,13 @@ where
                 start += size;
                 fvs.clear();
                 fvs.extend(indices.iter().map(|i| {
+                    let i = i + voffset;
                     let v: VH = i.into();
                     v
                 }));
                 outmesh.add_face(&fvs)?;
             }
+            voffset += nverts;
         }
         Ok(outmesh)
     }
