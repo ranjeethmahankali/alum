@@ -16,4 +16,5 @@ pub enum Error {
     // Obj.
     ObjLoadFailed(String),
     IncorrectNumberOfCoordinates(usize),
+    IncorrectIndexCount(usize),
 }

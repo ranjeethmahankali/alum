@@ -374,9 +374,7 @@ impl Topology {
     ) -> Result<u32, Error> {
         let ei = self.edges.len() as u32;
         self.eprops.push_value()?;
-        for _ in 0..2 {
-            self.hprops.push_value()?;
-        }
+        self.hprops.push_values(2)?;
         self.edges.push(Edge {
             halfedges: [
                 Halfedge {
