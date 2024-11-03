@@ -400,7 +400,8 @@ mod test {
             .expect("Cannot create a box primitive");
         assert!(!qbox.has_face_normals());
         // Update and verify face normals.
-        qbox.update_face_normals();
+        qbox.update_face_normals()
+            .expect("Unable to update face normals");
         assert!(qbox.has_face_normals());
         let fnormals = qbox.face_normals().expect("Face normals not available");
         let fnormals = fnormals.try_borrow().expect("Cannot borrow face normals");
