@@ -94,6 +94,14 @@ impl TVec3 for glam::Vec3 {
     fn length(&self) -> Self::Scalar {
         glam::Vec3::length(self.clone())
     }
+
+    fn normalized(&self) -> Self {
+        glam::Vec3::normalize(self.clone())
+    }
+
+    fn cross(a: &Self, b: &Self) -> Self {
+        a.cross(*b)
+    }
 }
 
 impl<VecT> PolyMeshT<VecT>
@@ -224,6 +232,35 @@ where
 
 impl<VecT> PolyMeshT<VecT>
 where
+    VecT: TVec3 + Add<Output = VecT>,
+    VecT::Scalar: TScalar + TPropData + Div<Output = VecT::Scalar> + PartialOrd,
+{
+    pub fn calc_vertex_normal_fast(&self, v: VH, fnormals: &[VecT]) -> VecT {
+        iterator::vf_ccw_iter(self.topology(), v)
+            .fold(
+                VecT::new(
+                    VecT::Scalar::from_f64(0.0),
+                    VecT::Scalar::from_f64(0.0),
+                    VecT::Scalar::from_f64(0.0),
+                ),
+                |total, f| total + fnormals[f.index() as usize],
+            )
+            .normalized()
+    }
+
+    pub fn calc_vertex_normal_fast_locked(&self, v: VH) -> Result<VecT, Error> {
+        match self.face_normals() {
+            Some(fnormals) => {
+                let fnormals = fnormals.try_borrow()?;
+                Ok(self.calc_vertex_normal_fast(v, &fnormals))
+            }
+            None => Err(Error::FaceNormalsNotAvailable),
+        }
+    }
+}
+
+impl<VecT> PolyMeshT<VecT>
+where
     VecT: TVec3 + Sub<Output = VecT>,
 {
     pub fn calc_halfedge_vector_locked(&self, h: HH) -> Result<VecT, Error> {
@@ -345,5 +382,20 @@ mod test {
                 glam::vec3(-1.0, 1.0, 1.0),
             ]
         );
+    }
+
+    #[test]
+    fn t_box_fast_vertex_normals() {
+        let mut qbox = PolyMeshF32::quad_box(glam::vec3(0., 0., 0.), glam::vec3(1., 1., 1.))
+            .expect("Cannot create a box primitive");
+        assert!(qbox.face_normals().is_none());
+        {
+            // Compute the face normals.
+            let mut fnormals = qbox
+                .face_normals_mut()
+                .expect("Cannoto borrow face normals as mutable");
+            let _fnormals: &mut [glam::Vec3] = &mut fnormals;
+            todo!("Unable to borrow anything else in the box while the normals are borrowed. Need to fix this design issue.");
+        }
     }
 }

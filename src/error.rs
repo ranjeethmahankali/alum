@@ -5,6 +5,7 @@ pub enum Error {
     // Properties.
     BorrowedPropertyAccess,
     PropertyDoesNotExist,
+    FaceNormalsNotAvailable,
     OutOfBoundsAccess,
     // Topology.
     ComplexVertex(VH),
