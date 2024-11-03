@@ -5,7 +5,7 @@ use crate::{
     property::{EProperty, FProperty, HProperty, PropertyContainer, TPropData, VProperty},
     status::Status,
 };
-use std::cell::{Ref, RefMut};
+use std::cell::RefMut;
 
 enum TentativeEdge {
     Old(HH),
@@ -142,7 +142,7 @@ impl Topology {
         Ok(())
     }
 
-    pub fn vertex_status(&self, v: VH) -> Result<Ref<'_, Status>, Error> {
+    pub fn vertex_status(&self, v: VH) -> Result<Status, Error> {
         self.vstatus.get(v)
     }
 
@@ -150,15 +150,11 @@ impl Topology {
         self.vstatus.get_mut(v)
     }
 
-    pub fn halfedge_status(&self, h: HH) -> Result<Ref<'_, Status>, Error> {
+    pub fn halfedge_status(&self, h: HH) -> Result<Status, Error> {
         self.hstatus.get(h)
     }
 
-    pub fn halfedge_status_mut(&mut self, h: HH) -> Result<RefMut<'_, Status>, Error> {
-        self.hstatus.get_mut(h)
-    }
-
-    pub fn edge_status(&self, e: EH) -> Result<Ref<'_, Status>, Error> {
+    pub fn edge_status(&self, e: EH) -> Result<Status, Error> {
         self.estatus.get(e)
     }
 
@@ -166,7 +162,7 @@ impl Topology {
         self.estatus.get_mut(e)
     }
 
-    pub fn face_status(&self, f: FH) -> Result<Ref<'_, Status>, Error> {
+    pub fn face_status(&self, f: FH) -> Result<Status, Error> {
         self.fstatus.get(f)
     }
 

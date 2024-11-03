@@ -172,6 +172,7 @@ trait GenericProperty {
     fn is_valid(&self) -> bool;
 }
 
+#[derive(Clone)]
 pub struct Property<H: Handle, T: TPropData> {
     data: Rc<RefCell<Vec<T>>>,
     _phantom: PhantomData<H>,
@@ -204,23 +205,27 @@ impl<H: Handle, T: TPropData> Property<H, T> {
         })
     }
 
-    pub fn try_borrow(&self) -> Result<Ref<'_, Vec<T>>, Error> {
+    pub fn try_borrow(&self) -> Result<Ref<Vec<T>>, Error> {
         self.data
             .try_borrow()
             .map_err(|_| Error::BorrowedPropertyAccess)
     }
 
-    pub fn try_borrow_mut(&mut self) -> Result<RefMut<'_, Vec<T>>, Error> {
+    pub fn try_borrow_mut(&mut self) -> Result<RefMut<Vec<T>>, Error> {
         self.data
             .try_borrow_mut()
             .map_err(|_| Error::BorrowedPropertyAccess)
     }
 
-    pub fn get(&self, i: H) -> Result<Ref<'_, T>, Error> {
-        Ok(Ref::map(self.try_borrow()?, |v| &v[i.index() as usize]))
+    pub fn get(&self, i: H) -> Result<T, Error> {
+        Ok(self
+            .try_borrow()?
+            .get(i.index() as usize)
+            .ok_or(Error::OutOfBoundsAccess)?
+            .clone())
     }
 
-    pub fn get_mut(&mut self, i: H) -> Result<RefMut<'_, T>, Error> {
+    pub fn get_mut(&mut self, i: H) -> Result<RefMut<T>, Error> {
         Ok(RefMut::map(self.try_borrow_mut()?, |v| {
             &mut v[i.index() as usize]
         }))

@@ -1,3 +1,5 @@
+use std::ops::{Add, Div, Mul, Sub};
+
 use crate::{
     element::{Handle, EH, FH, HH, VH},
     error::Error,
@@ -5,9 +7,8 @@ use crate::{
     property::{EProperty, FProperty, HProperty, TPropData, VProperty},
     status::Status,
     topol::{TopolCache, Topology},
-    vector::TVec3,
+    vector::{TScalar, TVec3},
 };
-use std::cell::{Ref, RefMut};
 
 pub struct PolyMeshT<VecT: TVec3> {
     topol: Topology,
@@ -143,65 +144,83 @@ impl<VecT: TVec3> PolyMeshT<VecT> {
     }
 
     pub fn point(&self, vi: VH) -> Result<VecT, Error> {
-        Ok(*(self.points.get(vi)?))
+        self.points.get(vi)
+    }
+
+    pub fn vertex_status(&self, v: VH) -> Result<Status, Error> {
+        self.topol.vertex_status(v)
+    }
+
+    pub fn halfedge_status(&self, h: HH) -> Result<Status, Error> {
+        self.topol.halfedge_status(h)
+    }
+
+    pub fn edge_status(&self, e: EH) -> Result<Status, Error> {
+        self.topol.edge_status(e)
+    }
+
+    pub fn face_status(&self, f: FH) -> Result<Status, Error> {
+        self.topol.face_status(f)
     }
 
     pub fn set_point(&mut self, v: VH, pos: VecT) -> Result<(), Error> {
         self.points.set(v, pos)
     }
 
-    pub fn points(&self) -> &VProperty<VecT> {
-        &self.points
+    pub fn points(&self) -> VProperty<VecT> {
+        self.points.clone()
     }
 
-    pub fn vertex_status(&self, v: VH) -> Result<Ref<'_, Status>, Error> {
-        self.topol.vertex_status(v)
+    pub fn has_vertex_normals(&self) -> bool {
+        self.vnormals.is_some()
     }
 
-    pub fn vertex_status_mut(&mut self, v: VH) -> Result<RefMut<'_, Status>, Error> {
-        self.topol.vertex_status_mut(v)
+    pub fn vertex_normals(&self) -> Option<VProperty<VecT>> {
+        self.vnormals.clone()
     }
 
-    pub fn halfedge_status(&self, h: HH) -> Result<Ref<'_, Status>, Error> {
-        self.topol.halfedge_status(h)
+    pub fn request_vertex_normals(&mut self) -> VProperty<VecT> {
+        self.vnormals
+            .get_or_insert_with(|| self.topol.new_vprop())
+            .clone()
     }
 
-    pub fn halfedge_status_mut(&mut self, h: HH) -> Result<RefMut<'_, Status>, Error> {
-        self.topol.halfedge_status_mut(h)
+    pub fn has_face_normals(&self) -> bool {
+        self.fnormals.is_some()
     }
 
-    pub fn edge_status(&self, e: EH) -> Result<Ref<'_, Status>, Error> {
-        self.topol.edge_status(e)
+    pub fn face_normals(&self) -> Option<FProperty<VecT>> {
+        self.fnormals.clone()
     }
 
-    pub fn edge_status_mut(&mut self, e: EH) -> Result<RefMut<'_, Status>, Error> {
-        self.topol.edge_status_mut(e)
+    pub fn request_face_normals(&mut self) -> FProperty<VecT> {
+        self.fnormals
+            .get_or_insert_with(|| self.topol.new_fprop())
+            .clone()
     }
 
-    pub fn face_status(&self, f: FH) -> Result<Ref<'_, Status>, Error> {
-        self.topol.face_status(f)
-    }
-
-    pub fn face_status_mut(&mut self, f: FH) -> Result<RefMut<'_, Status>, Error> {
-        self.topol.face_status_mut(f)
-    }
-
-    pub fn vertex_normals(&self) -> &Option<VProperty<VecT>> {
-        &self.vnormals
-    }
-
-    pub fn vertex_normals_mut(&mut self) -> Result<RefMut<'_, Vec<VecT>>, Error> {
-        let vnormals = self.vnormals.get_or_insert_with(|| self.topol.new_vprop());
-        vnormals.try_borrow_mut()
-    }
-
-    pub fn face_normals(&self) -> &Option<FProperty<VecT>> {
-        &self.fnormals
-    }
-
-    pub fn face_normals_mut(&mut self) -> Result<RefMut<'_, Vec<VecT>>, Error> {
-        let fnormals = self.fnormals.get_or_insert_with(|| self.topol.new_fprop());
-        fnormals.try_borrow_mut()
+    pub fn update_face_normals(&mut self)
+    where
+        VecT::Scalar: TScalar
+            + Mul<Output = VecT::Scalar>
+            + Add<Output = VecT::Scalar>
+            + TPropData
+            + Div<Output = VecT::Scalar>
+            + PartialOrd,
+        VecT: TVec3 + Add<Output = VecT> + Sub<Output = VecT>,
+    {
+        let mut fnormals = self.request_face_normals();
+        let mut fnormals = fnormals
+            .try_borrow_mut()
+            .expect("Cannot borrow face normals property");
+        let fnormals: &mut [VecT] = &mut fnormals;
+        let points = self.points();
+        let points = points
+            .try_borrow()
+            .expect("Cannot borrow the points property");
+        for f in self.faces() {
+            fnormals[f.index() as usize] = self.calc_face_normal(f, &points);
+        }
     }
 
     pub fn to_vertex(&self, h: HH) -> VH {

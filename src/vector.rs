@@ -115,7 +115,8 @@ where
     VecT: TVec3 + Add<Output = VecT> + Sub<Output = VecT>,
 {
     pub fn calc_face_normal_locked(&self, f: FH) -> Result<VecT, Error> {
-        let points = self.points().try_borrow()?;
+        let points = self.points();
+        let points = points.try_borrow()?;
         Ok(self.calc_face_normal(f, &points))
     }
 
@@ -158,7 +159,12 @@ where
 
 impl<VecT> PolyMeshT<VecT>
 where
-    VecT::Scalar: TScalar + Mul<Output = VecT::Scalar> + Sub<Output = VecT::Scalar>,
+    VecT::Scalar: TScalar
+        + Mul<Output = VecT::Scalar>
+        + Sub<Output = VecT::Scalar>
+        + TPropData
+        + Div<Output = VecT::Scalar>
+        + PartialOrd,
     VecT: TVec3 + Sub<Output = VecT> + Add<Output = VecT>,
 {
     pub fn calc_vertex_normal_accurate(&self, v: VH, points: &[VecT]) -> VecT {
@@ -191,10 +197,12 @@ where
                     )
             },
         )
+        .normalized()
     }
 
     pub fn calc_vertex_normal_accurate_locked(&self, v: VH) -> Result<VecT, Error> {
-        let points = self.points().try_borrow()?;
+        let points = self.points();
+        let points = points.try_borrow()?;
         Ok(self.calc_vertex_normal_accurate(v, &points))
     }
 }
@@ -205,7 +213,8 @@ where
     VecT: TVec3 + Add<Output = VecT> + Div<VecT::Scalar, Output = VecT>,
 {
     pub fn calc_face_centroid_locked(&self, f: FH) -> Result<VecT, Error> {
-        let points = self.points().try_borrow()?;
+        let points = self.points();
+        let points = points.try_borrow()?;
         Ok(self.calc_face_centroid(f, &points))
     }
 
@@ -264,7 +273,8 @@ where
     VecT: TVec3 + Sub<Output = VecT>,
 {
     pub fn calc_halfedge_vector_locked(&self, h: HH) -> Result<VecT, Error> {
-        let points = self.points().try_borrow()?;
+        let points = self.points();
+        let points = points.try_borrow()?;
         Ok(self.calc_halfedge_vector(h, &points))
     }
 
@@ -372,14 +382,14 @@ mod test {
                     .expect("Cannot compute the correct vertex normal"))
                 .collect::<Vec<_>>(),
             &[
-                glam::vec3(-1.0, -1.0, -1.0),
-                glam::vec3(1.0, -1.0, -1.0),
-                glam::vec3(1.0, 1.0, -1.0),
-                glam::vec3(-1.0, 1.0, -1.0),
-                glam::vec3(-1.0, -1.0, 1.0),
-                glam::vec3(1.0, -1.0, 1.0),
-                glam::vec3(1.0, 1.0, 1.0),
-                glam::vec3(-1.0, 1.0, 1.0),
+                glam::vec3(-0.57735026, -0.57735026, -0.57735026),
+                glam::vec3(0.57735026, -0.57735026, -0.57735026),
+                glam::vec3(0.57735026, 0.57735026, -0.57735026),
+                glam::vec3(-0.57735026, 0.57735026, -0.57735026),
+                glam::vec3(-0.57735026, -0.57735026, 0.57735026),
+                glam::vec3(0.57735026, -0.57735026, 0.57735026),
+                glam::vec3(0.57735026, 0.57735026, 0.57735026),
+                glam::vec3(-0.57735026, 0.57735026, 0.57735026),
             ]
         );
     }
@@ -388,14 +398,43 @@ mod test {
     fn t_box_fast_vertex_normals() {
         let mut qbox = PolyMeshF32::quad_box(glam::vec3(0., 0., 0.), glam::vec3(1., 1., 1.))
             .expect("Cannot create a box primitive");
-        assert!(qbox.face_normals().is_none());
-        {
-            // Compute the face normals.
-            let mut fnormals = qbox
-                .face_normals_mut()
-                .expect("Cannoto borrow face normals as mutable");
-            let _fnormals: &mut [glam::Vec3] = &mut fnormals;
-            todo!("Unable to borrow anything else in the box while the normals are borrowed. Need to fix this design issue.");
+        assert!(!qbox.has_face_normals());
+        // Update and verify face normals.
+        qbox.update_face_normals();
+        assert!(qbox.has_face_normals());
+        let fnormals = qbox.face_normals().expect("Face normals not available");
+        let fnormals = fnormals.try_borrow().expect("Cannot borrow face normals");
+        let fnormals: &[glam::Vec3] = &fnormals;
+        for n in fnormals {
+            println!("glam::vec3({:.1}, {:.1}, {:.1}),", n.x(), n.y(), n.z());
         }
+        assert_eq!(
+            &fnormals,
+            &[
+                glam::vec3(0.0, 0.0, -1.0),
+                glam::vec3(0.0, -1.0, 0.0),
+                glam::vec3(1.0, 0.0, 0.0),
+                glam::vec3(0.0, 1.0, 0.0),
+                glam::vec3(-1.0, 0.0, 0.0),
+                glam::vec3(0.0, 0.0, 1.0),
+            ]
+        );
+        let qbox = qbox; // Immutable.
+                         // Compute and verify vertex normals.
+        assert_eq!(
+            qbox.vertices()
+                .map(|v| qbox.calc_vertex_normal_fast(v, fnormals))
+                .collect::<Vec<_>>(),
+            &[
+                glam::vec3(-0.57735026, -0.57735026, -0.57735026),
+                glam::vec3(0.57735026, -0.57735026, -0.57735026),
+                glam::vec3(0.57735026, 0.57735026, -0.57735026),
+                glam::vec3(-0.57735026, 0.57735026, -0.57735026),
+                glam::vec3(-0.57735026, -0.57735026, 0.57735026),
+                glam::vec3(0.57735026, -0.57735026, 0.57735026),
+                glam::vec3(0.57735026, 0.57735026, 0.57735026),
+                glam::vec3(-0.57735026, 0.57735026, 0.57735026),
+            ]
+        );
     }
 }
