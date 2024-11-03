@@ -1,5 +1,3 @@
-use std::cell::{Ref, RefMut};
-
 use crate::{
     element::{Handle, EH, FH, HH, VH},
     error::Error,
@@ -9,6 +7,7 @@ use crate::{
     topol::{TopolCache, Topology},
     vector::TVec3,
 };
+use std::cell::{Ref, RefMut};
 
 pub struct PolyMeshT<VecT: TVec3> {
     topol: Topology,
@@ -187,20 +186,22 @@ impl<VecT: TVec3> PolyMeshT<VecT> {
         self.topol.face_status_mut(f)
     }
 
-    pub fn has_vertex_normals(&self) -> bool {
-        self.vnormals.is_some()
+    pub fn vertex_normals(&self) -> &Option<VProperty<VecT>> {
+        &self.vnormals
     }
 
-    pub fn vertex_normals(&mut self) -> &VProperty<VecT> {
-        self.vnormals.get_or_insert_with(|| self.topol.new_vprop())
+    pub fn vertex_normals_mut(&mut self) -> Result<RefMut<'_, Vec<VecT>>, Error> {
+        let vnormals = self.vnormals.get_or_insert_with(|| self.topol.new_vprop());
+        vnormals.try_borrow_mut()
     }
 
-    pub fn has_face_normals(&self) -> bool {
-        self.fnormals.is_some()
+    pub fn face_normals(&self) -> &Option<FProperty<VecT>> {
+        &self.fnormals
     }
 
-    pub fn face_normals(&mut self) -> &FProperty<VecT> {
-        self.fnormals.get_or_insert_with(|| self.topol.new_fprop())
+    pub fn face_normals_mut(&mut self) -> Result<RefMut<'_, Vec<VecT>>, Error> {
+        let fnormals = self.fnormals.get_or_insert_with(|| self.topol.new_fprop());
+        fnormals.try_borrow_mut()
     }
 
     pub fn to_vertex(&self, h: HH) -> VH {
