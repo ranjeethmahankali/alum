@@ -9,22 +9,24 @@ use crate::{
     error::Error,
 };
 
-pub struct PropertyContainer {
+pub struct PropertyContainer<H> {
     props: Vec<Box<dyn GenericProperty>>,
     length: usize,
+    _phantom: PhantomData<H>,
 }
 
-impl Default for PropertyContainer {
+impl<H> Default for PropertyContainer<H> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl PropertyContainer {
+impl<T> PropertyContainer<T> {
     pub fn new() -> Self {
         PropertyContainer {
             props: Vec::new(),
             length: 0,
+            _phantom: PhantomData,
         }
     }
 
@@ -176,7 +178,7 @@ pub struct Property<H: Handle, T: TPropData> {
 }
 
 impl<H: Handle, T: TPropData> Property<H, T> {
-    pub fn new(container: &mut PropertyContainer) -> Self {
+    pub fn new(container: &mut PropertyContainer<H>) -> Self {
         let prop = Property {
             data: Rc::new(RefCell::new(vec![T::default(); container.len()])),
             _phantom: PhantomData,
@@ -185,7 +187,7 @@ impl<H: Handle, T: TPropData> Property<H, T> {
         prop
     }
 
-    pub fn with_capacity(n: usize, container: &mut PropertyContainer) -> Self {
+    pub fn with_capacity(n: usize, container: &mut PropertyContainer<H>) -> Self {
         let mut buf = Vec::with_capacity(n);
         buf.resize(container.len(), T::default());
         let prop = Property {
