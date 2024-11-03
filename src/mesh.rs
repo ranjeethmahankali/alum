@@ -14,6 +14,8 @@ pub struct PolyMeshT<VecT: TVec3> {
     topol: Topology,
     cache: TopolCache,
     points: VProperty<VecT>,
+    vnormals: Option<VProperty<VecT>>,
+    fnormals: Option<FProperty<VecT>>,
 }
 
 pub type PolyMeshF32 = PolyMeshT<glam::Vec3>;
@@ -32,6 +34,8 @@ impl<VecT: TVec3> PolyMeshT<VecT> {
             topol,
             cache: TopolCache::default(),
             points,
+            vnormals: None,
+            fnormals: None,
         }
     }
 
@@ -42,6 +46,8 @@ impl<VecT: TVec3> PolyMeshT<VecT> {
             topol,
             cache: TopolCache::default(),
             points,
+            vnormals: None,
+            fnormals: None,
         }
     }
 
@@ -179,6 +185,22 @@ impl<VecT: TVec3> PolyMeshT<VecT> {
 
     pub fn face_status_mut(&mut self, f: FH) -> Result<RefMut<'_, Status>, Error> {
         self.topol.face_status_mut(f)
+    }
+
+    pub fn has_vertex_normals(&self) -> bool {
+        self.vnormals.is_some()
+    }
+
+    pub fn vertex_normals(&mut self) -> &VProperty<VecT> {
+        self.vnormals.get_or_insert_with(|| self.topol.new_vprop())
+    }
+
+    pub fn has_face_normals(&self) -> bool {
+        self.fnormals.is_some()
+    }
+
+    pub fn face_normals(&mut self) -> &FProperty<VecT> {
+        self.fnormals.get_or_insert_with(|| self.topol.new_fprop())
     }
 
     pub fn to_vertex(&self, h: HH) -> VH {
