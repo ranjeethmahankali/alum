@@ -27,7 +27,7 @@ impl<VecT: TVec3> Default for PolyMeshT<VecT> {
 impl<VecT: TVec3> PolyMeshT<VecT> {
     pub fn new() -> Self {
         let mut topol = Topology::new();
-        let points = topol.create_vertex_prop();
+        let points = topol.new_vprop();
         PolyMeshT {
             topol,
             points,
@@ -37,7 +37,7 @@ impl<VecT: TVec3> PolyMeshT<VecT> {
 
     pub fn with_capacity(nverts: usize, nedges: usize, nfaces: usize) -> Self {
         let mut topol = Topology::with_capacity(nverts, nedges, nfaces);
-        let points = VProperty::with_capacity(nverts, &mut topol.vprops);
+        let points = topol.new_vprop_with_capacity(nverts);
         PolyMeshT {
             topol,
             points,
@@ -46,19 +46,19 @@ impl<VecT: TVec3> PolyMeshT<VecT> {
     }
 
     pub fn create_vertex_prop<T: TPropData>(&mut self) -> VProperty<T> {
-        self.topol.create_vertex_prop()
+        self.topol.new_vprop()
     }
 
     pub fn create_halfedge_prop<T: TPropData>(&mut self) -> HProperty<T> {
-        self.topol.create_halfedge_prop()
+        self.topol.new_hprop()
     }
 
     pub fn create_edge_prop<T: TPropData>(&mut self) -> EProperty<T> {
-        self.topol.create_edge_prop()
+        self.topol.new_eprop()
     }
 
     pub fn create_face_prop<T: TPropData>(&mut self) -> FProperty<T> {
-        self.topol.create_face_prop()
+        self.topol.new_fprop()
     }
 
     pub fn reserve(&mut self, nverts: usize, nedges: usize, nfaces: usize) -> Result<(), Error> {

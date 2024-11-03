@@ -54,10 +54,10 @@ pub(crate) struct Topology {
     hstatus: HProperty<Status>,
     estatus: EProperty<Status>,
     fstatus: FProperty<Status>,
-    pub(crate) vprops: PropertyContainer,
-    pub(crate) hprops: PropertyContainer,
-    pub(crate) eprops: PropertyContainer,
-    pub(crate) fprops: PropertyContainer,
+    vprops: PropertyContainer,
+    hprops: PropertyContainer,
+    eprops: PropertyContainer,
+    fprops: PropertyContainer,
 }
 
 impl Topology {
@@ -175,20 +175,24 @@ impl Topology {
         self.fstatus.get_mut(f)
     }
 
-    pub fn create_vertex_prop<T: TPropData>(&mut self) -> VProperty<T> {
+    pub fn new_vprop<T: TPropData>(&mut self) -> VProperty<T> {
         VProperty::<T>::new(&mut self.vprops)
     }
 
-    pub fn create_halfedge_prop<T: TPropData>(&mut self) -> HProperty<T> {
+    pub fn new_hprop<T: TPropData>(&mut self) -> HProperty<T> {
         HProperty::<T>::new(&mut self.hprops)
     }
 
-    pub fn create_edge_prop<T: TPropData>(&mut self) -> EProperty<T> {
+    pub fn new_eprop<T: TPropData>(&mut self) -> EProperty<T> {
         EProperty::<T>::new(&mut self.eprops)
     }
 
-    pub fn create_face_prop<T: TPropData>(&mut self) -> FProperty<T> {
+    pub fn new_fprop<T: TPropData>(&mut self) -> FProperty<T> {
         FProperty::<T>::new(&mut self.fprops)
+    }
+
+    pub fn new_vprop_with_capacity<T: TPropData>(&mut self, n: usize) -> VProperty<T> {
+        VProperty::<T>::with_capacity(n, &mut self.vprops)
     }
 
     pub fn is_valid_vertex(&self, v: VH) -> bool {
