@@ -380,6 +380,10 @@ impl<VecT: TVec3> PolyMeshT<VecT> {
         iterator::fh_cw_circulator(&self.topol, h)
     }
 
+    pub fn triangulated_vertices(&self) -> impl Iterator<Item = [VH; 3]> + use<'_, VecT> {
+        self.topol.triangulated_vertices()
+    }
+
     pub fn add_vertex(&mut self, pos: VecT) -> Result<VH, Error> {
         let vi = self.topol.add_vertex()?;
         self.points.set(vi, pos)?;
