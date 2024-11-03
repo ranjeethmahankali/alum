@@ -199,7 +199,7 @@ impl<VecT: TVec3> PolyMeshT<VecT> {
             .clone()
     }
 
-    pub fn update_face_normals(&mut self) -> Result<(), Error>
+    pub fn update_face_normals(&mut self) -> Result<FProperty<VecT>, Error>
     where
         VecT::Scalar: TScalar
             + Mul<Output = VecT::Scalar>
@@ -209,18 +209,20 @@ impl<VecT: TVec3> PolyMeshT<VecT> {
             + PartialOrd,
         VecT: TVec3 + Add<Output = VecT> + Sub<Output = VecT>,
     {
-        let mut fnormals = self.request_face_normals();
-        let mut fnormals = fnormals.try_borrow_mut()?;
-        let fnormals: &mut [VecT] = &mut fnormals;
-        let points = self.points();
-        let points = points.try_borrow()?;
-        for f in self.faces() {
-            fnormals[f.index() as usize] = self.calc_face_normal(f, &points);
+        let mut fprop = self.request_face_normals();
+        {
+            let mut fnormals = fprop.try_borrow_mut()?;
+            let fnormals: &mut [VecT] = &mut fnormals;
+            let points = self.points();
+            let points = points.try_borrow()?;
+            for f in self.faces() {
+                fnormals[f.index() as usize] = self.calc_face_normal(f, &points);
+            }
         }
-        Ok(())
+        Ok(fprop)
     }
 
-    pub fn update_vertex_normals_fast(&mut self) -> Result<(), Error>
+    pub fn update_vertex_normals_fast(&mut self) -> Result<VProperty<VecT>, Error>
     where
         VecT::Scalar: TScalar
             + Mul<Output = VecT::Scalar>
@@ -230,18 +232,20 @@ impl<VecT: TVec3> PolyMeshT<VecT> {
             + PartialOrd,
         VecT: TVec3 + Add<Output = VecT> + Sub<Output = VecT>,
     {
-        if !self.has_face_normals() {
-            self.update_face_normals()?;
+        let mut vprop = self.request_vertex_normals();
+        {
+            let fprop = match self.face_normals() {
+                Some(prop) => prop,
+                None => self.update_face_normals()?,
+            };
+            let fnormals = fprop.try_borrow()?;
+            let mut vnormals = vprop.try_borrow_mut()?;
+            let vnormals: &mut [VecT] = &mut vnormals;
+            for v in self.vertices() {
+                vnormals[v.index() as usize] = self.calc_vertex_normal_fast(v, &fnormals);
+            }
         }
-        let fnormals = self.face_normals().ok_or(Error::FaceNormalsNotAvailable)?;
-        let fnormals = fnormals.try_borrow()?;
-        let mut vnormals = self.request_vertex_normals();
-        let mut vnormals = vnormals.try_borrow_mut()?;
-        let vnormals: &mut [VecT] = &mut vnormals;
-        for v in self.vertices() {
-            vnormals[v.index() as usize] = self.calc_vertex_normal_fast(v, &fnormals);
-        }
-        Ok(())
+        Ok(vprop)
     }
 
     pub fn to_vertex(&self, h: HH) -> VH {
