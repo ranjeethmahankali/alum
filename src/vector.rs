@@ -150,6 +150,49 @@ where
 
 impl<VecT> PolyMeshT<VecT>
 where
+    VecT::Scalar: TScalar + Mul<Output = VecT::Scalar> + Sub<Output = VecT::Scalar>,
+    VecT: TVec3 + Sub<Output = VecT> + Add<Output = VecT>,
+{
+    pub fn calc_vertex_normal_accurate(&self, v: VH, points: &[VecT]) -> VecT {
+        let topol = self.topology();
+        match topol.vertex_halfedge(v) {
+            Some(h) => {
+                let h2 = topol.ccw_rotated_halfedge(h);
+                if h2 == h {
+                    // Isolated vertex.
+                    return VecT::default();
+                }
+                // Iterate over adjacent pairs of outgoing halfedges.
+                iterator::halfedge_ccw_circulator(topol, h)
+                    .zip(iterator::halfedge_ccw_circulator(topol, h2))
+            }
+            None => return VecT::default(),
+        }
+        .fold(
+            VecT::new(
+                VecT::Scalar::from_f64(0.0),
+                VecT::Scalar::from_f64(0.0),
+                VecT::Scalar::from_f64(0.0),
+            ),
+            |total, (h1, h2)| {
+                // Intentionally not normalizing to account for sector area.
+                total
+                    + VecT::cross(
+                        &self.calc_halfedge_vector(h1, points),
+                        &self.calc_halfedge_vector(h2, points),
+                    )
+            },
+        )
+    }
+
+    pub fn calc_vertex_normal_accurate_locked(&self, v: VH) -> Result<VecT, Error> {
+        let points = self.points().try_borrow()?;
+        Ok(self.calc_vertex_normal_accurate(v, &points))
+    }
+}
+
+impl<VecT> PolyMeshT<VecT>
+where
     VecT::Scalar: TScalar + Add<Output = VecT::Scalar>,
     VecT: TVec3 + Add<Output = VecT> + Div<VecT::Scalar, Output = VecT>,
 {
@@ -277,6 +320,29 @@ mod test {
                 glam::vec3(-1.0, 0.0, 0.0),
                 glam::vec3(0.0, 1.0, 0.0),
                 glam::vec3(0.0, -1.0, 0.0)
+            ]
+        );
+    }
+
+    #[test]
+    fn t_box_accurate_vertex_normals() {
+        let qbox = PolyMeshF32::quad_box(glam::vec3(0., 0., 0.), glam::vec3(1., 1., 1.))
+            .expect("Cannot create a box primitive");
+        assert_eq!(
+            qbox.vertices()
+                .map(|v| qbox
+                    .calc_vertex_normal_accurate_locked(v)
+                    .expect("Cannot compute the correct vertex normal"))
+                .collect::<Vec<_>>(),
+            &[
+                glam::vec3(-1.0, -1.0, -1.0),
+                glam::vec3(1.0, -1.0, -1.0),
+                glam::vec3(1.0, 1.0, -1.0),
+                glam::vec3(-1.0, 1.0, -1.0),
+                glam::vec3(-1.0, -1.0, 1.0),
+                glam::vec3(1.0, -1.0, 1.0),
+                glam::vec3(1.0, 1.0, 1.0),
+                glam::vec3(-1.0, 1.0, 1.0),
             ]
         );
     }
