@@ -59,6 +59,17 @@ pub trait TVec3: TPropData {
             )
         }
     }
+
+    fn cross(a: &Self, b: &Self) -> Self
+    where
+        Self::Scalar: Mul<Output = Self::Scalar> + Sub<Output = Self::Scalar>,
+    {
+        Self::new(
+            a.y() * b.z() - a.z() * b.y(),
+            a.z() * b.x() - a.x() * b.z(),
+            a.x() * b.y() - a.y() * b.x(),
+        )
+    }
 }
 
 impl TVec3 for glam::Vec3 {
