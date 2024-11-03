@@ -319,6 +319,14 @@ impl<VecT: TVec3> PolyMeshT<VecT> {
         iterator::ff_cw_iter(&self.topol, f)
     }
 
+    pub fn halfedge_ccw_circulator(&self, h: HH) -> impl Iterator<Item = HH> + use<'_, VecT> {
+        iterator::halfedge_ccw_circulator(&self.topol, h)
+    }
+
+    pub fn halfedge_cw_circulator(&self, h: HH) -> impl Iterator<Item = HH> + use<'_, VecT> {
+        iterator::halfedge_cw_circulator(&self.topol, h)
+    }
+
     pub fn add_vertex(&mut self, pos: VecT) -> Result<VH, Error> {
         let vi = self.topol.add_vertex()?;
         self.points.set(vi, pos)?;

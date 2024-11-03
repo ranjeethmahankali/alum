@@ -201,6 +201,20 @@ pub(crate) fn ff_cw_iter(topol: &Topology, f: FH) -> impl Iterator<Item = FH> + 
     fh_cw_iter(topol, f).filter_map(|h| topol.halfedge_face(topol.opposite_halfedge(h)))
 }
 
+pub(crate) fn halfedge_ccw_circulator(
+    topol: &Topology,
+    h: HH,
+) -> impl Iterator<Item = HH> + use<'_> {
+    OutgoingHalfedgeIter::<true>::new(topol, Some(h))
+}
+
+pub(crate) fn halfedge_cw_circulator(
+    topol: &Topology,
+    h: HH,
+) -> impl Iterator<Item = HH> + use<'_> {
+    OutgoingHalfedgeIter::<false>::new(topol, Some(h))
+}
+
 #[cfg(test)]
 mod test {
     use crate::{
