@@ -1,5 +1,3 @@
-use std::cell::{Ref, RefMut};
-
 use crate::{
     element::{Edge, Face, Halfedge, Handle, Vertex, EH, FH, HH, VH},
     error::Error,
@@ -7,6 +5,7 @@ use crate::{
     property::{EProperty, FProperty, HProperty, PropertyContainer, TPropData, VProperty},
     status::Status,
 };
+use std::cell::{Ref, RefMut};
 
 enum TentativeEdge {
     Old(HH),

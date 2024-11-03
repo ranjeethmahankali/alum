@@ -12,8 +12,8 @@ use crate::{
 
 pub struct PolyMeshT<VecT: TVec3> {
     topol: Topology,
-    points: VProperty<VecT>,
     cache: TopolCache,
+    points: VProperty<VecT>,
 }
 
 pub type PolyMeshF32 = PolyMeshT<glam::Vec3>;
@@ -30,8 +30,8 @@ impl<VecT: TVec3> PolyMeshT<VecT> {
         let points = topol.new_vprop();
         PolyMeshT {
             topol,
-            points,
             cache: TopolCache::default(),
+            points,
         }
     }
 
@@ -40,8 +40,8 @@ impl<VecT: TVec3> PolyMeshT<VecT> {
         let points = topol.new_vprop_with_capacity(nverts);
         PolyMeshT {
             topol,
-            points,
             cache: TopolCache::default(),
+            points,
         }
     }
 
