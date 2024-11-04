@@ -177,8 +177,8 @@ where
                     return VecT::default();
                 }
                 // Iterate over adjacent pairs of outgoing halfedges.
-                iterator::voh_ccw_circulator(topol, h)
-                    .zip(iterator::voh_ccw_circulator(topol, h2))
+                iterator::ccw_rotate_iter(topol, h)
+                    .zip(iterator::ccw_rotate_iter(topol, h2))
             }
             None => return VecT::default(),
         }

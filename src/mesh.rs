@@ -364,20 +364,20 @@ impl<VecT: TVec3> PolyMeshT<VecT> {
         iterator::ff_cw_iter(&self.topol, f)
     }
 
-    pub fn voh_ccw_circulator(&self, h: HH) -> impl Iterator<Item = HH> + use<'_, VecT> {
-        iterator::voh_ccw_circulator(&self.topol, h)
+    pub fn ccw_rotate_iter(&self, h: HH) -> impl Iterator<Item = HH> + use<'_, VecT> {
+        iterator::ccw_rotate_iter(&self.topol, h)
     }
 
-    pub fn voh_cw_circulator(&self, h: HH) -> impl Iterator<Item = HH> + use<'_, VecT> {
-        iterator::voh_cw_circulator(&self.topol, h)
+    pub fn cw_rotate_iter(&self, h: HH) -> impl Iterator<Item = HH> + use<'_, VecT> {
+        iterator::cw_rotate_iter(&self.topol, h)
     }
 
-    pub fn fh_ccw_circulator(&self, h: HH) -> impl Iterator<Item = HH> + use<'_, VecT> {
-        iterator::fh_ccw_circulator(&self.topol, h)
+    pub fn loop_ccw_iter(&self, h: HH) -> impl Iterator<Item = HH> + use<'_, VecT> {
+        iterator::loop_ccw_iter(&self.topol, h)
     }
 
-    pub fn fh_cw_circulator(&self, h: HH) -> impl Iterator<Item = HH> + use<'_, VecT> {
-        iterator::fh_cw_circulator(&self.topol, h)
+    pub fn loop_cw_iter(&self, h: HH) -> impl Iterator<Item = HH> + use<'_, VecT> {
+        iterator::loop_cw_iter(&self.topol, h)
     }
 
     pub fn triangulated_vertices(&self) -> impl Iterator<Item = [VH; 3]> + use<'_, VecT> {

@@ -338,7 +338,7 @@ impl Topology {
     pub fn triangulated_face_vertices(&self, f: FH) -> impl Iterator<Item = [VH; 3]> + use<'_> {
         let hstart = self.face_halfedge(f);
         let vstart = self.from_vertex(hstart);
-        iterator::fh_ccw_circulator(self, self.next_halfedge(hstart))
+        iterator::loop_ccw_iter(self, self.next_halfedge(hstart))
             .take_while(move |h| self.to_vertex(*h) != vstart)
             .map(move |h| [vstart, self.from_vertex(h), self.to_vertex(h)])
     }
