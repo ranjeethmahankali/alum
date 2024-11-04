@@ -394,6 +394,27 @@ where
     }
 }
 
+impl<VecT> PolyMeshT<VecT>
+where
+    VecT: TVec3 + Sub<Output = VecT>,
+    VecT::Scalar: TScalar
+        + Mul<Output = VecT::Scalar>
+        + Sub<Output = VecT::Scalar>
+        + Add<Output = VecT::Scalar>,
+{
+    pub fn calc_dihedral_angle(&self, e: EH, points: &[VecT]) -> VecT::Scalar {
+        if self.is_boundary_edge(e) {
+            return VecT::Scalar::from_f64(0.);
+        }
+        let h0 = self.edge_halfedge(e, false);
+        let h1 = self.edge_halfedge(e, true);
+        let n0 = self.calc_sector_normal(h0, points);
+        let n1 = self.calc_sector_normal(h1, points);
+        let hv = self.calc_halfedge_vector(h0, points);
+        todo!()
+    }
+}
+
 #[cfg(test)]
 mod test {
     use crate::mesh::PolyMeshF32;
