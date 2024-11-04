@@ -5,6 +5,7 @@ pub enum Error {
     // Properties.
     BorrowedPropertyAccess,
     PropertyDoesNotExist,
+    FaceNormalsNotAvailable,
     OutOfBoundsAccess,
     // Topology.
     ComplexVertex(VH),
@@ -13,4 +14,8 @@ pub enum Error {
     PatchRelinkingFailed,
     DeletedFace(FH),
     MismatchedArrayLengths(usize, usize),
+    // Obj.
+    ObjLoadFailed(String),
+    IncorrectNumberOfCoordinates(usize),
+    IncorrectIndexCount(usize),
 }

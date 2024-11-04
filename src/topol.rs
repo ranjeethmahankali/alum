@@ -1,5 +1,3 @@
-use std::cell::{Ref, RefMut};
-
 use crate::{
     element::{Edge, Face, Halfedge, Handle, Vertex, EH, FH, HH, VH},
     error::Error,
@@ -7,6 +5,7 @@ use crate::{
     property::{EProperty, FProperty, HProperty, PropertyContainer, TPropData, VProperty},
     status::Status,
 };
+use std::cell::RefMut;
 
 enum TentativeEdge {
     Old(HH),
@@ -54,10 +53,10 @@ pub(crate) struct Topology {
     hstatus: HProperty<Status>,
     estatus: EProperty<Status>,
     fstatus: FProperty<Status>,
-    pub(crate) vprops: PropertyContainer,
-    pub(crate) hprops: PropertyContainer,
-    pub(crate) eprops: PropertyContainer,
-    pub(crate) fprops: PropertyContainer,
+    vprops: PropertyContainer<VH>,
+    hprops: PropertyContainer<HH>,
+    eprops: PropertyContainer<EH>,
+    fprops: PropertyContainer<FH>,
 }
 
 impl Topology {
@@ -143,7 +142,7 @@ impl Topology {
         Ok(())
     }
 
-    pub fn vertex_status(&self, v: VH) -> Result<Ref<'_, Status>, Error> {
+    pub fn vertex_status(&self, v: VH) -> Result<Status, Error> {
         self.vstatus.get(v)
     }
 
@@ -151,15 +150,11 @@ impl Topology {
         self.vstatus.get_mut(v)
     }
 
-    pub fn halfedge_status(&self, h: HH) -> Result<Ref<'_, Status>, Error> {
+    pub fn halfedge_status(&self, h: HH) -> Result<Status, Error> {
         self.hstatus.get(h)
     }
 
-    pub fn halfedge_status_mut(&mut self, h: HH) -> Result<RefMut<'_, Status>, Error> {
-        self.hstatus.get_mut(h)
-    }
-
-    pub fn edge_status(&self, e: EH) -> Result<Ref<'_, Status>, Error> {
+    pub fn edge_status(&self, e: EH) -> Result<Status, Error> {
         self.estatus.get(e)
     }
 
@@ -167,7 +162,7 @@ impl Topology {
         self.estatus.get_mut(e)
     }
 
-    pub fn face_status(&self, f: FH) -> Result<Ref<'_, Status>, Error> {
+    pub fn face_status(&self, f: FH) -> Result<Status, Error> {
         self.fstatus.get(f)
     }
 
@@ -175,20 +170,24 @@ impl Topology {
         self.fstatus.get_mut(f)
     }
 
-    pub fn create_vertex_prop<T: TPropData>(&mut self) -> VProperty<T> {
+    pub fn new_vprop<T: TPropData>(&mut self) -> VProperty<T> {
         VProperty::<T>::new(&mut self.vprops)
     }
 
-    pub fn create_halfedge_prop<T: TPropData>(&mut self) -> HProperty<T> {
+    pub fn new_hprop<T: TPropData>(&mut self) -> HProperty<T> {
         HProperty::<T>::new(&mut self.hprops)
     }
 
-    pub fn create_edge_prop<T: TPropData>(&mut self) -> EProperty<T> {
+    pub fn new_eprop<T: TPropData>(&mut self) -> EProperty<T> {
         EProperty::<T>::new(&mut self.eprops)
     }
 
-    pub fn create_face_prop<T: TPropData>(&mut self) -> FProperty<T> {
+    pub fn new_fprop<T: TPropData>(&mut self) -> FProperty<T> {
         FProperty::<T>::new(&mut self.fprops)
+    }
+
+    pub fn new_vprop_with_capacity<T: TPropData>(&mut self, n: usize) -> VProperty<T> {
+        VProperty::<T>::with_capacity(n, &mut self.vprops)
     }
 
     pub fn is_valid_vertex(&self, v: VH) -> bool {
@@ -330,11 +329,23 @@ impl Topology {
          * cases the vertex is manifold. If any outgoing halfedge apart from the
          * first is on the boundary, it implies there are more than one gaps
          * when circulating around the vertex, making it non-manifold. For this
-         * reason, we skip the first halfedge and check the rest.
-         */
+         * reason, we skip the first halfedge and check the rest. */
         iterator::voh_ccw_iter(self, v)
             .skip(1)
             .all(|h| !self.is_boundary_halfedge(h))
+    }
+
+    pub fn triangulated_face_vertices(&self, f: FH) -> impl Iterator<Item = [VH; 3]> + use<'_> {
+        let hstart = self.face_halfedge(f);
+        let vstart = self.from_vertex(hstart);
+        iterator::loop_ccw_iter(self, self.next_halfedge(hstart))
+            .take_while(move |h| self.to_vertex(*h) != vstart)
+            .map(move |h| [vstart, self.from_vertex(h), self.to_vertex(h)])
+    }
+
+    pub fn triangulated_vertices(&self) -> impl Iterator<Item = [VH; 3]> + use<'_> {
+        self.faces()
+            .flat_map(move |f| self.triangulated_face_vertices(f))
     }
 
     fn adjust_outgoing_halfedge(&mut self, v: VH) {
@@ -374,9 +385,7 @@ impl Topology {
     ) -> Result<u32, Error> {
         let ei = self.edges.len() as u32;
         self.eprops.push_value()?;
-        for _ in 0..2 {
-            self.hprops.push_value()?;
-        }
+        self.hprops.push_values(2)?;
         self.edges.push(Edge {
             halfedges: [
                 Halfedge {
@@ -1291,22 +1300,10 @@ mod test {
     #[test]
     fn t_quad_box_prop_len() {
         let qbox = quad_box();
-        assert_eq!(
-            qbox.num_vertices(),
-            qbox.vprops.len().expect("Cannot read length of property")
-        );
-        assert_eq!(
-            qbox.num_halfedges(),
-            qbox.hprops.len().expect("Cannot read length of property")
-        );
-        assert_eq!(
-            qbox.num_edges(),
-            qbox.eprops.len().expect("Cannot read length of property")
-        );
-        assert_eq!(
-            qbox.num_faces(),
-            qbox.fprops.len().expect("Cannot read length of property")
-        );
+        assert_eq!(qbox.num_vertices(), qbox.vprops.len());
+        assert_eq!(qbox.num_halfedges(), qbox.hprops.len());
+        assert_eq!(qbox.num_edges(), qbox.eprops.len());
+        assert_eq!(qbox.num_faces(), qbox.fprops.len());
     }
 
     #[test]
@@ -1424,6 +1421,21 @@ mod test {
             qbox.vertices()
                 .filter(|v| qbox.is_boundary_vertex(*v))
                 .count()
+        );
+    }
+
+    #[test]
+    fn t_box_triangulated_indices() {
+        let qbox = quad_box();
+        assert_eq!(
+            qbox.triangulated_vertices()
+                .flatten()
+                .map(|v| v.index())
+                .collect::<Vec<_>>(),
+            &[
+                1, 0, 3, 1, 3, 2, 4, 0, 1, 4, 1, 5, 5, 1, 2, 5, 2, 6, 6, 2, 3, 6, 3, 7, 7, 3, 0, 7,
+                0, 4, 7, 4, 5, 7, 5, 6
+            ]
         );
     }
 }

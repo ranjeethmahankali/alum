@@ -83,5 +83,8 @@ mod test {
         assert_eq!(qbox.num_halfedges(), 24);
         assert_eq!(qbox.num_edges(), 12);
         assert_eq!(qbox.num_faces(), 6);
+        for v in qbox.vertices() {
+            assert_eq!(qbox.vf_ccw_iter(v).count(), 3);
+        }
     }
 }

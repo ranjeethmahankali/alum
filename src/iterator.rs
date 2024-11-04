@@ -9,6 +9,16 @@ struct OutgoingHalfedgeIter<'a, const CCW: bool> {
     hcurrent: Option<HH>,
 }
 
+impl<'a, const CCW: bool> OutgoingHalfedgeIter<'a, CCW> {
+    fn new(topol: &'a Topology, h: Option<HH>) -> Self {
+        OutgoingHalfedgeIter {
+            topol,
+            hstart: h,
+            hcurrent: h,
+        }
+    }
+}
+
 impl<'a> Iterator for OutgoingHalfedgeIter<'a, true> {
     type Item = HH;
 
@@ -49,13 +59,23 @@ impl<'a> Iterator for OutgoingHalfedgeIter<'a, false> {
     }
 }
 
-struct FaceHalfedgeIter<'a, const CCW: bool> {
+struct LoopHalfedgeIter<'a, const CCW: bool> {
     topol: &'a Topology,
     hstart: HH,
     hcurrent: Option<HH>,
 }
 
-impl<'a> Iterator for FaceHalfedgeIter<'a, true> {
+impl<'a, const CCW: bool> LoopHalfedgeIter<'a, CCW> {
+    fn new(topol: &'a Topology, h: HH) -> Self {
+        LoopHalfedgeIter {
+            topol,
+            hstart: h,
+            hcurrent: Some(h),
+        }
+    }
+}
+
+impl<'a> Iterator for LoopHalfedgeIter<'a, true> {
     type Item = HH;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -74,7 +94,7 @@ impl<'a> Iterator for FaceHalfedgeIter<'a, true> {
     }
 }
 
-impl<'a> Iterator for FaceHalfedgeIter<'a, false> {
+impl<'a> Iterator for LoopHalfedgeIter<'a, false> {
     type Item = HH;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -102,41 +122,21 @@ pub(crate) fn vv_cw_iter(topol: &Topology, v: VH) -> impl Iterator<Item = VH> + 
 }
 
 pub(crate) fn vih_ccw_iter(topol: &Topology, v: VH) -> impl Iterator<Item = HH> + use<'_> {
-    let h = topol.vertex_halfedge(v);
-    OutgoingHalfedgeIter::<true> {
-        topol,
-        hstart: h,
-        hcurrent: h,
-    }
-    .map(|h| topol.opposite_halfedge(h))
+    OutgoingHalfedgeIter::<true>::new(topol, topol.vertex_halfedge(v))
+        .map(|h| topol.opposite_halfedge(h))
 }
 
 pub(crate) fn vih_cw_iter(topol: &Topology, v: VH) -> impl Iterator<Item = HH> + use<'_> {
-    let h = topol.vertex_halfedge(v);
-    OutgoingHalfedgeIter::<false> {
-        topol,
-        hstart: h,
-        hcurrent: h,
-    }
-    .map(|h| topol.opposite_halfedge(h))
+    OutgoingHalfedgeIter::<false>::new(topol, topol.vertex_halfedge(v))
+        .map(|h| topol.opposite_halfedge(h))
 }
 
 pub(crate) fn voh_ccw_iter(topol: &Topology, v: VH) -> impl Iterator<Item = HH> + use<'_> {
-    let h = topol.vertex_halfedge(v);
-    OutgoingHalfedgeIter::<true> {
-        topol,
-        hstart: h,
-        hcurrent: h,
-    }
+    OutgoingHalfedgeIter::<true>::new(topol, topol.vertex_halfedge(v))
 }
 
 pub(crate) fn voh_cw_iter(topol: &Topology, v: VH) -> impl Iterator<Item = HH> + use<'_> {
-    let h = topol.vertex_halfedge(v);
-    OutgoingHalfedgeIter::<false> {
-        topol,
-        hstart: h,
-        hcurrent: h,
-    }
+    OutgoingHalfedgeIter::<false>::new(topol, topol.vertex_halfedge(v))
 }
 
 pub(crate) fn ve_ccw_iter(topol: &Topology, v: VH) -> impl Iterator<Item = EH> + use<'_> {
@@ -178,21 +178,11 @@ pub(crate) fn fv_cw_iter(topol: &Topology, f: FH) -> impl Iterator<Item = VH> + 
 }
 
 pub(crate) fn fh_ccw_iter(topol: &Topology, f: FH) -> impl Iterator<Item = HH> + use<'_> {
-    let h = topol.face_halfedge(f);
-    FaceHalfedgeIter::<true> {
-        topol,
-        hstart: h,
-        hcurrent: Some(h),
-    }
+    LoopHalfedgeIter::<true>::new(topol, topol.face_halfedge(f))
 }
 
 pub(crate) fn fh_cw_iter(topol: &Topology, f: FH) -> impl Iterator<Item = HH> + use<'_> {
-    let h = topol.face_halfedge(f);
-    FaceHalfedgeIter::<false> {
-        topol,
-        hstart: h,
-        hcurrent: Some(h),
-    }
+    LoopHalfedgeIter::<false>::new(topol, topol.face_halfedge(f))
 }
 
 pub(crate) fn fe_ccw_iter(topol: &Topology, f: FH) -> impl Iterator<Item = EH> + use<'_> {
@@ -209,6 +199,22 @@ pub(crate) fn ff_ccw_iter(topol: &Topology, f: FH) -> impl Iterator<Item = FH> +
 
 pub(crate) fn ff_cw_iter(topol: &Topology, f: FH) -> impl Iterator<Item = FH> + use<'_> {
     fh_cw_iter(topol, f).filter_map(|h| topol.halfedge_face(topol.opposite_halfedge(h)))
+}
+
+pub(crate) fn ccw_rotate_iter(topol: &Topology, h: HH) -> impl Iterator<Item = HH> + use<'_> {
+    OutgoingHalfedgeIter::<true>::new(topol, Some(h))
+}
+
+pub(crate) fn cw_rotate_iter(topol: &Topology, h: HH) -> impl Iterator<Item = HH> + use<'_> {
+    OutgoingHalfedgeIter::<false>::new(topol, Some(h))
+}
+
+pub(crate) fn loop_ccw_iter(topol: &Topology, h: HH) -> impl Iterator<Item = HH> + use<'_> {
+    LoopHalfedgeIter::<true>::new(topol, h)
+}
+
+pub(crate) fn loop_cw_iter(topol: &Topology, h: HH) -> impl Iterator<Item = HH> + use<'_> {
+    LoopHalfedgeIter::<false>::new(topol, h)
 }
 
 #[cfg(test)]

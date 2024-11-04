@@ -12,6 +12,7 @@ categories = ["mathematics", "graphics", "rendering"]
 
 [dependencies]
 glam = "0.8.5"
+tobj = "4.0.2"
 
 [dev-dependencies]
 arrayvec = "0.7.6"
