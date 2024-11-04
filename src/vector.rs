@@ -349,11 +349,18 @@ where
         let points = points.try_borrow()?;
         Ok(self.calc_area(&points))
     }
+}
 
-    pub fn calc_volume(&self, points: &[VecT]) -> VecT::Scalar
-    where
-        VecT::Scalar: Div<Output = VecT::Scalar>,
-    {
+impl<VecT> PolyMeshT<VecT>
+where
+    VecT: TVec3 + Sub<Output = VecT>,
+    VecT::Scalar: TScalar
+        + Mul<Output = VecT::Scalar>
+        + Add<Output = VecT::Scalar>
+        + Div<Output = VecT::Scalar>
+        + Sub<Output = VecT::Scalar>,
+{
+    pub fn calc_volume(&self, points: &[VecT]) -> VecT::Scalar {
         if self
             .halfedges()
             .any(|h| self.topology().is_boundary_halfedge(h))
@@ -370,6 +377,12 @@ where
                 );
                 total + (VecT::dot(p0, VecT::cross(p1 - p0, p2 - p0)) / VecT::Scalar::from_f64(6.))
             })
+    }
+
+    pub fn try_calc_volume(&self) -> Result<VecT::Scalar, Error> {
+        let points = self.points();
+        let points = points.try_borrow()?;
+        Ok(self.calc_volume(&points))
     }
 }
 
@@ -558,5 +571,12 @@ mod test {
         let qbox = PolyMeshF32::quad_box(glam::vec3(0., 0., 0.), glam::vec3(1., 1., 1.))
             .expect("Cannot create a box primitive");
         assert_eq!(qbox.try_calc_area().expect("Unable to calculate area"), 6.);
+    }
+
+    #[test]
+    fn t_box_volume() {
+        let qbox = PolyMeshF32::quad_box(glam::vec3(0., 0., 0.), glam::vec3(1., 1., 1.))
+            .expect("Cannot create a box primitive");
+        assert_eq!(qbox.try_calc_volume().expect("Cannot compute volume"), 1.);
     }
 }
