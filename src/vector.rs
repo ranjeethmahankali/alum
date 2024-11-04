@@ -5,7 +5,7 @@ use crate::{
     mesh::PolyMeshT,
     property::TPropData,
 };
-use std::ops::{Add, Div, Mul, Sub};
+use std::ops::{Add, Div, Mul, Neg, Sub};
 
 pub trait TScalar {
     fn from_f64(val: f64) -> Self;
@@ -177,8 +177,7 @@ where
                     return VecT::default();
                 }
                 // Iterate over adjacent pairs of outgoing halfedges.
-                iterator::ccw_rotate_iter(topol, h)
-                    .zip(iterator::ccw_rotate_iter(topol, h2))
+                iterator::ccw_rotate_iter(topol, h).zip(iterator::ccw_rotate_iter(topol, h2))
             }
             None => return VecT::default(),
         }
@@ -280,6 +279,27 @@ where
 
     pub fn calc_halfedge_vector(&self, h: HH, points: &[VecT]) -> VecT {
         points[self.to_vertex(h).index() as usize] - points[self.from_vertex(h).index() as usize]
+    }
+}
+
+impl<VecT> PolyMeshT<VecT>
+where
+    VecT: TVec3 + Sub<Output = VecT>,
+    VecT::Scalar: TScalar + Mul<Output = VecT::Scalar> + Sub<Output = VecT::Scalar>,
+{
+    pub fn calc_sector_area(&self, h: HH, points: &[VecT]) -> VecT::Scalar {
+        VecT::cross(
+            &self.calc_halfedge_vector(h, points),
+            &self.calc_halfedge_vector(self.topology().prev_halfedge(h), points),
+        )
+        .length()
+            * VecT::Scalar::from_f64(0.5)
+    }
+
+    pub fn calc_sector_area_locked(&self, h: HH) -> Result<VecT::Scalar, Error> {
+        let points = self.points();
+        let points = points.try_borrow()?;
+        Ok(self.calc_sector_area(h, &points))
     }
 }
 
@@ -437,5 +457,18 @@ mod test {
                 glam::vec3(-0.57735026, 0.57735026, 0.57735026),
             ]
         );
+    }
+
+    #[test]
+    fn t_box_sector_area() {
+        let qbox = PolyMeshF32::quad_box(glam::vec3(0., 0., 0.), glam::vec3(1., 1., 1.))
+            .expect("Cannot create a box primitive");
+        let points = qbox.points();
+        let points = points
+            .try_borrow()
+            .expect("Cannot borrow the points property");
+        for h in qbox.halfedges() {
+            assert_eq!(qbox.calc_sector_area(h, &points), 0.5);
+        }
     }
 }
