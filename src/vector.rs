@@ -639,4 +639,19 @@ mod test {
             ]
         );
     }
+
+    #[test]
+    fn t_box_sector_normals() {
+        let qbox = PolyMeshF32::quad_box(glam::vec3(0., 0., 0.), glam::vec3(1., 1., 1.))
+            .expect("Cannot create a box primitive");
+        let points = qbox.points();
+        let points = points.try_borrow().expect("Cannot borrow points");
+        let points: &[glam::Vec3] = &points;
+        for f in qbox.faces() {
+            let fnorm = qbox.calc_face_normal(f, points);
+            for h in qbox.fh_ccw_iter(f) {
+                assert_eq!(qbox.calc_sector_normal(h, points), fnorm);
+            }
+        }
+    }
 }
