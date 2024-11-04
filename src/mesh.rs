@@ -234,15 +234,38 @@ impl<VecT: TVec3> PolyMeshT<VecT> {
     {
         let mut vprop = self.request_vertex_normals();
         {
-            let fprop = match self.face_normals() {
+            let fnormals = match self.face_normals() {
                 Some(prop) => prop,
                 None => self.update_face_normals()?,
             };
-            let fnormals = fprop.try_borrow()?;
+            let fnormals = fnormals.try_borrow()?;
             let mut vnormals = vprop.try_borrow_mut()?;
             let vnormals: &mut [VecT] = &mut vnormals;
             for v in self.vertices() {
                 vnormals[v.index() as usize] = self.calc_vertex_normal_fast(v, &fnormals);
+            }
+        }
+        Ok(vprop)
+    }
+
+    pub fn update_vertex_normals_accurate(&mut self) -> Result<VProperty<VecT>, Error>
+    where
+        VecT::Scalar: TScalar
+            + Mul<Output = VecT::Scalar>
+            + Sub<Output = VecT::Scalar>
+            + Div<Output = VecT::Scalar>
+            + TPropData
+            + PartialOrd,
+        VecT: TVec3 + Sub<Output = VecT> + Add<Output = VecT>,
+    {
+        let mut vprop = self.request_vertex_normals();
+        {
+            let mut vnormals = vprop.try_borrow_mut()?;
+            let vnormals: &mut [VecT] = &mut vnormals;
+            let points = self.points();
+            let points = points.try_borrow()?;
+            for v in self.vertices() {
+                vnormals[v.index() as usize] = self.calc_vertex_normal_accurate(v, &points);
             }
         }
         Ok(vprop)
