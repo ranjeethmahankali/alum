@@ -5,7 +5,7 @@ use crate::{
     mesh::PolyMeshT,
     property::TPropData,
 };
-use std::ops::{Add, Div, Mul, Neg, Sub};
+use std::ops::{Add, Div, Mul, Sub};
 
 pub trait TScalar {
     fn from_f64(val: f64) -> Self;
@@ -285,7 +285,10 @@ where
 impl<VecT> PolyMeshT<VecT>
 where
     VecT: TVec3 + Sub<Output = VecT>,
-    VecT::Scalar: TScalar + Mul<Output = VecT::Scalar> + Sub<Output = VecT::Scalar>,
+    VecT::Scalar: TScalar
+        + Mul<Output = VecT::Scalar>
+        + Sub<Output = VecT::Scalar>
+        + Add<Output = VecT::Scalar>,
 {
     pub fn calc_sector_area(&self, h: HH, points: &[VecT]) -> VecT::Scalar {
         VecT::cross(
@@ -300,6 +303,40 @@ where
         let points = self.points();
         let points = points.try_borrow()?;
         Ok(self.calc_sector_area(h, &points))
+    }
+
+    pub fn calc_face_area(&self, f: FH, points: &[VecT]) -> VecT::Scalar {
+        self.topology().triangulated_face_vertices(f).fold(
+            VecT::Scalar::from_f64(0.),
+            |total, vs| {
+                let p0 = points[vs[0].index() as usize];
+                total
+                    + VecT::cross(
+                        &(points[vs[1].index() as usize] - p0),
+                        &(points[vs[2].index() as usize] - p0),
+                    )
+                    .length()
+                        * VecT::Scalar::from_f64(0.5)
+            },
+        )
+    }
+
+    pub fn calc_face_area_locked(&self, f: FH) -> Result<VecT::Scalar, Error> {
+        let points = self.points();
+        let points = points.try_borrow()?;
+        Ok(self.calc_face_area(f, &points))
+    }
+
+    pub fn calc_area(&self, points: &[VecT]) -> VecT::Scalar {
+        self.faces().fold(VecT::Scalar::from_f64(0.), |total, f| {
+            total + self.calc_face_area(f, &points)
+        })
+    }
+
+    pub fn calc_area_locked(&self) -> Result<VecT::Scalar, Error> {
+        let points = self.points();
+        let points = points.try_borrow()?;
+        Ok(self.calc_area(&points))
     }
 }
 
@@ -470,5 +507,26 @@ mod test {
         for h in qbox.halfedges() {
             assert_eq!(qbox.calc_sector_area(h, &points), 0.5);
         }
+    }
+
+    #[test]
+    fn t_box_face_areas() {
+        let qbox = PolyMeshF32::quad_box(glam::vec3(0., 0., 0.), glam::vec3(1., 1., 1.))
+            .expect("Cannot create a box primitive");
+        let points = qbox.points();
+        let points = points.try_borrow().expect("Cannot borrow points");
+        for f in qbox.faces() {
+            assert_eq!(qbox.calc_face_area(f, &points), 1.);
+        }
+    }
+
+    #[test]
+    fn t_box_total_area() {
+        let qbox = PolyMeshF32::quad_box(glam::vec3(0., 0., 0.), glam::vec3(1., 1., 1.))
+            .expect("Cannot create a box primitive");
+        assert_eq!(
+            qbox.calc_area_locked().expect("Unable to calculate area"),
+            6.
+        );
     }
 }
