@@ -73,8 +73,7 @@ mod test {
 
     use crate::mesh::PolyMeshF32;
 
-    #[test]
-    fn t_load_bunny() {
+    fn bunny_mesh() -> PolyMeshF32 {
         let path = {
             let mut dirpath = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
             dirpath.push("assets");
@@ -82,13 +81,27 @@ mod test {
             dirpath
         };
         dbg!(&path);
-        let mesh = PolyMeshF32::load_obj(&path).unwrap();
+        PolyMeshF32::load_obj(&path).expect("Cannot load mesh")
+    }
+
+    #[test]
+    fn t_bunny_topol() {
+        let mesh = bunny_mesh();
         assert_eq!(2503, mesh.num_vertices());
         assert_eq!(7473, mesh.num_edges());
         assert_eq!(4968, mesh.num_faces());
         assert_eq!(
             42,
             mesh.edges().filter(|e| mesh.is_boundary_edge(*e)).count()
+        );
+    }
+
+    #[test]
+    fn t_bunny_area() {
+        let mesh = bunny_mesh();
+        assert_eq!(
+            mesh.try_calc_area().expect("Unable to compute the area"),
+            0.05646857
         );
     }
 }
