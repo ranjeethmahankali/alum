@@ -1,5 +1,5 @@
 use crate::{
-    element::{Handle, FH, HH, VH},
+    element::{Handle, EH, FH, HH, VH},
     error::Error,
     iterator,
     mesh::PolyMeshT,
@@ -301,13 +301,21 @@ where
         + Sub<Output = VecT::Scalar>
         + Add<Output = VecT::Scalar>,
 {
-    pub fn calc_sector_area(&self, h: HH, points: &[VecT]) -> VecT::Scalar {
+    pub fn calc_sector_normal(&self, h: HH, points: &[VecT]) -> VecT {
         VecT::cross(
-            self.calc_halfedge_vector(h, points),
             self.calc_halfedge_vector(self.topology().prev_halfedge(h), points),
+            self.calc_halfedge_vector(h, points),
         )
-        .length()
-            * VecT::Scalar::from_f64(0.5)
+    }
+
+    pub fn try_calc_sector_normal(&self, h: HH) -> Result<VecT, Error> {
+        let points = self.points();
+        let points = points.try_borrow()?;
+        Ok(self.calc_sector_normal(h, &points))
+    }
+
+    pub fn calc_sector_area(&self, h: HH, points: &[VecT]) -> VecT::Scalar {
+        self.calc_sector_normal(h, points).length() * VecT::Scalar::from_f64(0.5)
     }
 
     pub fn try_calc_sector_area(&self, h: HH) -> Result<VecT::Scalar, Error> {
