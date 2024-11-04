@@ -104,4 +104,10 @@ mod test {
             0.05646857
         );
     }
+
+    #[test]
+    fn t_bunny_volume() {
+        let mesh = bunny_mesh(); // This mesh is not closed.
+        assert_eq!(mesh.try_calc_volume().expect("Cannot compute volume"), 0.);
+    }
 }
