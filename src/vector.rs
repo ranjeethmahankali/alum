@@ -60,7 +60,7 @@ pub trait TVec3: TPropData {
         }
     }
 
-    fn cross(a: &Self, b: &Self) -> Self
+    fn cross(a: Self, b: Self) -> Self
     where
         Self::Scalar: Mul<Output = Self::Scalar> + Sub<Output = Self::Scalar>,
     {
@@ -69,6 +69,13 @@ pub trait TVec3: TPropData {
             a.z() * b.x() - a.x() * b.z(),
             a.x() * b.y() - a.y() * b.x(),
         )
+    }
+
+    fn dot(a: Self, b: Self) -> Self::Scalar
+    where
+        Self::Scalar: Mul<Output = Self::Scalar> + Add<Output = Self::Scalar>,
+    {
+        a.x() * b.x() + a.y() * b.y() + a.z() * b.z()
     }
 }
 
@@ -99,8 +106,12 @@ impl TVec3 for glam::Vec3 {
         glam::Vec3::normalize(self.clone())
     }
 
-    fn cross(a: &Self, b: &Self) -> Self {
-        a.cross(*b)
+    fn cross(a: Self, b: Self) -> Self {
+        a.cross(b)
+    }
+
+    fn dot(a: Self, b: Self) -> Self::Scalar {
+        a.dot(b)
     }
 }
 
@@ -191,8 +202,8 @@ where
                 // Intentionally not normalizing to account for sector area.
                 total
                     + VecT::cross(
-                        &self.calc_halfedge_vector(h1, points),
-                        &self.calc_halfedge_vector(h2, points),
+                        self.calc_halfedge_vector(h1, points),
+                        self.calc_halfedge_vector(h2, points),
                     )
             },
         )
@@ -292,8 +303,8 @@ where
 {
     pub fn calc_sector_area(&self, h: HH, points: &[VecT]) -> VecT::Scalar {
         VecT::cross(
-            &self.calc_halfedge_vector(h, points),
-            &self.calc_halfedge_vector(self.topology().prev_halfedge(h), points),
+            self.calc_halfedge_vector(h, points),
+            self.calc_halfedge_vector(self.topology().prev_halfedge(h), points),
         )
         .length()
             * VecT::Scalar::from_f64(0.5)
@@ -312,8 +323,8 @@ where
                 let p0 = points[vs[0].index() as usize];
                 total
                     + VecT::cross(
-                        &(points[vs[1].index() as usize] - p0),
-                        &(points[vs[2].index() as usize] - p0),
+                        points[vs[1].index() as usize] - p0,
+                        points[vs[2].index() as usize] - p0,
                     )
                     .length()
                         * VecT::Scalar::from_f64(0.5)
@@ -337,6 +348,28 @@ where
         let points = self.points();
         let points = points.try_borrow()?;
         Ok(self.calc_area(&points))
+    }
+
+    pub fn calc_volume(&self, points: &[VecT]) -> VecT::Scalar
+    where
+        VecT::Scalar: Div<Output = VecT::Scalar>,
+    {
+        if self
+            .halfedges()
+            .any(|h| self.topology().is_boundary_halfedge(h))
+        {
+            // Not closed.
+            return VecT::Scalar::from_f64(0.);
+        }
+        self.triangulated_vertices()
+            .fold(VecT::Scalar::from_f64(0.), |total, vs| {
+                let (p0, p1, p2) = (
+                    points[vs[0].index() as usize],
+                    points[vs[1].index() as usize],
+                    points[vs[2].index() as usize],
+                );
+                total + (VecT::dot(p0, VecT::cross(p1 - p0, p2 - p0)) / VecT::Scalar::from_f64(6.))
+            })
     }
 }
 
