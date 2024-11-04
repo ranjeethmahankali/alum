@@ -114,7 +114,7 @@ where
         + PartialOrd,
     VecT: TVec3 + Add<Output = VecT> + Sub<Output = VecT>,
 {
-    pub fn calc_face_normal_locked(&self, f: FH) -> Result<VecT, Error> {
+    pub fn try_calc_face_normal(&self, f: FH) -> Result<VecT, Error> {
         let points = self.points();
         let points = points.try_borrow()?;
         Ok(self.calc_face_normal(f, &points))
@@ -199,7 +199,7 @@ where
         .normalized()
     }
 
-    pub fn calc_vertex_normal_accurate_locked(&self, v: VH) -> Result<VecT, Error> {
+    pub fn try_calc_vertex_normal_accurate(&self, v: VH) -> Result<VecT, Error> {
         let points = self.points();
         let points = points.try_borrow()?;
         Ok(self.calc_vertex_normal_accurate(v, &points))
@@ -211,7 +211,7 @@ where
     VecT::Scalar: TScalar + Add<Output = VecT::Scalar>,
     VecT: TVec3 + Add<Output = VecT> + Div<VecT::Scalar, Output = VecT>,
 {
-    pub fn calc_face_centroid_locked(&self, f: FH) -> Result<VecT, Error> {
+    pub fn try_calc_face_centroid(&self, f: FH) -> Result<VecT, Error> {
         let points = self.points();
         let points = points.try_borrow()?;
         Ok(self.calc_face_centroid(f, &points))
@@ -256,7 +256,7 @@ where
             .normalized()
     }
 
-    pub fn calc_vertex_normal_fast_locked(&self, v: VH) -> Result<VecT, Error> {
+    pub fn try_calc_vertex_normal_fast(&self, v: VH) -> Result<VecT, Error> {
         match self.face_normals() {
             Some(fnormals) => {
                 let fnormals = fnormals.try_borrow()?;
@@ -271,7 +271,7 @@ impl<VecT> PolyMeshT<VecT>
 where
     VecT: TVec3 + Sub<Output = VecT>,
 {
-    pub fn calc_halfedge_vector_locked(&self, h: HH) -> Result<VecT, Error> {
+    pub fn try_calc_halfedge_vector(&self, h: HH) -> Result<VecT, Error> {
         let points = self.points();
         let points = points.try_borrow()?;
         Ok(self.calc_halfedge_vector(h, &points))
@@ -299,7 +299,7 @@ where
             * VecT::Scalar::from_f64(0.5)
     }
 
-    pub fn calc_sector_area_locked(&self, h: HH) -> Result<VecT::Scalar, Error> {
+    pub fn try_calc_sector_area(&self, h: HH) -> Result<VecT::Scalar, Error> {
         let points = self.points();
         let points = points.try_borrow()?;
         Ok(self.calc_sector_area(h, &points))
@@ -321,7 +321,7 @@ where
         )
     }
 
-    pub fn calc_face_area_locked(&self, f: FH) -> Result<VecT::Scalar, Error> {
+    pub fn try_calc_face_area(&self, f: FH) -> Result<VecT::Scalar, Error> {
         let points = self.points();
         let points = points.try_borrow()?;
         Ok(self.calc_face_area(f, &points))
@@ -333,7 +333,7 @@ where
         })
     }
 
-    pub fn calc_area_locked(&self) -> Result<VecT::Scalar, Error> {
+    pub fn try_calc_area(&self) -> Result<VecT::Scalar, Error> {
         let points = self.points();
         let points = points.try_borrow()?;
         Ok(self.calc_area(&points))
@@ -351,7 +351,7 @@ mod test {
         assert_eq!(
             qbox.faces()
                 .map(|f| {
-                    qbox.calc_face_normal_locked(f)
+                    qbox.try_calc_face_normal(f)
                         .expect("Cannot compute face centroid")
                 })
                 .collect::<Vec<_>>(),
@@ -373,7 +373,7 @@ mod test {
         assert_eq!(
             qbox.faces()
                 .map(|f| {
-                    qbox.calc_face_centroid_locked(f)
+                    qbox.try_calc_face_centroid(f)
                         .expect("Cannot compute face centroid")
                 })
                 .collect::<Vec<_>>(),
@@ -395,7 +395,7 @@ mod test {
         assert_eq!(
             qbox.halfedges()
                 .map(|h| {
-                    qbox.calc_halfedge_vector_locked(h)
+                    qbox.try_calc_halfedge_vector(h)
                         .expect("Cannot compute halfedge vector")
                 })
                 .collect::<Vec<_>>(),
@@ -435,7 +435,7 @@ mod test {
         assert_eq!(
             qbox.vertices()
                 .map(|v| qbox
-                    .calc_vertex_normal_accurate_locked(v)
+                    .try_calc_vertex_normal_accurate(v)
                     .expect("Cannot compute the correct vertex normal"))
                 .collect::<Vec<_>>(),
             &[
@@ -524,9 +524,6 @@ mod test {
     fn t_box_total_area() {
         let qbox = PolyMeshF32::quad_box(glam::vec3(0., 0., 0.), glam::vec3(1., 1., 1.))
             .expect("Cannot create a box primitive");
-        assert_eq!(
-            qbox.calc_area_locked().expect("Unable to calculate area"),
-            6.
-        );
+        assert_eq!(qbox.try_calc_area().expect("Unable to calculate area"), 6.);
     }
 }
