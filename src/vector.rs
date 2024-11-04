@@ -579,4 +579,56 @@ mod test {
             .expect("Cannot create a box primitive");
         assert_eq!(qbox.try_calc_volume().expect("Cannot compute volume"), 1.);
     }
+
+    #[test]
+    fn t_box_update_vertex_normals_fast() {
+        let mut qbox = PolyMeshF32::quad_box(glam::vec3(0., 0., 0.), glam::vec3(1., 1., 1.))
+            .expect("Cannot create a box primitive");
+        assert!(!qbox.has_vertex_normals());
+        let vnormals = qbox
+            .update_vertex_normals_fast()
+            .expect("Cannot update vertex normals");
+        let vnormals = vnormals.try_borrow().expect("Cannot borrow vertex normals");
+        let vnormals: &[glam::Vec3] = &vnormals;
+        assert!(qbox.has_vertex_normals());
+        assert_eq!(
+            vnormals,
+            &[
+                glam::vec3(-0.57735026, -0.57735026, -0.57735026),
+                glam::vec3(0.57735026, -0.57735026, -0.57735026),
+                glam::vec3(0.57735026, 0.57735026, -0.57735026),
+                glam::vec3(-0.57735026, 0.57735026, -0.57735026),
+                glam::vec3(-0.57735026, -0.57735026, 0.57735026),
+                glam::vec3(0.57735026, -0.57735026, 0.57735026),
+                glam::vec3(0.57735026, 0.57735026, 0.57735026),
+                glam::vec3(-0.57735026, 0.57735026, 0.57735026),
+            ]
+        );
+    }
+
+    #[test]
+    fn t_box_update_vertex_normals_accurate() {
+        let mut qbox = PolyMeshF32::quad_box(glam::vec3(0., 0., 0.), glam::vec3(1., 1., 1.))
+            .expect("Cannot create a box primitive");
+        assert!(!qbox.has_vertex_normals());
+        let vnormals = qbox
+            .update_vertex_normals_accurate()
+            .expect("Cannot update vertex normals");
+        let vnormals = vnormals.try_borrow().expect("Cannot borrow vertex normals");
+        let vnormals: &[glam::Vec3] = &vnormals;
+        assert!(qbox.has_vertex_normals());
+        assert_eq!(
+            vnormals,
+            &[
+                glam::vec3(-0.57735026, -0.57735026, -0.57735026),
+                glam::vec3(0.57735026, -0.57735026, -0.57735026),
+                glam::vec3(0.57735026, 0.57735026, -0.57735026),
+                glam::vec3(-0.57735026, 0.57735026, -0.57735026),
+                glam::vec3(-0.57735026, -0.57735026, 0.57735026),
+                glam::vec3(0.57735026, -0.57735026, 0.57735026),
+                glam::vec3(0.57735026, 0.57735026, 0.57735026),
+                glam::vec3(-0.57735026, 0.57735026, 0.57735026),
+            ]
+        );
+    }
 }
