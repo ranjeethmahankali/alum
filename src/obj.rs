@@ -84,6 +84,17 @@ mod test {
         PolyMeshF32::load_obj(&path).expect("Cannot load mesh")
     }
 
+    fn large_bunny_mesh() -> PolyMeshF32 {
+        let path = {
+            let mut dirpath = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+            dirpath.push("assets");
+            dirpath.push("bunny_large.obj");
+            dirpath
+        };
+        dbg!(&path);
+        PolyMeshF32::load_obj(&path).expect("Cannot load mesh")
+    }
+
     #[test]
     fn t_bunny_topol() {
         let mesh = bunny_mesh();
@@ -109,5 +120,14 @@ mod test {
     fn t_bunny_volume() {
         let mesh = bunny_mesh(); // This mesh is not closed.
         assert_eq!(mesh.try_calc_volume().expect("Cannot compute volume"), 0.);
+    }
+
+    #[test]
+    fn t_large_bunny_volume() {
+        let mesh = large_bunny_mesh();
+        assert_eq!(
+            mesh.try_calc_volume().expect("Cannot compute volume"),
+            6.039229
+        );
     }
 }
