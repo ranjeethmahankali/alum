@@ -5,7 +5,7 @@ use crate::{
     mesh::PolyMeshT,
     property::TPropData,
 };
-use std::ops::{Add, Div, Mul, Sub};
+use std::ops::{Add, Div, Mul, Neg, Sub};
 
 pub trait TScalar {
     fn from_f64(val: f64) -> Self;
@@ -77,6 +77,8 @@ pub trait TVec3: TPropData {
     {
         a.x() * b.x() + a.y() * b.y() + a.z() * b.z()
     }
+
+    fn angle(a: Self, b: Self) -> Self::Scalar;
 }
 
 impl TVec3 for glam::Vec3 {
@@ -112,6 +114,10 @@ impl TVec3 for glam::Vec3 {
 
     fn dot(a: Self, b: Self) -> Self::Scalar {
         a.dot(b)
+    }
+
+    fn angle(a: Self, b: Self) -> Self::Scalar {
+        Self::angle_between(a, b)
     }
 }
 
@@ -401,22 +407,15 @@ where
         + Mul<Output = VecT::Scalar>
         + Sub<Output = VecT::Scalar>
         + Add<Output = VecT::Scalar>
-        + Div<Output = VecT::Scalar>
+        + Neg<Output = VecT::Scalar>
         + PartialOrd,
 {
     fn aligned_angle(norm0: VecT, norm1: VecT, hvec: VecT) -> VecT::Scalar {
-        let denom = norm0.length() * norm1.length();
-        let cos = VecT::dot(norm0, norm1) / denom;
-        let sign = VecT::dot(VecT::cross(norm0, norm1), hvec);
-        // Clamp to [-1, 1].
-        let cos = if cos < VecT::Scalar::from_f64(-1.) {
-            VecT::Scalar::from_f64(0.)
-        } else if cos > VecT::Scalar::from_f64(1.) {
-            VecT::Scalar::from_f64(1.)
+        if VecT::dot(VecT::cross(norm0, norm1), hvec) >= VecT::Scalar::from_f64(0.) {
+            VecT::angle(norm0, norm1)
         } else {
-            cos
-        };
-        todo!()
+            -VecT::angle(norm0, norm1)
+        }
     }
 
     pub fn calc_dihedral_angle(&self, e: EH, points: &[VecT]) -> VecT::Scalar {
@@ -425,16 +424,51 @@ where
         }
         let h0 = self.edge_halfedge(e, false);
         let h1 = self.edge_halfedge(e, true);
-        let n0 = self.calc_sector_normal(h0, points);
-        let n1 = self.calc_sector_normal(h1, points);
-        let hv = self.calc_halfedge_vector(h0, points);
-        todo!()
+        Self::aligned_angle(
+            self.calc_sector_normal(h0, points),
+            self.calc_sector_normal(h1, points),
+            self.calc_halfedge_vector(h0, points),
+        )
+    }
+
+    pub fn try_calc_dihedral_angle(&self, e: EH) -> Result<VecT::Scalar, Error> {
+        let points = self.points();
+        let points = points.try_borrow()?;
+        Ok(self.calc_dihedral_angle(e, &points))
+    }
+
+    pub fn calc_dihedral_angle_fast(
+        &self,
+        e: EH,
+        points: &[VecT],
+        face_normals: &[VecT],
+    ) -> VecT::Scalar {
+        let h0 = self.edge_halfedge(e, false);
+        let h1 = self.edge_halfedge(e, true);
+        let f0 = self.halfedge_face(h0);
+        let f1 = self.halfedge_face(h1);
+        match (f0, f1) {
+            (None, None) | (None, Some(_)) | (Some(_), None) => VecT::Scalar::from_f64(0.),
+            (Some(f0), Some(f1)) => Self::aligned_angle(
+                face_normals[f0.index() as usize],
+                face_normals[f1.index() as usize],
+                self.calc_halfedge_vector(h0, points),
+            ),
+        }
+    }
+
+    pub fn try_calc_dihedral_angle_fast(&self, e: EH) -> Result<VecT::Scalar, Error> {
+        let fnormals = self.face_normals().ok_or(Error::FaceNormalsNotAvailable)?;
+        let fnormals = fnormals.try_borrow()?;
+        let points = self.points();
+        let points = points.try_borrow()?;
+        Ok(self.calc_dihedral_angle_fast(e, &points, &fnormals))
     }
 }
 
 #[cfg(test)]
 mod test {
-    use crate::mesh::PolyMeshF32;
+    use crate::{error::Error, mesh::PolyMeshF32};
 
     #[test]
     fn t_box_face_normals() {
@@ -690,6 +724,39 @@ mod test {
             for h in qbox.fh_ccw_iter(f) {
                 assert_eq!(qbox.calc_sector_normal(h, points), fnorm);
             }
+        }
+    }
+
+    #[test]
+    fn t_box_fast_dihedral_angles() {
+        let mut qbox = PolyMeshF32::quad_box(glam::vec3(0., 0., 0.), glam::vec3(1., 1., 1.))
+            .expect("Cannot create a box primitive");
+        for e in qbox.edges() {
+            let out = qbox.try_calc_dihedral_angle_fast(e);
+            assert!(matches!(out, Err(Error::FaceNormalsNotAvailable)));
+        }
+        qbox.update_face_normals()
+            .expect("Cannot update face normals");
+        let qbox = qbox;
+        for e in qbox.edges() {
+            assert_eq!(
+                1.5707963,
+                qbox.try_calc_dihedral_angle_fast(e)
+                    .expect("Cannot compute dihedral angle")
+            );
+        }
+    }
+
+    #[test]
+    fn t_box_dihedral_angles() {
+        let qbox = PolyMeshF32::quad_box(glam::vec3(0., 0., 0.), glam::vec3(1., 1., 1.))
+            .expect("Cannot create a box primitive");
+        for e in qbox.edges() {
+            assert_eq!(
+                1.5707963,
+                qbox.try_calc_dihedral_angle(e)
+                    .expect("Cannot compute dihedral angle")
+            );
         }
     }
 }
