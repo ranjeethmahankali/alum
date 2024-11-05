@@ -466,6 +466,23 @@ where
     }
 }
 
+impl<VecT> PolyMeshT<VecT>
+where
+    VecT: TVec3 + Sub<Output = VecT>,
+{
+    pub fn calc_sector_angle(
+        &self,
+        h: HH,
+        points: &[VecT],
+        _face_normals: &[VecT],
+    ) -> VecT::Scalar {
+        let v0 = self.calc_halfedge_vector(h, points);
+        let v1 = self.calc_halfedge_vector(self.topology().opposite_halfedge(h), points);
+        let _angle = VecT::angle(v0, v1);
+        todo!()
+    }
+}
+
 #[cfg(test)]
 mod test {
     use crate::{error::Error, mesh::PolyMeshF32};
