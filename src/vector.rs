@@ -400,8 +400,25 @@ where
     VecT::Scalar: TScalar
         + Mul<Output = VecT::Scalar>
         + Sub<Output = VecT::Scalar>
-        + Add<Output = VecT::Scalar>,
+        + Add<Output = VecT::Scalar>
+        + Div<Output = VecT::Scalar>
+        + PartialOrd,
 {
+    fn aligned_angle(norm0: VecT, norm1: VecT, hvec: VecT) -> VecT::Scalar {
+        let denom = norm0.length() * norm1.length();
+        let cos = VecT::dot(norm0, norm1) / denom;
+        let sign = VecT::dot(VecT::cross(norm0, norm1), hvec);
+        // Clamp to [-1, 1].
+        let cos = if cos < VecT::Scalar::from_f64(-1.) {
+            VecT::Scalar::from_f64(0.)
+        } else if cos > VecT::Scalar::from_f64(1.) {
+            VecT::Scalar::from_f64(1.)
+        } else {
+            cos
+        };
+        todo!()
+    }
+
     pub fn calc_dihedral_angle(&self, e: EH, points: &[VecT]) -> VecT::Scalar {
         if self.is_boundary_edge(e) {
             return VecT::Scalar::from_f64(0.);
