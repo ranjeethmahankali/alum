@@ -279,16 +279,32 @@ impl<VecT: TVec3> PolyMeshT<VecT> {
         self.topol.from_vertex(h)
     }
 
+    pub fn next_halfedge(&self, h: HH) -> HH {
+        self.topol.next_halfedge(h)
+    }
+
+    pub fn prev_halfedge(&self, h: HH) -> HH {
+        self.topol.prev_halfedge(h)
+    }
+
+    pub fn opposite_halfedge(&self, h: HH) -> HH {
+        self.topol.opposite_halfedge(h)
+    }
+
     pub fn halfedge_face(&self, h: HH) -> Option<FH> {
         self.topol.halfedge_face(h)
+    }
+
+    pub fn halfedge_edge(&self, h: HH) -> EH {
+        self.topol.halfedge_edge(h)
     }
 
     pub fn face_halfedge(&self, f: FH) -> HH {
         self.topol.face_halfedge(f)
     }
 
-    pub fn halfedge_edge(&self, h: HH) -> EH {
-        self.topol.halfedge_edge(h)
+    pub fn is_boundary_halfedge(&self, h: HH) -> bool {
+        self.topol.is_boundary_halfedge(h)
     }
 
     pub fn edge_halfedge(&self, e: EH, flag: bool) -> HH {

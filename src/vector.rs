@@ -469,17 +469,35 @@ where
 impl<VecT> PolyMeshT<VecT>
 where
     VecT: TVec3 + Sub<Output = VecT>,
+    VecT::Scalar: TScalar
+        + Mul<Output = VecT::Scalar>
+        + Add<Output = VecT::Scalar>
+        + Sub<Output = VecT::Scalar>
+        + PartialOrd
+        + Neg<Output = VecT::Scalar>,
 {
-    pub fn calc_sector_angle(
-        &self,
-        h: HH,
-        points: &[VecT],
-        _face_normals: &[VecT],
-    ) -> VecT::Scalar {
-        let v0 = self.calc_halfedge_vector(h, points);
-        let v1 = self.calc_halfedge_vector(self.topology().opposite_halfedge(h), points);
-        let _angle = VecT::angle(v0, v1);
-        todo!()
+    pub fn calc_sector_angle(&self, h: HH, points: &[VecT], face_normals: &[VecT]) -> VecT::Scalar {
+        let n0 = self.calc_halfedge_vector(h, points);
+        let h2 = self.opposite_halfedge(self.prev_halfedge(h));
+        let n1 = self.calc_halfedge_vector(h2, points);
+        let angle = VecT::angle(n0, n1);
+        if let Some(f) = self.halfedge_face(self.opposite_halfedge(h)) {
+            if self.is_boundary_halfedge(h)
+                && VecT::dot(VecT::cross(n0, n1), face_normals[f.index() as usize])
+                    < VecT::Scalar::from_f64(0.)
+            {
+                return -angle;
+            }
+        }
+        angle
+    }
+
+    pub fn try_calc_sector_angle(&self, h: HH) -> Result<VecT::Scalar, Error> {
+        let fnormals = self.face_normals().ok_or(Error::FaceNormalsNotAvailable)?;
+        let fnormals = fnormals.try_borrow()?;
+        let points = self.points();
+        let points = points.try_borrow()?;
+        Ok(self.calc_sector_angle(h, &points, &fnormals))
     }
 }
 
@@ -775,5 +793,47 @@ mod test {
                     .expect("Cannot compute dihedral angle")
             );
         }
+    }
+
+    #[test]
+    fn t_box_sector_angles() {
+        let mut qbox = PolyMeshF32::quad_box(glam::vec3(0., 0., 0.), glam::vec3(1., 1., 1.))
+            .expect("Cannot create a box primitive");
+        assert!(matches!(
+            qbox.try_calc_sector_angle(0.into()),
+            Err(Error::FaceNormalsNotAvailable)
+        ));
+        qbox.update_face_normals()
+            .expect("Cannot update face normals");
+        for h in qbox.halfedges() {
+            assert_eq!(
+                1.5707963,
+                qbox.try_calc_sector_angle(h)
+                    .expect("Cannot compute sector angles")
+            );
+        }
+        // Remove faces and test boundary edges.
+        let mut qbox = qbox;
+        for fi in 0..3 {
+            qbox.delete_face(fi.into(), true)
+                .expect("Cannot delete a face");
+        }
+        qbox.garbage_collection().expect("Cannot garbage collect");
+        let qbox = qbox;
+        let mut convex = 0usize;
+        let mut concave = 0usize;
+        for h in qbox.halfedges().filter(|h| qbox.is_boundary_halfedge(*h)) {
+            let angle = qbox
+                .try_calc_sector_angle(h)
+                .expect("Cannot compute sector angle");
+            assert_eq!(1.5707963, angle.abs());
+            if angle < 0. {
+                concave += 1;
+            } else {
+                convex += 1;
+            };
+        }
+        assert_eq!(3, convex);
+        assert_eq!(3, concave);
     }
 }
