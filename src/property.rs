@@ -9,7 +9,7 @@ use crate::{
     error::Error,
 };
 
-pub struct PropertyContainer<H> {
+pub(crate) struct PropertyContainer<H> {
     props: Vec<Box<dyn GenericProperty>>,
     length: usize,
     _phantom: PhantomData<H>,
@@ -108,23 +108,12 @@ impl<T> PropertyContainer<T> {
         Ok(())
     }
 
-    pub fn copy(&mut self, src: usize, dst: usize) -> Result<(), Error> {
-        for prop in self.props.iter_mut() {
-            prop.copy(src, dst)?;
-        }
-        Ok(())
-    }
-
     pub fn len(&self) -> usize {
         self.length
     }
 
     pub fn garbage_collection(&mut self) {
         self.props.retain(|prop| prop.is_valid())
-    }
-
-    pub fn num_props(&self) -> usize {
-        self.props.len()
     }
 }
 
@@ -167,8 +156,6 @@ trait GenericProperty {
 
     fn swap(&mut self, i: usize, j: usize) -> Result<(), Error>;
 
-    fn copy(&mut self, src: usize, dst: usize) -> Result<(), Error>;
-
     fn is_valid(&self) -> bool;
 }
 
@@ -179,7 +166,7 @@ pub struct Property<H: Handle, T: TPropData> {
 }
 
 impl<H: Handle, T: TPropData> Property<H, T> {
-    pub fn new(container: &mut PropertyContainer<H>) -> Self {
+    pub(crate) fn new(container: &mut PropertyContainer<H>) -> Self {
         let prop = Property {
             data: Rc::new(RefCell::new(vec![T::default(); container.len()])),
             _phantom: PhantomData,
@@ -188,7 +175,7 @@ impl<H: Handle, T: TPropData> Property<H, T> {
         prop
     }
 
-    pub fn with_capacity(n: usize, container: &mut PropertyContainer<H>) -> Self {
+    pub(crate) fn with_capacity(n: usize, container: &mut PropertyContainer<H>) -> Self {
         let mut buf = Vec::with_capacity(n);
         buf.resize(container.len(), T::default());
         let prop = Property {
@@ -312,15 +299,6 @@ impl<T: TPropData> GenericProperty for PropertyRef<T> {
         Ok(())
     }
 
-    fn copy(&mut self, src: usize, dst: usize) -> Result<(), Error> {
-        if let Some(prop) = self.data.upgrade() {
-            prop.try_borrow_mut()
-                .map_err(|_| Error::BorrowedPropertyAccess)?
-                .copy_within(src..(src + 1), dst);
-        }
-        Ok(())
-    }
-
     fn is_valid(&self) -> bool {
         self.data.upgrade().is_some()
     }
@@ -333,15 +311,15 @@ mod test {
     #[test]
     fn t_garbage_collection() {
         let mut container = PropertyContainer::new();
-        assert_eq!(container.num_props(), 0);
+        assert_eq!(container.props.len(), 0);
         {
             let _prop0 = VProperty::<u32>::new(&mut container);
-            assert_eq!(container.num_props(), 1);
+            assert_eq!(container.props.len(), 1);
             {
                 let _prop1 = VProperty::<u16>::new(&mut container);
-                assert_eq!(container.num_props(), 2);
+                assert_eq!(container.props.len(), 2);
             }
-            assert_eq!(container.num_props(), 2);
+            assert_eq!(container.props.len(), 2);
             assert_eq!(
                 container
                     .props
@@ -351,9 +329,9 @@ mod test {
                 1
             );
             container.garbage_collection();
-            assert_eq!(container.num_props(), 1);
+            assert_eq!(container.props.len(), 1);
         }
-        assert_eq!(container.num_props(), 1);
+        assert_eq!(container.props.len(), 1);
         assert_eq!(
             container
                 .props
@@ -363,13 +341,13 @@ mod test {
             0
         );
         container.garbage_collection();
-        assert_eq!(container.num_props(), 0);
+        assert_eq!(container.props.len(), 0);
         let mut _prop = Some(VProperty::<u8>::new(&mut container));
-        assert_eq!(container.num_props(), 1);
+        assert_eq!(container.props.len(), 1);
         _prop = None;
-        assert_eq!(container.num_props(), 1);
+        assert_eq!(container.props.len(), 1);
         assert!(!container.props[0].is_valid());
         container.garbage_collection();
-        assert_eq!(container.num_props(), 0);
+        assert_eq!(container.props.len(), 0);
     }
 }

@@ -1,24 +1,43 @@
 use std::fmt::{Debug, Display};
 
+/**
+ * All elements of the mesh implement this trait. They are identified by their
+ * index.
+ */
 pub trait Handle {
+    /**
+     * The index of the element.
+     */
     fn index(&self) -> u32;
 }
 
+/**
+ * Vertex handle.
+ */
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct VH {
     idx: u32,
 }
 
+/**
+ * Halfedge handle.
+ */
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct HH {
     idx: u32,
 }
 
+/**
+ * Edge handle.
+ */
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct EH {
     idx: u32,
 }
 
+/**
+ * Face handle.
+ */
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct FH {
     idx: u32,

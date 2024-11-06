@@ -13,7 +13,6 @@ where
      * Makes a box with the following topology, spanning from the min point to the max point.
      *
      * ```text
-     *
      *      7-----------6
      *     /|          /|
      *    / |         / |

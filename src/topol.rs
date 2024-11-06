@@ -729,9 +729,11 @@ impl Topology {
         // Collect neighborhood topology.
         ecache.clear();
         vcache.clear();
+        // Pull the halfedges into the cache because the borrow checker won't
+        // allow modifying the mesh while it is borrowed by the iterator.
         hcache.clear();
         hcache.extend(iterator::fh_ccw_iter(self, f));
-        for h in hcache.drain(..) {
+        for &h in hcache.iter() {
             self.halfedge_mut(h).face = None; // Disconnect from face.
             if self.is_boundary_halfedge(self.opposite_halfedge(h)) {
                 ecache.push(self.halfedge_edge(h));

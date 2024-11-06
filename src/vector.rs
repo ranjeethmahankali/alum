@@ -1,11 +1,11 @@
 use crate::{
-    element::{Handle, FH, HH, VH},
+    element::{Handle, EH, FH, HH, VH},
     error::Error,
     iterator,
     mesh::PolyMeshT,
     property::TPropData,
 };
-use std::ops::{Add, Div, Mul, Sub};
+use std::ops::{Add, Div, Mul, Neg, Sub};
 
 pub trait TScalar {
     fn from_f64(val: f64) -> Self;
@@ -77,6 +77,8 @@ pub trait TVec3: TPropData {
     {
         a.x() * b.x() + a.y() * b.y() + a.z() * b.z()
     }
+
+    fn angle(a: Self, b: Self) -> Self::Scalar;
 }
 
 impl TVec3 for glam::Vec3 {
@@ -112,6 +114,10 @@ impl TVec3 for glam::Vec3 {
 
     fn dot(a: Self, b: Self) -> Self::Scalar {
         a.dot(b)
+    }
+
+    fn angle(a: Self, b: Self) -> Self::Scalar {
+        Self::angle_between(a, b)
     }
 }
 
@@ -301,13 +307,21 @@ where
         + Sub<Output = VecT::Scalar>
         + Add<Output = VecT::Scalar>,
 {
-    pub fn calc_sector_area(&self, h: HH, points: &[VecT]) -> VecT::Scalar {
+    pub fn calc_sector_normal(&self, h: HH, points: &[VecT]) -> VecT {
         VecT::cross(
-            self.calc_halfedge_vector(h, points),
             self.calc_halfedge_vector(self.topology().prev_halfedge(h), points),
+            self.calc_halfedge_vector(h, points),
         )
-        .length()
-            * VecT::Scalar::from_f64(0.5)
+    }
+
+    pub fn try_calc_sector_normal(&self, h: HH) -> Result<VecT, Error> {
+        let points = self.points();
+        let points = points.try_borrow()?;
+        Ok(self.calc_sector_normal(h, &points))
+    }
+
+    pub fn calc_sector_area(&self, h: HH, points: &[VecT]) -> VecT::Scalar {
+        self.calc_sector_normal(h, points).length() * VecT::Scalar::from_f64(0.5)
     }
 
     pub fn try_calc_sector_area(&self, h: HH) -> Result<VecT::Scalar, Error> {
@@ -386,9 +400,110 @@ where
     }
 }
 
+impl<VecT> PolyMeshT<VecT>
+where
+    VecT: TVec3 + Sub<Output = VecT>,
+    VecT::Scalar: TScalar
+        + Mul<Output = VecT::Scalar>
+        + Sub<Output = VecT::Scalar>
+        + Add<Output = VecT::Scalar>
+        + Neg<Output = VecT::Scalar>
+        + PartialOrd,
+{
+    fn aligned_angle(norm0: VecT, norm1: VecT, hvec: VecT) -> VecT::Scalar {
+        if VecT::dot(VecT::cross(norm0, norm1), hvec) >= VecT::Scalar::from_f64(0.) {
+            VecT::angle(norm0, norm1)
+        } else {
+            -VecT::angle(norm0, norm1)
+        }
+    }
+
+    pub fn calc_dihedral_angle(&self, e: EH, points: &[VecT]) -> VecT::Scalar {
+        if self.is_boundary_edge(e) {
+            return VecT::Scalar::from_f64(0.);
+        }
+        let h0 = self.edge_halfedge(e, false);
+        let h1 = self.edge_halfedge(e, true);
+        Self::aligned_angle(
+            self.calc_sector_normal(h0, points),
+            self.calc_sector_normal(h1, points),
+            self.calc_halfedge_vector(h0, points),
+        )
+    }
+
+    pub fn try_calc_dihedral_angle(&self, e: EH) -> Result<VecT::Scalar, Error> {
+        let points = self.points();
+        let points = points.try_borrow()?;
+        Ok(self.calc_dihedral_angle(e, &points))
+    }
+
+    pub fn calc_dihedral_angle_fast(
+        &self,
+        e: EH,
+        points: &[VecT],
+        face_normals: &[VecT],
+    ) -> VecT::Scalar {
+        let h0 = self.edge_halfedge(e, false);
+        let h1 = self.edge_halfedge(e, true);
+        let f0 = self.halfedge_face(h0);
+        let f1 = self.halfedge_face(h1);
+        match (f0, f1) {
+            (None, None) | (None, Some(_)) | (Some(_), None) => VecT::Scalar::from_f64(0.),
+            (Some(f0), Some(f1)) => Self::aligned_angle(
+                face_normals[f0.index() as usize],
+                face_normals[f1.index() as usize],
+                self.calc_halfedge_vector(h0, points),
+            ),
+        }
+    }
+
+    pub fn try_calc_dihedral_angle_fast(&self, e: EH) -> Result<VecT::Scalar, Error> {
+        let fnormals = self.face_normals().ok_or(Error::FaceNormalsNotAvailable)?;
+        let fnormals = fnormals.try_borrow()?;
+        let points = self.points();
+        let points = points.try_borrow()?;
+        Ok(self.calc_dihedral_angle_fast(e, &points, &fnormals))
+    }
+}
+
+impl<VecT> PolyMeshT<VecT>
+where
+    VecT: TVec3 + Sub<Output = VecT>,
+    VecT::Scalar: TScalar
+        + Mul<Output = VecT::Scalar>
+        + Add<Output = VecT::Scalar>
+        + Sub<Output = VecT::Scalar>
+        + PartialOrd
+        + Neg<Output = VecT::Scalar>,
+{
+    pub fn calc_sector_angle(&self, h: HH, points: &[VecT], face_normals: &[VecT]) -> VecT::Scalar {
+        let n0 = self.calc_halfedge_vector(h, points);
+        let h2 = self.opposite_halfedge(self.prev_halfedge(h));
+        let n1 = self.calc_halfedge_vector(h2, points);
+        let angle = VecT::angle(n0, n1);
+        if let Some(f) = self.halfedge_face(self.opposite_halfedge(h)) {
+            if self.is_boundary_halfedge(h)
+                && VecT::dot(VecT::cross(n0, n1), face_normals[f.index() as usize])
+                    < VecT::Scalar::from_f64(0.)
+            {
+                return -angle;
+            }
+        }
+        angle
+    }
+
+    pub fn try_calc_sector_angle(&self, h: HH) -> Result<VecT::Scalar, Error> {
+        let fnormals = self.face_normals().ok_or(Error::FaceNormalsNotAvailable)?;
+        let fnormals = fnormals.try_borrow()?;
+        let points = self.points();
+        let points = points.try_borrow()?;
+        Ok(self.calc_sector_angle(h, &points, &fnormals))
+    }
+}
+
 #[cfg(test)]
 mod test {
-    use crate::mesh::PolyMeshF32;
+    use crate::{error::Error, mesh::PolyMeshF32};
 
     #[test]
     fn t_box_face_normals() {
@@ -578,5 +693,147 @@ mod test {
         let qbox = PolyMeshF32::quad_box(glam::vec3(0., 0., 0.), glam::vec3(1., 1., 1.))
             .expect("Cannot create a box primitive");
         assert_eq!(qbox.try_calc_volume().expect("Cannot compute volume"), 1.);
+    }
+
+    #[test]
+    fn t_box_update_vertex_normals_fast() {
+        let mut qbox = PolyMeshF32::quad_box(glam::vec3(0., 0., 0.), glam::vec3(1., 1., 1.))
+            .expect("Cannot create a box primitive");
+        assert!(!qbox.has_vertex_normals());
+        let vnormals = qbox
+            .update_vertex_normals_fast()
+            .expect("Cannot update vertex normals");
+        let vnormals = vnormals.try_borrow().expect("Cannot borrow vertex normals");
+        let vnormals: &[glam::Vec3] = &vnormals;
+        assert!(qbox.has_vertex_normals());
+        assert_eq!(
+            vnormals,
+            &[
+                glam::vec3(-0.57735026, -0.57735026, -0.57735026),
+                glam::vec3(0.57735026, -0.57735026, -0.57735026),
+                glam::vec3(0.57735026, 0.57735026, -0.57735026),
+                glam::vec3(-0.57735026, 0.57735026, -0.57735026),
+                glam::vec3(-0.57735026, -0.57735026, 0.57735026),
+                glam::vec3(0.57735026, -0.57735026, 0.57735026),
+                glam::vec3(0.57735026, 0.57735026, 0.57735026),
+                glam::vec3(-0.57735026, 0.57735026, 0.57735026),
+            ]
+        );
+    }
+
+    #[test]
+    fn t_box_update_vertex_normals_accurate() {
+        let mut qbox = PolyMeshF32::quad_box(glam::vec3(0., 0., 0.), glam::vec3(1., 1., 1.))
+            .expect("Cannot create a box primitive");
+        assert!(!qbox.has_vertex_normals());
+        let vnormals = qbox
+            .update_vertex_normals_accurate()
+            .expect("Cannot update vertex normals");
+        let vnormals = vnormals.try_borrow().expect("Cannot borrow vertex normals");
+        let vnormals: &[glam::Vec3] = &vnormals;
+        assert!(qbox.has_vertex_normals());
+        assert_eq!(
+            vnormals,
+            &[
+                glam::vec3(-0.57735026, -0.57735026, -0.57735026),
+                glam::vec3(0.57735026, -0.57735026, -0.57735026),
+                glam::vec3(0.57735026, 0.57735026, -0.57735026),
+                glam::vec3(-0.57735026, 0.57735026, -0.57735026),
+                glam::vec3(-0.57735026, -0.57735026, 0.57735026),
+                glam::vec3(0.57735026, -0.57735026, 0.57735026),
+                glam::vec3(0.57735026, 0.57735026, 0.57735026),
+                glam::vec3(-0.57735026, 0.57735026, 0.57735026),
+            ]
+        );
+    }
+
+    #[test]
+    fn t_box_sector_normals() {
+        let qbox = PolyMeshF32::quad_box(glam::vec3(0., 0., 0.), glam::vec3(1., 1., 1.))
+            .expect("Cannot create a box primitive");
+        let points = qbox.points();
+        let points = points.try_borrow().expect("Cannot borrow points");
+        let points: &[glam::Vec3] = &points;
+        for f in qbox.faces() {
+            let fnorm = qbox.calc_face_normal(f, points);
+            for h in qbox.fh_ccw_iter(f) {
+                assert_eq!(qbox.calc_sector_normal(h, points), fnorm);
+            }
+        }
+    }
+
+    #[test]
+    fn t_box_fast_dihedral_angles() {
+        let mut qbox = PolyMeshF32::quad_box(glam::vec3(0., 0., 0.), glam::vec3(1., 1., 1.))
+            .expect("Cannot create a box primitive");
+        for e in qbox.edges() {
+            let out = qbox.try_calc_dihedral_angle_fast(e);
+            assert!(matches!(out, Err(Error::FaceNormalsNotAvailable)));
+        }
+        qbox.update_face_normals()
+            .expect("Cannot update face normals");
+        let qbox = qbox;
+        for e in qbox.edges() {
+            assert_eq!(
+                1.5707963,
+                qbox.try_calc_dihedral_angle_fast(e)
+                    .expect("Cannot compute dihedral angle")
+            );
+        }
+    }
+
+    #[test]
+    fn t_box_dihedral_angles() {
+        let qbox = PolyMeshF32::quad_box(glam::vec3(0., 0., 0.), glam::vec3(1., 1., 1.))
+            .expect("Cannot create a box primitive");
+        for e in qbox.edges() {
+            assert_eq!(
+                1.5707963,
+                qbox.try_calc_dihedral_angle(e)
+                    .expect("Cannot compute dihedral angle")
+            );
+        }
+    }
+
+    #[test]
+    fn t_box_sector_angles() {
+        let mut qbox = PolyMeshF32::quad_box(glam::vec3(0., 0., 0.), glam::vec3(1., 1., 1.))
+            .expect("Cannot create a box primitive");
+        assert!(matches!(
+            qbox.try_calc_sector_angle(0.into()),
+            Err(Error::FaceNormalsNotAvailable)
+        ));
+        qbox.update_face_normals()
+            .expect("Cannot update face normals");
+        for h in qbox.halfedges() {
+            assert_eq!(
+                1.5707963,
+                qbox.try_calc_sector_angle(h)
+                    .expect("Cannot compute sector angles")
+            );
+        }
+        // Remove faces and test boundary edges.
+        let mut qbox = qbox;
+        for fi in 0..3 {
+            qbox.delete_face(fi.into(), true)
+                .expect("Cannot delete a face");
+        }
+        qbox.garbage_collection().expect("Cannot garbage collect");
+        let qbox = qbox;
+        let mut convex = 0usize;
+        let mut concave = 0usize;
+        for h in qbox.halfedges().filter(|h| qbox.is_boundary_halfedge(*h)) {
+            let angle = qbox
+                .try_calc_sector_angle(h)
+                .expect("Cannot compute sector angle");
+            assert_eq!(1.5707963, angle.abs());
+            if angle < 0. {
+                concave += 1;
+            } else {
+                convex += 1;
+            };
+        }
+        assert_eq!(3, convex);
+        assert_eq!(3, concave);
     }
 }
