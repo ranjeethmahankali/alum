@@ -10,7 +10,19 @@ impl<VecT: TVec3> PolyMeshT<VecT>
 where
     VecT::Scalar: TScalar,
 {
+    /**
+     * Load a polygon mesh from an obj file.
+     */
     pub fn load_obj(path: &Path) -> Result<Self, Error> {
+        if path
+            .extension()
+            .ok_or(Error::InvalidObjFile(path.to_path_buf()))?
+            .to_str()
+            .ok_or(Error::InvalidObjFile(path.to_path_buf()))?
+            != "obj"
+        {
+            return Err(Error::InvalidObjFile(path.to_path_buf()));
+        }
         let options = tobj::LoadOptions::default();
         let (models, _) =
             tobj::load_obj(path, &options).map_err(|e| Error::ObjLoadFailed(format!("{}", e)))?;

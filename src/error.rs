@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use crate::element::{FH, HH, VH};
 
 #[derive(Debug)]
@@ -15,6 +17,7 @@ pub enum Error {
     DeletedFace(FH),
     MismatchedArrayLengths(usize, usize),
     // Obj.
+    InvalidObjFile(PathBuf),
     ObjLoadFailed(String),
     IncorrectNumberOfCoordinates(usize),
     IncorrectIndexCount(usize),
