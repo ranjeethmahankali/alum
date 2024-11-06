@@ -9,3 +9,5 @@ pub mod vector;
 
 mod iterator;
 mod topol;
+
+pub type PolyMeshF32 = mesh::PolyMeshF32;
