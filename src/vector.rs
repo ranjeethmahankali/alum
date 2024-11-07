@@ -7,13 +7,13 @@ use crate::{
 };
 use std::ops::{Add, AddAssign, Div, Mul, Neg, Sub};
 
-pub trait TScalar {
+pub trait FromFloat {
     fn from_f64(val: f64) -> Self;
 
     fn from_f32(val: f32) -> Self;
 }
 
-impl TScalar for f32 {
+impl FromFloat for f32 {
     fn from_f64(val: f64) -> Self {
         val as f32
     }
@@ -23,7 +23,7 @@ impl TScalar for f32 {
     }
 }
 
-impl TScalar for f64 {
+impl FromFloat for f64 {
     fn from_f64(val: f64) -> Self {
         val
     }
@@ -46,7 +46,7 @@ pub trait TVec<const DIM: usize>: TPropData {
 
     fn normalized(self) -> Self
     where
-        Self::Scalar: TScalar + TPropData + Div<Output = Self::Scalar> + PartialOrd,
+        Self::Scalar: FromFloat + Div<Output = Self::Scalar> + PartialOrd,
         Self: Div<Self::Scalar, Output = Self>,
     {
         let norm = self.norm();
@@ -59,7 +59,7 @@ pub trait TVec<const DIM: usize>: TPropData {
 
     fn dot(a: Self, b: Self) -> Self::Scalar
     where
-        Self::Scalar: Mul<Output = Self::Scalar> + AddAssign + TScalar,
+        Self::Scalar: Mul<Output = Self::Scalar> + AddAssign + FromFloat,
     {
         let mut out = Self::Scalar::from_f64(0.);
         for i in 0..DIM {
@@ -115,10 +115,9 @@ impl CrossProduct3 for glam::Vec3 {
 
 impl<VecT> PolyMeshT<VecT, 3>
 where
-    VecT::Scalar: TScalar
+    VecT::Scalar: FromFloat
         + Mul<Output = VecT::Scalar>
         + Add<Output = VecT::Scalar>
-        + TPropData
         + Div<Output = VecT::Scalar>
         + PartialOrd,
     VecT: TVec<3> + Add<Output = VecT> + Sub<Output = VecT> + Div<VecT::Scalar, Output = VecT>,
@@ -204,12 +203,7 @@ where
 
 impl<VecT> PolyMeshT<VecT, 3>
 where
-    VecT::Scalar: TScalar
-        + Mul<Output = VecT::Scalar>
-        + Sub<Output = VecT::Scalar>
-        + TPropData
-        + Div<Output = VecT::Scalar>
-        + PartialOrd,
+    VecT::Scalar: FromFloat + Div<Output = VecT::Scalar> + PartialOrd,
     VecT: TVec<3>
         + Sub<Output = VecT>
         + Add<Output = VecT>
@@ -269,7 +263,7 @@ where
 
 impl<VecT, const DIM: usize> PolyMeshT<VecT, DIM>
 where
-    VecT::Scalar: TScalar + Add<Output = VecT::Scalar>,
+    VecT::Scalar: FromFloat + Add<Output = VecT::Scalar>,
     VecT: TVec<DIM> + Add<Output = VecT> + Div<VecT::Scalar, Output = VecT>,
 {
     pub fn try_calc_face_centroid(&self, f: FH) -> Result<VecT, Error> {
@@ -295,7 +289,7 @@ where
 impl<VecT, const DIM: usize> PolyMeshT<VecT, DIM>
 where
     VecT: TVec<DIM> + Add<Output = VecT> + Div<VecT::Scalar, Output = VecT>,
-    VecT::Scalar: TScalar + TPropData + Div<Output = VecT::Scalar> + PartialOrd,
+    VecT::Scalar: FromFloat + Div<Output = VecT::Scalar> + PartialOrd,
 {
     pub fn calc_vertex_normal_fast(&self, v: VH, fnormals: &[VecT]) -> VecT {
         iterator::vf_ccw_iter(self.topology(), v)
@@ -334,7 +328,7 @@ where
 impl<VecT> PolyMeshT<VecT, 3>
 where
     VecT: TVec<3> + Sub<Output = VecT> + CrossProduct3,
-    VecT::Scalar: TScalar
+    VecT::Scalar: FromFloat
         + Mul<Output = VecT::Scalar>
         + Sub<Output = VecT::Scalar>
         + Add<Output = VecT::Scalar>,
@@ -400,11 +394,10 @@ where
 impl<VecT> PolyMeshT<VecT, 3>
 where
     VecT: TVec<3> + Sub<Output = VecT> + CrossProduct3,
-    VecT::Scalar: TScalar
+    VecT::Scalar: FromFloat
         + Mul<Output = VecT::Scalar>
         + Add<Output = VecT::Scalar>
         + Div<Output = VecT::Scalar>
-        + Sub<Output = VecT::Scalar>
         + AddAssign,
 {
     pub fn calc_volume(&self, points: &[VecT]) -> VecT::Scalar {
@@ -436,7 +429,7 @@ where
 impl<VecT> PolyMeshT<VecT, 3>
 where
     VecT: TVec<3> + Sub<Output = VecT> + CrossProduct3,
-    VecT::Scalar: TScalar
+    VecT::Scalar: FromFloat
         + Mul<Output = VecT::Scalar>
         + Sub<Output = VecT::Scalar>
         + Add<Output = VecT::Scalar>
@@ -503,10 +496,8 @@ where
 impl<VecT> PolyMeshT<VecT, 3>
 where
     VecT: TVec<3> + Sub<Output = VecT> + CrossProduct3,
-    VecT::Scalar: TScalar
+    VecT::Scalar: FromFloat
         + Mul<Output = VecT::Scalar>
-        + Add<Output = VecT::Scalar>
-        + Sub<Output = VecT::Scalar>
         + Neg<Output = VecT::Scalar>
         + AddAssign
         + PartialOrd,

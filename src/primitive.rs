@@ -1,14 +1,8 @@
-use crate::{
-    element::VH,
-    error::Error,
-    mesh::PolyMeshT,
-    vector::{TScalar, TVec},
-};
+use crate::{element::VH, error::Error, mesh::PolyMeshT, vector::TVec};
 
 impl<VecT> PolyMeshT<VecT, 3>
 where
     VecT: TVec<3>,
-    VecT::Scalar: TScalar,
 {
     /**
      * Makes a box with the following topology, spanning from the min point to the max point.
@@ -46,11 +40,7 @@ where
         ];
         let mut qbox = Self::with_capacity(8, 12, 6);
         let verts = {
-            let mut pos: [VecT; 8] = [VecT::new([
-                VecT::Scalar::from_f64(0.0),
-                VecT::Scalar::from_f64(0.0),
-                VecT::Scalar::from_f64(0.0),
-            ]); 8];
+            let mut pos: [VecT; 8] = [VecT::zero(); 8];
             for (i, &(xf, yf, zf)) in BOX_POS.iter().enumerate() {
                 pos[i] = VecT::new([
                     if xf { max.coord(0) } else { min.coord(0) },

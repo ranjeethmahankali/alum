@@ -3,13 +3,13 @@ use std::path::Path;
 use crate::{
     error::Error,
     mesh::PolyMeshT,
-    vector::{TScalar, TVec},
+    vector::{FromFloat, TVec},
 };
 
 impl<VecT> PolyMeshT<VecT, 3>
 where
     VecT: TVec<3>,
-    VecT::Scalar: TScalar,
+    VecT::Scalar: FromFloat,
 {
     /**
      * Load a polygon mesh from an obj file.
