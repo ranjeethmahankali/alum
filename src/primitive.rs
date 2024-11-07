@@ -2,11 +2,12 @@ use crate::{
     element::VH,
     error::Error,
     mesh::PolyMeshT,
-    vector::{TScalar, TVec3},
+    vector::{TScalar, TVec},
 };
 
-impl<VecT: TVec3> PolyMeshT<VecT>
+impl<VecT> PolyMeshT<VecT, 3>
 where
+    VecT: TVec<3>,
     VecT::Scalar: TScalar,
 {
     /**
@@ -45,17 +46,17 @@ where
         ];
         let mut qbox = Self::with_capacity(8, 12, 6);
         let verts = {
-            let mut pos: [VecT; 8] = [VecT::new(
+            let mut pos: [VecT; 8] = [VecT::new([
                 VecT::Scalar::from_f64(0.0),
                 VecT::Scalar::from_f64(0.0),
                 VecT::Scalar::from_f64(0.0),
-            ); 8];
+            ]); 8];
             for (i, &(xf, yf, zf)) in BOX_POS.iter().enumerate() {
-                pos[i] = VecT::new(
-                    if xf { max.x() } else { min.x() },
-                    if yf { max.y() } else { min.y() },
-                    if zf { max.z() } else { min.z() },
-                );
+                pos[i] = VecT::new([
+                    if xf { max.coord(0) } else { min.coord(0) },
+                    if yf { max.coord(1) } else { min.coord(1) },
+                    if zf { max.coord(2) } else { min.coord(2) },
+                ]);
             }
             let mut verts: [VH; 8] = [0.into(); 8];
             qbox.add_vertices(&pos, &mut verts)?;
