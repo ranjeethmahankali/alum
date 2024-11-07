@@ -1566,4 +1566,33 @@ mod test {
             ]
         );
     }
+
+    #[test]
+    fn t_box_check_collapse() {
+        let qbox = quad_box();
+        for h in qbox.halfedges() {
+            assert!(qbox
+                .try_check_collapse(h)
+                .expect("Cannot check halfedge collapse"));
+        }
+    }
+
+    #[test]
+    fn t_loop_mesh_check_collapse() {
+        let mesh = loop_mesh();
+        assert_eq!(48, mesh.num_halfedges());
+        // The edges spanning different boundary loops cannot be
+        // collapsed. There are 8 of them, i.e. 16 halfedges. The remaining 32
+        // can be collapsed.
+        assert_eq!(
+            (32, 16),
+            mesh.halfedges().fold((0usize, 0usize), |(can, cannot), h| {
+                if mesh.try_check_collapse(h).expect("Cannot check collapse") {
+                    (can + 1, cannot)
+                } else {
+                    (can, 1 + cannot)
+                }
+            })
+        );
+    }
 }
