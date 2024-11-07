@@ -30,7 +30,6 @@ pub struct TopolCache {
     pub(crate) faces: Vec<FH>,
     pub(crate) edges: Vec<EH>,
     pub(crate) vertices: Vec<VH>,
-    pub(crate) collapse_vtags: Vec<bool>,
 }
 
 impl TopolCache {
@@ -930,8 +929,7 @@ impl Topology {
         &self,
         h: HH,
         edge_status: &[Status],
-        vertex_status: &[Status],
-        vtag_cache: &mut Vec<bool>,
+        vertex_status: &mut [Status],
     ) -> bool {
         // Check if already deleted.
         if edge_status[self.halfedge_edge(h).index() as usize].deleted() {
@@ -958,7 +956,9 @@ impl Topology {
         let vl = if htriangle {
             let h1 = self.next_halfedge(h);
             let h2 = self.next_halfedge(h1);
-            if self.is_boundary_halfedge(h1) && self.is_boundary_halfedge(h2) {
+            if self.is_boundary_halfedge(self.opposite_halfedge(h1))
+                && self.is_boundary_halfedge(self.opposite_halfedge(h2))
+            {
                 return false;
             }
             Some(self.to_vertex(h1))
@@ -968,7 +968,9 @@ impl Topology {
         let vr = if ohtriangle {
             let h1 = self.next_halfedge(oh);
             let h2 = self.next_halfedge(h1);
-            if self.is_boundary_halfedge(h1) && self.is_boundary_halfedge(h2) {
+            if self.is_boundary_halfedge(self.opposite_halfedge(h1))
+                && self.is_boundary_halfedge(self.opposite_halfedge(h2))
+            {
                 return false;
             }
             Some(self.to_vertex(h1))
@@ -991,28 +993,61 @@ impl Topology {
         // Check the 'Link condition' Edelsbrunner [2006]. The intersection of
         // the one rings of from and to vertices must be the left and right
         // vertices, and only if the corresponding faces are triangles.
-        vtag_cache.resize(self.num_vertices(), false);
         let vl = self.to_vertex(self.next_halfedge(h));
         let vr = self.to_vertex(self.next_halfedge(oh));
         for v in iterator::vv_ccw_iter(self, v0) {
-            vtag_cache[v.index() as usize] = false;
+            vertex_status[v.index() as usize].set_tagged(false);
         }
         for v in iterator::vv_ccw_iter(self, v1) {
-            vtag_cache[v.index() as usize] = true;
+            vertex_status[v.index() as usize].set_tagged(true);
         }
         for v in iterator::vv_ccw_iter(self, v0) {
-            if vtag_cache[v.index() as usize] && !(v == vl && htriangle) && !(v == vr && ohtriangle)
+            if vertex_status[v.index() as usize].tagged()
+                && !(v == vl && htriangle)
+                && !(v == vr && ohtriangle)
             {
                 return false;
             }
         }
-        todo!()
+        // Check for folded faces that might degenerate.
+        if htriangle {
+            let h1 = self.opposite_halfedge(self.next_halfedge(h));
+            let h2 = self.opposite_halfedge(self.prev_halfedge(h));
+            match (self.halfedge_face(h1), self.halfedge_face(h2)) {
+                (None, None) => return false, // This is redundant but just in case.
+                (Some(fa), Some(fb)) if fa == fb && self.face_valence(fa) != 3 => return false,
+                _ => {} // Do nothing.
+            }
+        }
+        if ohtriangle {
+            let h1 = self.opposite_halfedge(self.next_halfedge(oh));
+            let h2 = self.opposite_halfedge(self.prev_halfedge(oh));
+            match (self.halfedge_face(h1), self.halfedge_face(h2)) {
+                (None, None) => return false, // This is redundant but just in case.
+                (Some(fa), Some(fb)) if fa == fb && self.face_valence(fa) != 3 => return false,
+                _ => {} // Do nothing.
+            }
+        }
+        // Check again if left and right are the same vertex.
+        if let Some(h) = self.vertex_halfedge(v0) {
+            if vertex_status[self.to_vertex(h).index() as usize].tagged()
+                && vl == vr
+                && htriangle
+                && ohtriangle
+            {
+                return false;
+            }
+        }
+        true
     }
 
-    pub fn try_check_collapse(&self, h: HH, vtags_cache: &mut Vec<bool>) -> Result<bool, Error> {
+    pub fn try_check_collapse(&self, h: HH) -> Result<bool, Error> {
         let estatus = self.estatus.try_borrow()?;
-        let vstatus = self.vstatus.try_borrow()?;
-        Ok(self.check_collapse(h, &estatus, &vstatus, vtags_cache))
+        // Clone the property to side step compile time borrow checker. The
+        // runtime borrow checker is still in use, so not a problem.
+        let mut vstatus = self.vstatus.clone();
+        let mut vstatus = vstatus.try_borrow_mut()?;
+        Ok(self.check_collapse(h, &estatus, &mut vstatus))
     }
 }
 
