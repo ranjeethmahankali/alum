@@ -925,7 +925,7 @@ impl Topology {
         Ok(())
     }
 
-    pub fn check_collapse(
+    pub fn check_edge_collapse(
         &self,
         h: HH,
         edge_status: &[Status],
@@ -1041,13 +1041,13 @@ impl Topology {
         true
     }
 
-    pub fn try_check_collapse(&self, h: HH) -> Result<bool, Error> {
+    pub fn try_check_edge_collapse(&self, h: HH) -> Result<bool, Error> {
         let estatus = self.estatus.try_borrow()?;
         // Clone the property to side step compile time borrow checker. The
         // runtime borrow checker is still in use, so not a problem.
         let mut vstatus = self.vstatus.clone();
         let mut vstatus = vstatus.try_borrow_mut()?;
-        Ok(self.check_collapse(h, &estatus, &mut vstatus))
+        Ok(self.check_edge_collapse(h, &estatus, &mut vstatus))
     }
 }
 
@@ -1568,17 +1568,17 @@ mod test {
     }
 
     #[test]
-    fn t_box_check_collapse() {
+    fn t_box_check_edge_collapse() {
         let qbox = quad_box();
         for h in qbox.halfedges() {
             assert!(qbox
-                .try_check_collapse(h)
+                .try_check_edge_collapse(h)
                 .expect("Cannot check halfedge collapse"));
         }
     }
 
     #[test]
-    fn t_loop_mesh_check_collapse() {
+    fn t_loop_mesh_check_edge_collapse() {
         let mesh = loop_mesh();
         assert_eq!(48, mesh.num_halfedges());
         // The edges spanning different boundary loops cannot be
@@ -1587,7 +1587,7 @@ mod test {
         assert_eq!(
             (32, 16),
             mesh.halfedges().fold((0usize, 0usize), |(can, cannot), h| {
-                if mesh.try_check_collapse(h).expect("Cannot check collapse") {
+                if mesh.try_check_edge_collapse(h).expect("Cannot check collapse") {
                     (can + 1, cannot)
                 } else {
                     (can, 1 + cannot)
