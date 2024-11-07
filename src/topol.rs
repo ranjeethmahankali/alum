@@ -923,6 +923,71 @@ impl Topology {
         self.fprops.garbage_collection();
         Ok(())
     }
+
+    pub fn check_collapse(&self, h: HH, edge_status: &[Status], vertex_status: &[Status]) -> bool {
+        // Check if already deleted.
+        if edge_status[self.halfedge_edge(h).index() as usize].deleted() {
+            return false;
+        }
+        let oh = self.opposite_halfedge(h);
+        let v0 = self.to_vertex(oh);
+        let v1 = self.to_vertex(h);
+        if vertex_status[v0.index() as usize].deleted()
+            || vertex_status[v1.index() as usize].deleted()
+        {
+            return false;
+        }
+        let htriangle = match self.halfedge_face(h) {
+            Some(f) => self.face_valence(f) == 3,
+            None => false,
+        };
+        let ohtriangle = match self.halfedge_face(oh) {
+            Some(f) => self.face_valence(f) == 3,
+            None => false,
+        };
+        // Check if the faces are triangles and the vertices opposite the edge
+        // on those triangles are actually the same vertex.
+        let vl = if htriangle {
+            let h1 = self.next_halfedge(h);
+            let h2 = self.next_halfedge(h1);
+            if self.is_boundary_halfedge(h1) && self.is_boundary_halfedge(h2) {
+                return false;
+            }
+            Some(self.to_vertex(h1))
+        } else {
+            None
+        };
+        let vr = if ohtriangle {
+            let h1 = self.next_halfedge(oh);
+            let h2 = self.next_halfedge(h1);
+            if self.is_boundary_halfedge(h1) && self.is_boundary_halfedge(h2) {
+                return false;
+            }
+            Some(self.to_vertex(h1))
+        } else {
+            None
+        };
+        if let (Some(vl), Some(vr)) = (vl, vr) {
+            if vl == vr {
+                return false;
+            }
+        }
+        // Check if we're collapsing across two different boundaries.
+        if self.is_boundary_vertex(v0)
+            && self.is_boundary_vertex(v1)
+            && !self.is_boundary_halfedge(h)
+            && !self.is_boundary_halfedge(oh)
+        {
+            return false;
+        }
+        todo!()
+    }
+
+    pub fn try_check_collapse(&self, h: HH) -> Result<bool, Error> {
+        let estatus = self.estatus.try_borrow()?;
+        let vstatus = self.vstatus.try_borrow()?;
+        Ok(self.check_collapse(h, &estatus, &vstatus))
+    }
 }
 
 impl Default for Topology {
