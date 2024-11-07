@@ -538,7 +538,9 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::{error::Error, mesh::PolyMeshF32, vector::TVec};
+    use core::f32;
+
+    use crate::{error::Error, macros::assert_f32_eq, mesh::PolyMeshF32, vector::TVec};
 
     #[test]
     fn t_box_face_normals() {
@@ -814,8 +816,8 @@ mod test {
             .expect("Cannot update face normals");
         let qbox = qbox;
         for e in qbox.edges() {
-            assert_eq!(
-                1.5707963,
+            assert_f32_eq!(
+                f32::consts::FRAC_PI_2,
                 qbox.try_calc_dihedral_angle_fast(e)
                     .expect("Cannot compute dihedral angle")
             );
@@ -827,8 +829,8 @@ mod test {
         let qbox = PolyMeshF32::quad_box(glam::vec3(0., 0., 0.), glam::vec3(1., 1., 1.))
             .expect("Cannot create a box primitive");
         for e in qbox.edges() {
-            assert_eq!(
-                1.5707963,
+            assert_f32_eq!(
+                f32::consts::FRAC_PI_2,
                 qbox.try_calc_dihedral_angle(e)
                     .expect("Cannot compute dihedral angle")
             );
@@ -846,8 +848,8 @@ mod test {
         qbox.update_face_normals()
             .expect("Cannot update face normals");
         for h in qbox.halfedges() {
-            assert_eq!(
-                1.5707963,
+            assert_f32_eq!(
+                f32::consts::FRAC_PI_2,
                 qbox.try_calc_sector_angle(h)
                     .expect("Cannot compute sector angles")
             );
@@ -866,7 +868,7 @@ mod test {
             let angle = qbox
                 .try_calc_sector_angle(h)
                 .expect("Cannot compute sector angle");
-            assert_eq!(1.5707963, angle.abs());
+            assert_f32_eq!(f32::consts::FRAC_PI_2, angle.abs());
             if angle < 0. {
                 concave += 1;
             } else {
