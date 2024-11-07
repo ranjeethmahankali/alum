@@ -177,28 +177,6 @@ where
         }
         Ok(fprop)
     }
-
-    /**
-     * Compute a fast approximation of the vertex normals. If the vertex
-     * normals property is not available, it is initialized before computing the
-     * vertex normals.
-     */
-    pub fn update_vertex_normals_fast(&mut self) -> Result<VProperty<VecT>, Error> {
-        let mut vprop = self.request_vertex_normals();
-        {
-            let fnormals = match self.face_normals() {
-                Some(prop) => prop,
-                None => self.update_face_normals()?,
-            };
-            let fnormals = fnormals.try_borrow()?;
-            let mut vnormals = vprop.try_borrow_mut()?;
-            let vnormals: &mut [VecT] = &mut vnormals;
-            for v in self.vertices() {
-                vnormals[v.index() as usize] = self.calc_vertex_normal_fast(v, &fnormals);
-            }
-        }
-        Ok(vprop)
-    }
 }
 
 impl<VecT> PolyMeshT<VecT, 3>
@@ -307,6 +285,25 @@ where
             }
             None => Err(Error::FaceNormalsNotAvailable),
         }
+    }
+
+    /**
+     * Compute a fast approximation of the vertex normals. If the vertex
+     * normals property is not available, it is initialized before computing the
+     * vertex normals.
+     */
+    pub fn update_vertex_normals_fast(&mut self) -> Result<VProperty<VecT>, Error> {
+        let mut vprop = self.request_vertex_normals();
+        {
+            let fnormals = self.face_normals().ok_or(Error::FaceNormalsNotAvailable)?;
+            let fnormals = fnormals.try_borrow()?;
+            let mut vnormals = vprop.try_borrow_mut()?;
+            let vnormals: &mut [VecT] = &mut vnormals;
+            for v in self.vertices() {
+                vnormals[v.index() as usize] = self.calc_vertex_normal_fast(v, &fnormals);
+            }
+        }
+        Ok(vprop)
     }
 }
 
@@ -733,6 +730,8 @@ mod test {
         let mut qbox = PolyMeshF32::quad_box(glam::vec3(0., 0., 0.), glam::vec3(1., 1., 1.))
             .expect("Cannot create a box primitive");
         assert!(!qbox.has_vertex_normals());
+        qbox.update_face_normals()
+            .expect("Cannot update face normals");
         let vnormals = qbox
             .update_vertex_normals_fast()
             .expect("Cannot update vertex normals");
