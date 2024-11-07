@@ -30,6 +30,7 @@ pub struct TopolCache {
     pub(crate) faces: Vec<FH>,
     pub(crate) edges: Vec<EH>,
     pub(crate) vertices: Vec<VH>,
+    pub(crate) collapse_vtags: Vec<bool>,
 }
 
 impl TopolCache {
@@ -486,6 +487,7 @@ impl Topology {
         }
         // Create boundary loop. No more errors allowed from this point.
         // If anything goes wrong, we panic.
+        cache.tentative.clear();
         cache.tentative.reserve(verts.len());
         {
             let mut ei = self.edges.len() as u32;
@@ -924,7 +926,13 @@ impl Topology {
         Ok(())
     }
 
-    pub fn check_collapse(&self, h: HH, edge_status: &[Status], vertex_status: &[Status]) -> bool {
+    pub fn check_collapse(
+        &self,
+        h: HH,
+        edge_status: &[Status],
+        vertex_status: &[Status],
+        vtag_cache: &mut Vec<bool>,
+    ) -> bool {
         // Check if already deleted.
         if edge_status[self.halfedge_edge(h).index() as usize].deleted() {
             return false;
@@ -980,13 +988,31 @@ impl Topology {
         {
             return false;
         }
+        // Check the 'Link condition' Edelsbrunner [2006]. The intersection of
+        // the one rings of from and to vertices must be the left and right
+        // vertices, and only if the corresponding faces are triangles.
+        vtag_cache.resize(self.num_vertices(), false);
+        let vl = self.to_vertex(self.next_halfedge(h));
+        let vr = self.to_vertex(self.next_halfedge(oh));
+        for v in iterator::vv_ccw_iter(self, v0) {
+            vtag_cache[v.index() as usize] = false;
+        }
+        for v in iterator::vv_ccw_iter(self, v1) {
+            vtag_cache[v.index() as usize] = true;
+        }
+        for v in iterator::vv_ccw_iter(self, v0) {
+            if vtag_cache[v.index() as usize] && !(v == vl && htriangle) && !(v == vr && ohtriangle)
+            {
+                return false;
+            }
+        }
         todo!()
     }
 
-    pub fn try_check_collapse(&self, h: HH) -> Result<bool, Error> {
+    pub fn try_check_collapse(&self, h: HH, vtags_cache: &mut Vec<bool>) -> Result<bool, Error> {
         let estatus = self.estatus.try_borrow()?;
         let vstatus = self.vstatus.try_borrow()?;
-        Ok(self.check_collapse(h, &estatus, &vstatus))
+        Ok(self.check_collapse(h, &estatus, &vstatus, vtags_cache))
     }
 }
 
