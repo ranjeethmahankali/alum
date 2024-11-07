@@ -205,11 +205,10 @@ impl<H: Handle, T: TPropData> Property<H, T> {
     }
 
     pub fn get(&self, i: H) -> Result<T, Error> {
-        Ok(self
+        Ok(*self
             .try_borrow()?
             .get(i.index() as usize)
-            .ok_or(Error::OutOfBoundsAccess)?
-            .clone())
+            .ok_or(Error::OutOfBoundsAccess)?)
     }
 
     pub fn get_mut(&mut self, i: H) -> Result<RefMut<T>, Error> {

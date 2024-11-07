@@ -42,16 +42,16 @@ pub trait TVec<const DIM: usize>: TPropData {
 
     fn coord(&self, i: usize) -> Self::Scalar;
 
-    fn norm(&self) -> Self::Scalar;
+    fn norm(self) -> Self::Scalar;
 
-    fn normalized(&self) -> Self
+    fn normalized(self) -> Self
     where
         Self::Scalar: TScalar + TPropData + Div<Output = Self::Scalar> + PartialOrd,
         Self: Div<Self::Scalar, Output = Self>,
     {
         let norm = self.norm();
         if norm > Self::Scalar::from_f64(0.0) {
-            (*self) / norm
+            self / norm
         } else {
             Self::zero()
         }
@@ -82,12 +82,12 @@ impl TVec<3> for glam::Vec3 {
         glam::vec3(coords[0], coords[1], coords[2])
     }
 
-    fn norm(&self) -> Self::Scalar {
-        glam::Vec3::length(self.clone())
+    fn norm(self) -> Self::Scalar {
+        glam::Vec3::length(self)
     }
 
-    fn normalized(&self) -> Self {
-        glam::Vec3::normalize(self.clone())
+    fn normalized(self) -> Self {
+        glam::Vec3::normalize(self)
     }
 
     fn dot(a: Self, b: Self) -> Self::Scalar {
@@ -386,7 +386,7 @@ where
 
     pub fn calc_area(&self, points: &[VecT]) -> VecT::Scalar {
         self.faces().fold(VecT::Scalar::from_f64(0.), |total, f| {
-            total + self.calc_face_area(f, &points)
+            total + self.calc_face_area(f, points)
         })
     }
 
