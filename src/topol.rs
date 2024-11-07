@@ -21,7 +21,7 @@ enum TentativeEdge {
 }
 
 #[derive(Default)]
-pub(crate) struct TopolCache {
+pub struct TopolCache {
     loop_halfedges: Vec<Option<HH>>,
     needs_adjust: Vec<bool>,
     next_cache: Vec<(HH, HH)>,
@@ -45,7 +45,7 @@ impl TopolCache {
     }
 }
 
-pub(crate) struct Topology {
+pub struct Topology {
     vertices: Vec<Vertex>,
     edges: Vec<Edge>,
     faces: Vec<Face>,

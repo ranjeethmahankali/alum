@@ -5,9 +5,11 @@ pub mod obj;
 pub mod primitive;
 pub mod property;
 pub mod status;
+pub mod topol;
 pub mod vector;
 
 mod iterator;
-mod topol;
+mod macros;
 
 pub type PolyMeshF32 = mesh::PolyMeshF32;
+pub type Topology = topol::Topology;

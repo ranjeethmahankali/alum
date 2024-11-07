@@ -1,5 +1,3 @@
-use std::ops::{Add, Div, Mul, Sub};
-
 use crate::{
     element::{Handle, EH, FH, HH, VH},
     error::Error,
@@ -7,7 +5,7 @@ use crate::{
     property::{EProperty, FProperty, HProperty, TPropData, VProperty},
     status::Status,
     topol::{TopolCache, Topology},
-    vector::{TScalar, TVec3},
+    vector::TVec,
 };
 
 /**
@@ -17,7 +15,10 @@ use crate::{
  * functions of the API, such as computing normals etc. are available predicated
  * on the trait bounds `VecT` satisfies.
  */
-pub struct PolyMeshT<VecT: TVec3> {
+pub struct PolyMeshT<VecT, const DIM: usize>
+where
+    VecT: TVec<DIM>,
+{
     topol: Topology,
     cache: TopolCache,
     points: VProperty<VecT>,
@@ -25,9 +26,12 @@ pub struct PolyMeshT<VecT: TVec3> {
     fnormals: Option<FProperty<VecT>>,
 }
 
-pub type PolyMeshF32 = PolyMeshT<glam::Vec3>;
+pub type PolyMeshF32 = PolyMeshT<glam::Vec3, 3>;
 
-impl<VecT: TVec3> Default for PolyMeshT<VecT> {
+impl<VecT, const DIM: usize> Default for PolyMeshT<VecT, DIM>
+where
+    VecT: TVec<DIM>,
+{
     /**
      * Create a new empty mesh.
      */
@@ -36,7 +40,10 @@ impl<VecT: TVec3> Default for PolyMeshT<VecT> {
     }
 }
 
-impl<VecT: TVec3> PolyMeshT<VecT> {
+impl<VecT, const DIM: usize> PolyMeshT<VecT, DIM>
+where
+    VecT: TVec<DIM>,
+{
     /**
      * Create a new empty mesh.
      */
@@ -339,92 +346,6 @@ impl<VecT: TVec3> PolyMeshT<VecT> {
     }
 
     /**
-     * Compute the face normals. If the face normals property is not available,
-     * it is initialized before computing the face normals.
-     */
-    pub fn update_face_normals(&mut self) -> Result<FProperty<VecT>, Error>
-    where
-        VecT::Scalar: TScalar
-            + Mul<Output = VecT::Scalar>
-            + Add<Output = VecT::Scalar>
-            + TPropData
-            + Div<Output = VecT::Scalar>
-            + PartialOrd,
-        VecT: TVec3 + Add<Output = VecT> + Sub<Output = VecT>,
-    {
-        let mut fprop = self.request_face_normals();
-        {
-            let mut fnormals = fprop.try_borrow_mut()?;
-            let fnormals: &mut [VecT] = &mut fnormals;
-            let points = self.points();
-            let points = points.try_borrow()?;
-            for f in self.faces() {
-                fnormals[f.index() as usize] = self.calc_face_normal(f, &points);
-            }
-        }
-        Ok(fprop)
-    }
-
-    /**
-     * Compute a fast approximation of the vertex normals. If the vertex
-     * normals property is not available, it is initialized before computing the
-     * vertex normals.
-     */
-    pub fn update_vertex_normals_fast(&mut self) -> Result<VProperty<VecT>, Error>
-    where
-        VecT::Scalar: TScalar
-            + Mul<Output = VecT::Scalar>
-            + Add<Output = VecT::Scalar>
-            + TPropData
-            + Div<Output = VecT::Scalar>
-            + PartialOrd,
-        VecT: TVec3 + Add<Output = VecT> + Sub<Output = VecT>,
-    {
-        let mut vprop = self.request_vertex_normals();
-        {
-            let fnormals = match self.face_normals() {
-                Some(prop) => prop,
-                None => self.update_face_normals()?,
-            };
-            let fnormals = fnormals.try_borrow()?;
-            let mut vnormals = vprop.try_borrow_mut()?;
-            let vnormals: &mut [VecT] = &mut vnormals;
-            for v in self.vertices() {
-                vnormals[v.index() as usize] = self.calc_vertex_normal_fast(v, &fnormals);
-            }
-        }
-        Ok(vprop)
-    }
-
-    /**
-     * Compute accurate vertex normals. This can be slower than the fast
-     * approximation. If the vertex normals property is not available, it is
-     * initialized before computing the vertex normals.
-     */
-    pub fn update_vertex_normals_accurate(&mut self) -> Result<VProperty<VecT>, Error>
-    where
-        VecT::Scalar: TScalar
-            + Mul<Output = VecT::Scalar>
-            + Sub<Output = VecT::Scalar>
-            + Div<Output = VecT::Scalar>
-            + TPropData
-            + PartialOrd,
-        VecT: TVec3 + Sub<Output = VecT> + Add<Output = VecT>,
-    {
-        let mut vprop = self.request_vertex_normals();
-        {
-            let mut vnormals = vprop.try_borrow_mut()?;
-            let vnormals: &mut [VecT] = &mut vnormals;
-            let points = self.points();
-            let points = points.try_borrow()?;
-            for v in self.vertices() {
-                vnormals[v.index() as usize] = self.calc_vertex_normal_accurate(v, &points);
-            }
-        }
-        Ok(vprop)
-    }
-
-    /**
      * Get the vertex the halfedge points to.
      */
     pub fn to_vertex(&self, h: HH) -> VH {
@@ -515,133 +436,133 @@ impl<VecT: TVec3> PolyMeshT<VecT> {
     /**
      * Iterator over the outgoing halfedges around a vertex, going counter-clockwise.
      */
-    pub fn voh_ccw_iter(&self, v: VH) -> impl Iterator<Item = HH> + use<'_, VecT> {
+    pub fn voh_ccw_iter(&self, v: VH) -> impl Iterator<Item = HH> + use<'_, VecT, DIM> {
         iterator::voh_ccw_iter(&self.topol, v)
     }
 
     /**
      * Iterator over the outgoing halfedges around a vertex, going clockwise
      */
-    pub fn voh_cw_iter(&self, v: VH) -> impl Iterator<Item = HH> + use<'_, VecT> {
+    pub fn voh_cw_iter(&self, v: VH) -> impl Iterator<Item = HH> + use<'_, VecT, DIM> {
         iterator::voh_cw_iter(&self.topol, v)
     }
 
     /**
      * Iterator over the incoming halfedges around a vertex, going counter-clockwise
      */
-    pub fn vih_ccw_iter(&self, v: VH) -> impl Iterator<Item = HH> + use<'_, VecT> {
+    pub fn vih_ccw_iter(&self, v: VH) -> impl Iterator<Item = HH> + use<'_, VecT, DIM> {
         iterator::vih_ccw_iter(&self.topol, v)
     }
 
     /**
      * Iterator over the incoming halfedges around a vertex, going clockwise
      */
-    pub fn vih_cw_iter(&self, v: VH) -> impl Iterator<Item = HH> + use<'_, VecT> {
+    pub fn vih_cw_iter(&self, v: VH) -> impl Iterator<Item = HH> + use<'_, VecT, DIM> {
         iterator::vih_cw_iter(&self.topol, v)
     }
 
     /**
      * Iterator over the faces incident on a vertex, going counter-clockwise.
      */
-    pub fn vf_ccw_iter(&self, v: VH) -> impl Iterator<Item = FH> + use<'_, VecT> {
+    pub fn vf_ccw_iter(&self, v: VH) -> impl Iterator<Item = FH> + use<'_, VecT, DIM> {
         iterator::vf_ccw_iter(&self.topol, v)
     }
 
     /**
      * Iterator over the faces incident on a vertex, going clockwise.
      */
-    pub fn vf_cw_iter(&self, v: VH) -> impl Iterator<Item = FH> + use<'_, VecT> {
+    pub fn vf_cw_iter(&self, v: VH) -> impl Iterator<Item = FH> + use<'_, VecT, DIM> {
         iterator::vf_cw_iter(&self.topol, v)
     }
 
     /**
      * Iterator over the neighboring vertices around the given vertex, going counter-clockwise.
      */
-    pub fn vv_ccw_iter(&self, v: VH) -> impl Iterator<Item = VH> + use<'_, VecT> {
+    pub fn vv_ccw_iter(&self, v: VH) -> impl Iterator<Item = VH> + use<'_, VecT, DIM> {
         iterator::vv_ccw_iter(&self.topol, v)
     }
 
     /**
      * Iterator over the neighboring vertices around the given vertex, going clockwise.
      */
-    pub fn vv_cw_iter(&self, v: VH) -> impl Iterator<Item = VH> + use<'_, VecT> {
+    pub fn vv_cw_iter(&self, v: VH) -> impl Iterator<Item = VH> + use<'_, VecT, DIM> {
         iterator::vv_cw_iter(&self.topol, v)
     }
 
     /**
      * Iterator over the incident edges around an vertex, going counter-clockwise.
      */
-    pub fn ve_ccw_iter(&self, v: VH) -> impl Iterator<Item = EH> + use<'_, VecT> {
+    pub fn ve_ccw_iter(&self, v: VH) -> impl Iterator<Item = EH> + use<'_, VecT, DIM> {
         iterator::ve_ccw_iter(&self.topol, v)
     }
 
     /**
      * Iterator over the incident edges around a vertex, going clockwise.
      */
-    pub fn ve_cw_iter(&self, v: VH) -> impl Iterator<Item = EH> + use<'_, VecT> {
+    pub fn ve_cw_iter(&self, v: VH) -> impl Iterator<Item = EH> + use<'_, VecT, DIM> {
         iterator::ve_cw_iter(&self.topol, v)
     }
 
     /**
      * Iterator over the two vertices incident on the given edge.
      */
-    pub fn ev_iter(&self, e: EH) -> impl Iterator<Item = VH> + use<'_, VecT> {
+    pub fn ev_iter(&self, e: EH) -> impl Iterator<Item = VH> + use<'_, VecT, DIM> {
         iterator::ev_iter(&self.topol, e)
     }
 
     /**
      * Iterator over the two halfedges corresponding to an edge.
      */
-    pub fn eh_iter(&self, e: EH) -> impl Iterator<Item = HH> + use<'_, VecT> {
+    pub fn eh_iter(&self, e: EH) -> impl Iterator<Item = HH> + use<'_, VecT, DIM> {
         iterator::eh_iter(&self.topol, e)
     }
 
     /**
      * Iterator over the faces incident on an edge.
      */
-    pub fn ef_iter(&self, e: EH) -> impl Iterator<Item = FH> + use<'_, VecT> {
+    pub fn ef_iter(&self, e: EH) -> impl Iterator<Item = FH> + use<'_, VecT, DIM> {
         iterator::ef_iter(&self.topol, e)
     }
 
     /**
      * Iterator over the halfedges of a face loop, going counter-clockwise.
      */
-    pub fn fh_ccw_iter(&self, f: FH) -> impl Iterator<Item = HH> + use<'_, VecT> {
+    pub fn fh_ccw_iter(&self, f: FH) -> impl Iterator<Item = HH> + use<'_, VecT, DIM> {
         iterator::fh_ccw_iter(&self.topol, f)
     }
 
     /**
      * Iterator over the halfedges of a face loop, going clockwise.
      */
-    pub fn fh_cw_iter(&self, f: FH) -> impl Iterator<Item = HH> + use<'_, VecT> {
+    pub fn fh_cw_iter(&self, f: FH) -> impl Iterator<Item = HH> + use<'_, VecT, DIM> {
         iterator::fh_cw_iter(&self.topol, f)
     }
 
     /**
      * Iterator over the vertices incident on a face, going counter-clockwise.
      */
-    pub fn fv_ccw_iter(&self, f: FH) -> impl Iterator<Item = VH> + use<'_, VecT> {
+    pub fn fv_ccw_iter(&self, f: FH) -> impl Iterator<Item = VH> + use<'_, VecT, DIM> {
         iterator::fv_ccw_iter(&self.topol, f)
     }
 
     /**
      * Iterator over the vertices incident on a face, going clockwise.
      */
-    pub fn fv_cw_iter(&self, f: FH) -> impl Iterator<Item = VH> + use<'_, VecT> {
+    pub fn fv_cw_iter(&self, f: FH) -> impl Iterator<Item = VH> + use<'_, VecT, DIM> {
         iterator::fv_cw_iter(&self.topol, f)
     }
 
     /**
      * Iterator over the edges incident on a face, going counter-clockwise.
      */
-    pub fn fe_ccw_iter(&self, f: FH) -> impl Iterator<Item = EH> + use<'_, VecT> {
+    pub fn fe_ccw_iter(&self, f: FH) -> impl Iterator<Item = EH> + use<'_, VecT, DIM> {
         iterator::fe_ccw_iter(&self.topol, f)
     }
 
     /**
      * Iterator over the edges incident on a face, going clockwise.
      */
-    pub fn fe_cw_iter(&self, f: FH) -> impl Iterator<Item = EH> + use<'_, VecT> {
+    pub fn fe_cw_iter(&self, f: FH) -> impl Iterator<Item = EH> + use<'_, VecT, DIM> {
         iterator::fe_cw_iter(&self.topol, f)
     }
 
@@ -650,7 +571,7 @@ impl<VecT: TVec3> PolyMeshT<VecT> {
      * counter-clockwise. This includes the faces connected via a shared, edge,
      * but not those connected via a shared vertex.
      */
-    pub fn ff_ccw_iter(&self, f: FH) -> impl Iterator<Item = FH> + use<'_, VecT> {
+    pub fn ff_ccw_iter(&self, f: FH) -> impl Iterator<Item = FH> + use<'_, VecT, DIM> {
         iterator::ff_ccw_iter(&self.topol, f)
     }
 
@@ -659,7 +580,7 @@ impl<VecT: TVec3> PolyMeshT<VecT> {
      * clockwise. This includes the faces connected via a shared, edge, but not
      * those connected via a shared vertex.
      */
-    pub fn ff_cw_iter(&self, f: FH) -> impl Iterator<Item = FH> + use<'_, VecT> {
+    pub fn ff_cw_iter(&self, f: FH) -> impl Iterator<Item = FH> + use<'_, VecT, DIM> {
         iterator::ff_cw_iter(&self.topol, f)
     }
 
@@ -669,7 +590,7 @@ impl<VecT: TVec3> PolyMeshT<VecT> {
      * equivalent to a circular shifted `voh_ccw_iter` of the vertex at teh base
      * of this halfedge.
      */
-    pub fn ccw_rotate_iter(&self, h: HH) -> impl Iterator<Item = HH> + use<'_, VecT> {
+    pub fn ccw_rotate_iter(&self, h: HH) -> impl Iterator<Item = HH> + use<'_, VecT, DIM> {
         iterator::ccw_rotate_iter(&self.topol, h)
     }
 
@@ -679,7 +600,7 @@ impl<VecT: TVec3> PolyMeshT<VecT> {
      * equivalent to a circular shifted `voh_cw_iter` of the vertex at teh base
      * of this halfedge.
      */
-    pub fn cw_rotate_iter(&self, h: HH) -> impl Iterator<Item = HH> + use<'_, VecT> {
+    pub fn cw_rotate_iter(&self, h: HH) -> impl Iterator<Item = HH> + use<'_, VecT, DIM> {
         iterator::cw_rotate_iter(&self.topol, h)
     }
 
@@ -690,7 +611,7 @@ impl<VecT: TVec3> PolyMeshT<VecT> {
      * incident face. If the halfedge is on the boundary, this iterator goes
      * over the boundary loop counter-clockwise.
      */
-    pub fn loop_ccw_iter(&self, h: HH) -> impl Iterator<Item = HH> + use<'_, VecT> {
+    pub fn loop_ccw_iter(&self, h: HH) -> impl Iterator<Item = HH> + use<'_, VecT, DIM> {
         iterator::loop_ccw_iter(&self.topol, h)
     }
 
@@ -701,7 +622,7 @@ impl<VecT: TVec3> PolyMeshT<VecT> {
      * incident face. If the halfedge is on the boundary, this iterator goes
      * over the boundary loop clockwise.
      */
-    pub fn loop_cw_iter(&self, h: HH) -> impl Iterator<Item = HH> + use<'_, VecT> {
+    pub fn loop_cw_iter(&self, h: HH) -> impl Iterator<Item = HH> + use<'_, VecT, DIM> {
         iterator::loop_cw_iter(&self.topol, h)
     }
 
@@ -710,7 +631,7 @@ impl<VecT: TVec3> PolyMeshT<VecT> {
      * mesh. The triangulation of a face does not take it's shape into
      * account. It only accounts for the topology.
      */
-    pub fn triangulated_vertices(&self) -> impl Iterator<Item = [VH; 3]> + use<'_, VecT> {
+    pub fn triangulated_vertices(&self) -> impl Iterator<Item = [VH; 3]> + use<'_, VecT, DIM> {
         self.topol.triangulated_vertices()
     }
 
@@ -722,7 +643,7 @@ impl<VecT: TVec3> PolyMeshT<VecT> {
     pub fn triangulated_face_vertices(
         &self,
         f: FH,
-    ) -> impl Iterator<Item = [VH; 3]> + use<'_, VecT> {
+    ) -> impl Iterator<Item = [VH; 3]> + use<'_, VecT, DIM> {
         self.topol.triangulated_face_vertices(f)
     }
 

@@ -3,12 +3,13 @@ use std::path::Path;
 use crate::{
     error::Error,
     mesh::PolyMeshT,
-    vector::{TScalar, TVec3},
+    vector::{FromFloat, TVec},
 };
 
-impl<VecT: TVec3> PolyMeshT<VecT>
+impl<VecT> PolyMeshT<VecT, 3>
 where
-    VecT::Scalar: TScalar,
+    VecT: TVec<3>,
+    VecT::Scalar: FromFloat,
 {
     /**
      * Load a polygon mesh from an obj file.
@@ -36,7 +37,7 @@ where
                 )
             });
         let nedges = nfaces * 3 / 2; // Estimate.
-        let mut outmesh = PolyMeshT::<VecT>::with_capacity(nverts, nedges, nfaces);
+        let mut outmesh = PolyMeshT::<VecT, 3>::with_capacity(nverts, nedges, nfaces);
         let mut positions = Vec::new();
         let mut vertices = Vec::new();
         let mut fvs = Vec::new();
@@ -47,11 +48,11 @@ where
             }
             positions.clear();
             positions.extend(mesh.positions.chunks(3).map(|triplet| {
-                VecT::new(
+                VecT::new([
                     VecT::Scalar::from_f32(triplet[0]),
                     VecT::Scalar::from_f32(triplet[1]),
                     VecT::Scalar::from_f32(triplet[2]),
-                )
+                ])
             }));
             vertices.resize(positions.len(), 0u32.into());
             outmesh.add_vertices(&positions, &mut vertices)?;

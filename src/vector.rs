@@ -3,17 +3,17 @@ use crate::{
     error::Error,
     iterator,
     mesh::PolyMeshT,
-    property::TPropData,
+    property::{FProperty, TPropData, VProperty},
 };
-use std::ops::{Add, Div, Mul, Neg, Sub};
+use std::ops::{Add, AddAssign, Div, Mul, Neg, Sub};
 
-pub trait TScalar {
+pub trait FromFloat {
     fn from_f64(val: f64) -> Self;
 
     fn from_f32(val: f32) -> Self;
 }
 
-impl TScalar for f32 {
+impl FromFloat for f32 {
     fn from_f64(val: f64) -> Self {
         val as f32
     }
@@ -23,7 +23,7 @@ impl TScalar for f32 {
     }
 }
 
-impl TScalar for f64 {
+impl FromFloat for f64 {
     fn from_f64(val: f64) -> Self {
         val
     }
@@ -33,83 +33,61 @@ impl TScalar for f64 {
     }
 }
 
-pub trait TVec3: TPropData {
+pub trait TVec<const DIM: usize>: TPropData {
     type Scalar;
 
-    fn new(x: Self::Scalar, y: Self::Scalar, z: Self::Scalar) -> Self;
+    fn new(coords: [Self::Scalar; DIM]) -> Self;
 
-    fn x(&self) -> Self::Scalar;
-    fn y(&self) -> Self::Scalar;
-    fn z(&self) -> Self::Scalar;
+    fn zero() -> Self;
 
-    fn length(&self) -> Self::Scalar;
+    fn coord(&self, i: usize) -> Self::Scalar;
 
-    fn normalized(&self) -> Self
+    fn norm(self) -> Self::Scalar;
+
+    fn normalized(self) -> Self
     where
-        Self::Scalar: TScalar + TPropData + Div<Output = Self::Scalar> + PartialOrd,
+        Self::Scalar: FromFloat + Div<Output = Self::Scalar> + PartialOrd,
+        Self: Div<Self::Scalar, Output = Self>,
     {
-        let norm = self.length();
+        let norm = self.norm();
         if norm > Self::Scalar::from_f64(0.0) {
-            Self::new(self.x() / norm, self.y() / norm, self.z() / norm)
+            self / norm
         } else {
-            Self::new(
-                Self::Scalar::from_f64(0.0),
-                Self::Scalar::from_f64(0.0),
-                Self::Scalar::from_f64(0.0),
-            )
+            Self::zero()
         }
-    }
-
-    fn cross(a: Self, b: Self) -> Self
-    where
-        Self::Scalar: Mul<Output = Self::Scalar> + Sub<Output = Self::Scalar>,
-    {
-        Self::new(
-            a.y() * b.z() - a.z() * b.y(),
-            a.z() * b.x() - a.x() * b.z(),
-            a.x() * b.y() - a.y() * b.x(),
-        )
     }
 
     fn dot(a: Self, b: Self) -> Self::Scalar
     where
-        Self::Scalar: Mul<Output = Self::Scalar> + Add<Output = Self::Scalar>,
+        Self::Scalar: Mul<Output = Self::Scalar> + AddAssign + FromFloat,
     {
-        a.x() * b.x() + a.y() * b.y() + a.z() * b.z()
+        let mut out = Self::Scalar::from_f64(0.);
+        for i in 0..DIM {
+            out += a.coord(i) * b.coord(i);
+        }
+        out
     }
 
     fn angle(a: Self, b: Self) -> Self::Scalar;
 }
 
-impl TVec3 for glam::Vec3 {
+pub trait CrossProduct3 {
+    fn cross(a: Self, b: Self) -> Self;
+}
+
+impl TVec<3> for glam::Vec3 {
     type Scalar = f32;
 
-    fn new(x: Self::Scalar, y: Self::Scalar, z: Self::Scalar) -> Self {
-        glam::vec3(x, y, z)
+    fn new(coords: [f32; 3]) -> Self {
+        glam::vec3(coords[0], coords[1], coords[2])
     }
 
-    fn x(&self) -> Self::Scalar {
-        self[0]
+    fn norm(self) -> Self::Scalar {
+        glam::Vec3::length(self)
     }
 
-    fn y(&self) -> Self::Scalar {
-        self[1]
-    }
-
-    fn z(&self) -> Self::Scalar {
-        self[2]
-    }
-
-    fn length(&self) -> Self::Scalar {
-        glam::Vec3::length(self.clone())
-    }
-
-    fn normalized(&self) -> Self {
-        glam::Vec3::normalize(self.clone())
-    }
-
-    fn cross(a: Self, b: Self) -> Self {
-        a.cross(b)
+    fn normalized(self) -> Self {
+        glam::Vec3::normalize(self)
     }
 
     fn dot(a: Self, b: Self) -> Self::Scalar {
@@ -119,17 +97,30 @@ impl TVec3 for glam::Vec3 {
     fn angle(a: Self, b: Self) -> Self::Scalar {
         Self::angle_between(a, b)
     }
+
+    fn zero() -> Self {
+        glam::Vec3::splat(0.)
+    }
+
+    fn coord(&self, i: usize) -> Self::Scalar {
+        self[i]
+    }
 }
 
-impl<VecT> PolyMeshT<VecT>
+impl CrossProduct3 for glam::Vec3 {
+    fn cross(a: Self, b: Self) -> Self {
+        a.cross(b)
+    }
+}
+
+impl<VecT> PolyMeshT<VecT, 3>
 where
-    VecT::Scalar: TScalar
+    VecT::Scalar: FromFloat
         + Mul<Output = VecT::Scalar>
         + Add<Output = VecT::Scalar>
-        + TPropData
         + Div<Output = VecT::Scalar>
         + PartialOrd,
-    VecT: TVec3 + Add<Output = VecT> + Sub<Output = VecT>,
+    VecT: TVec<3> + Add<Output = VecT> + Sub<Output = VecT> + Div<VecT::Scalar, Output = VecT>,
 {
     pub fn try_calc_face_normal(&self, f: FH) -> Result<VecT, Error> {
         let points = self.points();
@@ -155,34 +146,47 @@ where
                     };
                     (
                         nverts + 1,
-                        x + a.y() * b.z(),
-                        y + a.z() * b.x(),
-                        z + a.x() * b.y(),
+                        x + a.coord(1) * b.coord(2),
+                        y + a.coord(2) * b.coord(0),
+                        z + a.coord(0) * b.coord(1),
                     )
                 },
             )
         };
         if nverts < 3 {
             // Guard against degenerate cases.
-            return VecT::new(
-                VecT::Scalar::from_f64(0.0),
-                VecT::Scalar::from_f64(0.0),
-                VecT::Scalar::from_f64(0.0),
-            );
+            return VecT::zero();
         }
-        VecT::new(x, y, z).normalized()
+        VecT::new([x, y, z]).normalized()
+    }
+
+    /**
+     * Compute the face normals. If the face normals property is not available,
+     * it is initialized before computing the face normals.
+     */
+    pub fn update_face_normals(&mut self) -> Result<FProperty<VecT>, Error> {
+        let mut fprop = self.request_face_normals();
+        {
+            let mut fnormals = fprop.try_borrow_mut()?;
+            let fnormals: &mut [VecT] = &mut fnormals;
+            let points = self.points();
+            let points = points.try_borrow()?;
+            for f in self.faces() {
+                fnormals[f.index() as usize] = self.calc_face_normal(f, &points);
+            }
+        }
+        Ok(fprop)
     }
 }
 
-impl<VecT> PolyMeshT<VecT>
+impl<VecT> PolyMeshT<VecT, 3>
 where
-    VecT::Scalar: TScalar
-        + Mul<Output = VecT::Scalar>
-        + Sub<Output = VecT::Scalar>
-        + TPropData
-        + Div<Output = VecT::Scalar>
-        + PartialOrd,
-    VecT: TVec3 + Sub<Output = VecT> + Add<Output = VecT>,
+    VecT::Scalar: FromFloat + Div<Output = VecT::Scalar> + PartialOrd,
+    VecT: TVec<3>
+        + Sub<Output = VecT>
+        + Add<Output = VecT>
+        + Div<VecT::Scalar, Output = VecT>
+        + CrossProduct3,
 {
     pub fn calc_vertex_normal_accurate(&self, v: VH, points: &[VecT]) -> VecT {
         let topol = self.topology();
@@ -198,21 +202,14 @@ where
             }
             None => return VecT::default(),
         }
-        .fold(
-            VecT::new(
-                VecT::Scalar::from_f64(0.0),
-                VecT::Scalar::from_f64(0.0),
-                VecT::Scalar::from_f64(0.0),
-            ),
-            |total, (h1, h2)| {
-                // Intentionally not normalizing to account for sector area.
-                total
-                    + VecT::cross(
-                        self.calc_halfedge_vector(h1, points),
-                        self.calc_halfedge_vector(h2, points),
-                    )
-            },
-        )
+        .fold(VecT::zero(), |total, (h1, h2)| {
+            // Intentionally not normalizing to account for sector area.
+            total
+                + VecT::cross(
+                    self.calc_halfedge_vector(h1, points),
+                    self.calc_halfedge_vector(h2, points),
+                )
+        })
         .normalized()
     }
 
@@ -221,12 +218,31 @@ where
         let points = points.try_borrow()?;
         Ok(self.calc_vertex_normal_accurate(v, &points))
     }
+
+    /**
+     * Compute accurate vertex normals. This can be slower than the fast
+     * approximation. If the vertex normals property is not available, it is
+     * initialized before computing the vertex normals.
+     */
+    pub fn update_vertex_normals_accurate(&mut self) -> Result<VProperty<VecT>, Error> {
+        let mut vprop = self.request_vertex_normals();
+        {
+            let mut vnormals = vprop.try_borrow_mut()?;
+            let vnormals: &mut [VecT] = &mut vnormals;
+            let points = self.points();
+            let points = points.try_borrow()?;
+            for v in self.vertices() {
+                vnormals[v.index() as usize] = self.calc_vertex_normal_accurate(v, &points);
+            }
+        }
+        Ok(vprop)
+    }
 }
 
-impl<VecT> PolyMeshT<VecT>
+impl<VecT, const DIM: usize> PolyMeshT<VecT, DIM>
 where
-    VecT::Scalar: TScalar + Add<Output = VecT::Scalar>,
-    VecT: TVec3 + Add<Output = VecT> + Div<VecT::Scalar, Output = VecT>,
+    VecT::Scalar: FromFloat + Add<Output = VecT::Scalar>,
+    VecT: TVec<DIM> + Add<Output = VecT> + Div<VecT::Scalar, Output = VecT>,
 {
     pub fn try_calc_face_centroid(&self, f: FH) -> Result<VecT, Error> {
         let points = self.points();
@@ -236,14 +252,7 @@ where
 
     pub fn calc_face_centroid(&self, f: FH, points: &[VecT]) -> VecT {
         let (denom, total) = iterator::fv_ccw_iter(self.topology(), f).fold(
-            (
-                VecT::Scalar::from_f64(0.0),
-                VecT::new(
-                    VecT::Scalar::from_f64(0.0),
-                    VecT::Scalar::from_f64(0.0),
-                    VecT::Scalar::from_f64(0.0),
-                ),
-            ),
+            (VecT::Scalar::from_f64(0.0), VecT::zero()),
             |(denom, total): (VecT::Scalar, VecT), v: VH| {
                 (
                     denom + VecT::Scalar::from_f64(1.0),
@@ -255,21 +264,16 @@ where
     }
 }
 
-impl<VecT> PolyMeshT<VecT>
+impl<VecT, const DIM: usize> PolyMeshT<VecT, DIM>
 where
-    VecT: TVec3 + Add<Output = VecT>,
-    VecT::Scalar: TScalar + TPropData + Div<Output = VecT::Scalar> + PartialOrd,
+    VecT: TVec<DIM> + Add<Output = VecT> + Div<VecT::Scalar, Output = VecT>,
+    VecT::Scalar: FromFloat + Div<Output = VecT::Scalar> + PartialOrd,
 {
     pub fn calc_vertex_normal_fast(&self, v: VH, fnormals: &[VecT]) -> VecT {
         iterator::vf_ccw_iter(self.topology(), v)
-            .fold(
-                VecT::new(
-                    VecT::Scalar::from_f64(0.0),
-                    VecT::Scalar::from_f64(0.0),
-                    VecT::Scalar::from_f64(0.0),
-                ),
-                |total, f| total + fnormals[f.index() as usize],
-            )
+            .fold(VecT::zero(), |total, f| {
+                total + fnormals[f.index() as usize]
+            })
             .normalized()
     }
 
@@ -282,11 +286,30 @@ where
             None => Err(Error::FaceNormalsNotAvailable),
         }
     }
+
+    /**
+     * Compute a fast approximation of the vertex normals. If the vertex
+     * normals property is not available, it is initialized before computing the
+     * vertex normals.
+     */
+    pub fn update_vertex_normals_fast(&mut self) -> Result<VProperty<VecT>, Error> {
+        let mut vprop = self.request_vertex_normals();
+        {
+            let fnormals = self.face_normals().ok_or(Error::FaceNormalsNotAvailable)?;
+            let fnormals = fnormals.try_borrow()?;
+            let mut vnormals = vprop.try_borrow_mut()?;
+            let vnormals: &mut [VecT] = &mut vnormals;
+            for v in self.vertices() {
+                vnormals[v.index() as usize] = self.calc_vertex_normal_fast(v, &fnormals);
+            }
+        }
+        Ok(vprop)
+    }
 }
 
-impl<VecT> PolyMeshT<VecT>
+impl<VecT, const DIM: usize> PolyMeshT<VecT, DIM>
 where
-    VecT: TVec3 + Sub<Output = VecT>,
+    VecT: TVec<DIM> + Sub<Output = VecT>,
 {
     pub fn try_calc_halfedge_vector(&self, h: HH) -> Result<VecT, Error> {
         let points = self.points();
@@ -299,10 +322,10 @@ where
     }
 }
 
-impl<VecT> PolyMeshT<VecT>
+impl<VecT> PolyMeshT<VecT, 3>
 where
-    VecT: TVec3 + Sub<Output = VecT>,
-    VecT::Scalar: TScalar
+    VecT: TVec<3> + Sub<Output = VecT> + CrossProduct3,
+    VecT::Scalar: FromFloat
         + Mul<Output = VecT::Scalar>
         + Sub<Output = VecT::Scalar>
         + Add<Output = VecT::Scalar>,
@@ -321,7 +344,7 @@ where
     }
 
     pub fn calc_sector_area(&self, h: HH, points: &[VecT]) -> VecT::Scalar {
-        self.calc_sector_normal(h, points).length() * VecT::Scalar::from_f64(0.5)
+        self.calc_sector_normal(h, points).norm() * VecT::Scalar::from_f64(0.5)
     }
 
     pub fn try_calc_sector_area(&self, h: HH) -> Result<VecT::Scalar, Error> {
@@ -340,7 +363,7 @@ where
                         points[vs[1].index() as usize] - p0,
                         points[vs[2].index() as usize] - p0,
                     )
-                    .length()
+                    .norm()
                         * VecT::Scalar::from_f64(0.5)
             },
         )
@@ -354,7 +377,7 @@ where
 
     pub fn calc_area(&self, points: &[VecT]) -> VecT::Scalar {
         self.faces().fold(VecT::Scalar::from_f64(0.), |total, f| {
-            total + self.calc_face_area(f, &points)
+            total + self.calc_face_area(f, points)
         })
     }
 
@@ -365,14 +388,14 @@ where
     }
 }
 
-impl<VecT> PolyMeshT<VecT>
+impl<VecT> PolyMeshT<VecT, 3>
 where
-    VecT: TVec3 + Sub<Output = VecT>,
-    VecT::Scalar: TScalar
+    VecT: TVec<3> + Sub<Output = VecT> + CrossProduct3,
+    VecT::Scalar: FromFloat
         + Mul<Output = VecT::Scalar>
         + Add<Output = VecT::Scalar>
         + Div<Output = VecT::Scalar>
-        + Sub<Output = VecT::Scalar>,
+        + AddAssign,
 {
     pub fn calc_volume(&self, points: &[VecT]) -> VecT::Scalar {
         if self
@@ -400,15 +423,16 @@ where
     }
 }
 
-impl<VecT> PolyMeshT<VecT>
+impl<VecT> PolyMeshT<VecT, 3>
 where
-    VecT: TVec3 + Sub<Output = VecT>,
-    VecT::Scalar: TScalar
+    VecT: TVec<3> + Sub<Output = VecT> + CrossProduct3,
+    VecT::Scalar: FromFloat
         + Mul<Output = VecT::Scalar>
         + Sub<Output = VecT::Scalar>
         + Add<Output = VecT::Scalar>
         + Neg<Output = VecT::Scalar>
-        + PartialOrd,
+        + PartialOrd
+        + AddAssign,
 {
     fn aligned_angle(norm0: VecT, norm1: VecT, hvec: VecT) -> VecT::Scalar {
         if VecT::dot(VecT::cross(norm0, norm1), hvec) >= VecT::Scalar::from_f64(0.) {
@@ -466,15 +490,14 @@ where
     }
 }
 
-impl<VecT> PolyMeshT<VecT>
+impl<VecT> PolyMeshT<VecT, 3>
 where
-    VecT: TVec3 + Sub<Output = VecT>,
-    VecT::Scalar: TScalar
+    VecT: TVec<3> + Sub<Output = VecT> + CrossProduct3,
+    VecT::Scalar: FromFloat
         + Mul<Output = VecT::Scalar>
-        + Add<Output = VecT::Scalar>
-        + Sub<Output = VecT::Scalar>
-        + PartialOrd
-        + Neg<Output = VecT::Scalar>,
+        + Neg<Output = VecT::Scalar>
+        + AddAssign
+        + PartialOrd,
 {
     pub fn calc_sector_angle(&self, h: HH, points: &[VecT], face_normals: &[VecT]) -> VecT::Scalar {
         let n0 = self.calc_halfedge_vector(h, points);
@@ -503,7 +526,9 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::{error::Error, mesh::PolyMeshF32};
+    use core::f32;
+
+    use crate::{error::Error, macros::assert_f32_eq, mesh::PolyMeshF32, vector::TVec};
 
     #[test]
     fn t_box_face_normals() {
@@ -625,7 +650,12 @@ mod test {
         let fnormals = fnormals.try_borrow().expect("Cannot borrow face normals");
         let fnormals: &[glam::Vec3] = &fnormals;
         for n in fnormals {
-            println!("glam::vec3({:.1}, {:.1}, {:.1}),", n.x(), n.y(), n.z());
+            println!(
+                "glam::vec3({:.1}, {:.1}, {:.1}),",
+                n.coord(0),
+                n.coord(1),
+                n.coord(2)
+            );
         }
         assert_eq!(
             &fnormals,
@@ -700,6 +730,8 @@ mod test {
         let mut qbox = PolyMeshF32::quad_box(glam::vec3(0., 0., 0.), glam::vec3(1., 1., 1.))
             .expect("Cannot create a box primitive");
         assert!(!qbox.has_vertex_normals());
+        qbox.update_face_normals()
+            .expect("Cannot update face normals");
         let vnormals = qbox
             .update_vertex_normals_fast()
             .expect("Cannot update vertex normals");
@@ -774,8 +806,8 @@ mod test {
             .expect("Cannot update face normals");
         let qbox = qbox;
         for e in qbox.edges() {
-            assert_eq!(
-                1.5707963,
+            assert_f32_eq!(
+                f32::consts::FRAC_PI_2,
                 qbox.try_calc_dihedral_angle_fast(e)
                     .expect("Cannot compute dihedral angle")
             );
@@ -787,8 +819,8 @@ mod test {
         let qbox = PolyMeshF32::quad_box(glam::vec3(0., 0., 0.), glam::vec3(1., 1., 1.))
             .expect("Cannot create a box primitive");
         for e in qbox.edges() {
-            assert_eq!(
-                1.5707963,
+            assert_f32_eq!(
+                f32::consts::FRAC_PI_2,
                 qbox.try_calc_dihedral_angle(e)
                     .expect("Cannot compute dihedral angle")
             );
@@ -806,8 +838,8 @@ mod test {
         qbox.update_face_normals()
             .expect("Cannot update face normals");
         for h in qbox.halfedges() {
-            assert_eq!(
-                1.5707963,
+            assert_f32_eq!(
+                f32::consts::FRAC_PI_2,
                 qbox.try_calc_sector_angle(h)
                     .expect("Cannot compute sector angles")
             );
@@ -826,7 +858,7 @@ mod test {
             let angle = qbox
                 .try_calc_sector_angle(h)
                 .expect("Cannot compute sector angle");
-            assert_eq!(1.5707963, angle.abs());
+            assert_f32_eq!(f32::consts::FRAC_PI_2, angle.abs());
             if angle < 0. {
                 concave += 1;
             } else {
