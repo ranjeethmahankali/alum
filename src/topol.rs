@@ -222,6 +222,10 @@ impl Topology {
         &mut self.edges[(h.index() >> 1) as usize].halfedges[(h.index() & 1) as usize]
     }
 
+    fn face_mut(&mut self, f: FH) -> &mut Face {
+        &mut self.faces[f.index() as usize]
+    }
+
     pub fn vertex_halfedge(&self, v: VH) -> Option<HH> {
         self.vertex(v).halfedge
     }
@@ -1049,6 +1053,128 @@ impl Topology {
         let mut vstatus = vstatus.try_borrow_mut()?;
         Ok(self.check_edge_collapse(h, &estatus, &mut vstatus))
     }
+
+    fn collapse_triangular_loop(
+        &mut self,
+        h: HH,
+        hstatus: &mut [Status],
+        estatus: &mut [Status],
+        fstatus: &mut [Status],
+    ) {
+        let h1 = self.next_halfedge(h);
+        let o = self.opposite_halfedge(h);
+        let o1 = self.opposite_halfedge(h1);
+        let v0 = self.to_vertex(h);
+        let v1 = self.to_vertex(h1);
+        let fh = self.halfedge_face(h);
+        let fo = self.halfedge_face(o);
+        // Ensure the loop represents a collapsed triangle. Because this is a
+        // private function, all callers inside the implementation, so we can be
+        // confident and assert to catch and weed out any bugs in debug builds.
+        debug_assert_eq!(self.next_halfedge(h1), h);
+        debug_assert_ne!(h1, o);
+        // Rewire halfedge -> halfedge.
+        self.set_next_halfedge(h1, self.next_halfedge(o));
+        self.set_next_halfedge(self.prev_halfedge(o), h1);
+        // Rewire halfedge -> face.
+        self.halfedge_mut(h1).face = fo;
+        // Rewire vertex -> halfedge.
+        self.vertex_mut(v0).halfedge = Some(h1);
+        self.adjust_outgoing_halfedge(v0);
+        self.vertex_mut(v1).halfedge = Some(o1);
+        self.adjust_outgoing_halfedge(v1);
+        // Rewire face -> halfedge.
+        if let Some(fo) = fo {
+            if self.face_halfedge(fo) == o {
+                self.face_mut(fo).halfedge = h1;
+            }
+        }
+        // Delete stuff.
+        if let Some(fh) = fh {
+            fstatus[fh.index() as usize].set_deleted(true);
+        }
+        estatus[self.halfedge_edge(h).index() as usize].set_deleted(true);
+        hstatus[h.index() as usize].set_deleted(true);
+        hstatus[h.index() as usize].set_deleted(true);
+    }
+
+    pub fn collapse_edge(
+        &mut self,
+        h: HH,
+        vstatus: &mut [Status],
+        hstatus: &mut [Status],
+        estatus: &mut [Status],
+        fstatus: &mut [Status],
+        cache: &mut TopolCache,
+    ) {
+        // Collect neighboring topology.
+        let hn = self.next_halfedge(h);
+        let hp = self.prev_halfedge(h);
+        let o = self.opposite_halfedge(h);
+        let on = self.next_halfedge(o);
+        let op = self.prev_halfedge(o);
+        let fh = self.halfedge_face(h);
+        let fo = self.halfedge_face(o);
+        let vh = self.to_vertex(h);
+        let vo = self.to_vertex(o);
+        // Setup cache.
+        let hcache: &mut Vec<HH> = &mut cache.halfedges;
+        // Rewire halfedge -> vertex
+        hcache.clear();
+        hcache.extend(iterator::vih_ccw_iter(self, vo));
+        for ih in hcache.drain(..) {
+            self.halfedge_mut(ih).vertex = vh;
+        }
+        // Rewire halfedge -> halfedge
+        self.set_next_halfedge(hp, hn);
+        self.set_next_halfedge(op, on);
+        // Rewire face -> halfedge
+        if let Some(fh) = fh {
+            self.face_mut(fh).halfedge = hn;
+        }
+        if let Some(fo) = fo {
+            self.face_mut(fo).halfedge = on;
+        }
+        // Rewire vertex -> halfedge
+        if self.vertex_halfedge(vh) == Some(o) {
+            self.set_vertex_halfedge(vh, hn);
+        }
+        self.adjust_outgoing_halfedge(vh);
+        self.vertex_mut(vo).halfedge = None;
+        // Delete stuff
+        estatus[self.halfedge_edge(h).index() as usize].set_deleted(true);
+        vstatus[vo.index() as usize].set_deleted(true);
+        hstatus[h.index() as usize].set_deleted(true);
+        hstatus[o.index() as usize].set_deleted(true);
+        // If the loops that used to contain the halfedges that were collapsed
+        // and deleted had a valance of 3, they are now degenerate. So we need
+        // to collapse those loops.
+        if self.next_halfedge(hn) == hp {
+            self.collapse_triangular_loop(hn, hstatus, estatus, fstatus);
+        }
+        if self.next_halfedge(on) == op {
+            self.collapse_triangular_loop(on, hstatus, estatus, fstatus);
+        }
+    }
+
+    pub fn try_collapse_edge(&mut self, h: HH, cache: &mut TopolCache) -> Result<(), Error> {
+        let mut vstatus = self.vstatus.clone();
+        let mut vstatus = vstatus.try_borrow_mut()?;
+        let mut hstatus = self.hstatus.clone();
+        let mut hstatus = hstatus.try_borrow_mut()?;
+        let mut estatus = self.estatus.clone();
+        let mut estatus = estatus.try_borrow_mut()?;
+        let mut fstatus = self.fstatus.clone();
+        let mut fstatus = fstatus.try_borrow_mut()?;
+        Ok(self.collapse_edge(
+            h,
+            &mut vstatus,
+            &mut hstatus,
+            &mut estatus,
+            &mut fstatus,
+            cache,
+        ))
+    }
 }
 
 impl Default for Topology {
@@ -1587,7 +1713,10 @@ mod test {
         assert_eq!(
             (32, 16),
             mesh.halfedges().fold((0usize, 0usize), |(can, cannot), h| {
-                if mesh.try_check_edge_collapse(h).expect("Cannot check collapse") {
+                if mesh
+                    .try_check_edge_collapse(h)
+                    .expect("Cannot check collapse")
+                {
                     (can + 1, cannot)
                 } else {
                     (can, 1 + cannot)
