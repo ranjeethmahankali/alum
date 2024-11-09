@@ -613,4 +613,101 @@ mod test {
             ]
         );
     }
+
+    #[test]
+    fn t_box_split_edge() {
+        let mut qbox = quad_box();
+        let e = qbox.halfedge_edge(
+            qbox.find_halfedge(4.into(), 5.into())
+                .expect("Cannot find halfedge"),
+        );
+        let h = qbox.edge_halfedge(e, false);
+        let oh = qbox.edge_halfedge(e, true);
+        let v = qbox.add_vertex().expect("Cannotr add vertex");
+        let enew = qbox.split_edge(e, v, false).expect("Cannot split edge");
+        let hnew = qbox.edge_halfedge(enew, false);
+        let ohnew = qbox.edge_halfedge(enew, true);
+        assert_eq!(qbox.to_vertex(oh), qbox.from_vertex(ohnew));
+        assert_eq!(qbox.to_vertex(oh), v);
+        assert_eq!(qbox.to_vertex(hnew), qbox.from_vertex(h));
+        assert_eq!(qbox.to_vertex(hnew), v);
+        assert_eq!(
+            qbox.next_halfedge(ohnew),
+            qbox.find_halfedge(5.into(), 6.into())
+                .expect("Cannot find halfedge")
+        );
+        assert_eq!(
+            qbox.prev_halfedge(hnew),
+            qbox.find_halfedge(1.into(), 5.into())
+                .expect("Cannot find halfedge")
+        );
+        assert_eq!(qbox.prev_halfedge(h), hnew);
+        assert_eq!(qbox.next_halfedge(oh), ohnew);
+        assert_eq!(qbox.halfedge_face(h), qbox.halfedge_face(hnew));
+        assert_eq!(qbox.halfedge_face(oh), qbox.halfedge_face(ohnew));
+    }
+
+    #[test]
+    fn t_box_split_edge_copy_props() {
+        let mut qbox = quad_box();
+        let e = qbox.halfedge_edge(
+            qbox.find_halfedge(5.into(), 6.into())
+                .expect("Cannot find halfedge"),
+        );
+        // Set properties.
+        let mut eprop = qbox.new_eprop::<usize>();
+        eprop.set(e, 123).expect("Cannot set property");
+        let mut hprop = qbox.new_hprop::<usize>();
+        hprop
+            .set(qbox.edge_halfedge(e, true), 234)
+            .expect("Cannot set property");
+        hprop
+            .set(qbox.edge_halfedge(e, false), 345)
+            .expect("Cannot set property");
+        assert_eq!(
+            1,
+            qbox.edges()
+                .filter(|e| eprop.get(*e).expect("Cannot read property") != usize::default())
+                .count()
+        );
+        assert_eq!(
+            2,
+            qbox.halfedges()
+                .filter(|h| hprop.get(*h).expect("Cannot read property") != usize::default())
+                .count()
+        );
+        // Do the split and check topology.
+        let h = qbox.edge_halfedge(e, false);
+        let oh = qbox.edge_halfedge(e, true);
+        let v = qbox.add_vertex().expect("Cannotr add vertex");
+        let enew = qbox.split_edge(e, v, true).expect("Cannot split edge");
+        let hnew = qbox.edge_halfedge(enew, false);
+        let ohnew = qbox.edge_halfedge(enew, true);
+        assert_eq!(qbox.to_vertex(oh), qbox.from_vertex(ohnew));
+        assert_eq!(qbox.to_vertex(oh), v);
+        assert_eq!(qbox.to_vertex(hnew), qbox.from_vertex(h));
+        assert_eq!(qbox.to_vertex(hnew), v);
+        assert_eq!(qbox.prev_halfedge(h), hnew);
+        assert_eq!(qbox.next_halfedge(oh), ohnew);
+        assert_eq!(qbox.halfedge_face(h), qbox.halfedge_face(hnew));
+        assert_eq!(qbox.halfedge_face(oh), qbox.halfedge_face(ohnew));
+        // Check properties.
+        assert_eq!(
+            2,
+            qbox.edges()
+                .filter(|e| eprop.get(*e).expect("Cannot read property") != usize::default())
+                .count()
+        );
+        assert_eq!(
+            4,
+            qbox.halfedges()
+                .filter(|h| hprop.get(*h).expect("Cannot read property") != usize::default())
+                .count()
+        );
+        let eprop = eprop.try_borrow().expect("Cannot borrow edge");
+        assert_eq!(eprop[e.index() as usize], eprop[enew.index() as usize]);
+        let hprop = hprop.try_borrow().expect("Cannot borrow halfedge");
+        assert_eq!(hprop[h.index() as usize], hprop[hnew.index() as usize]);
+        assert_eq!(hprop[oh.index() as usize], hprop[ohnew.index() as usize]);
+    }
 }
