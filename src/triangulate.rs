@@ -63,7 +63,7 @@ impl Topology {
 
 #[cfg(test)]
 mod test {
-    use crate::{element::Handle, topol::test::quad_box};
+    use crate::{element::Handle, iterator, topol::test::quad_box};
 
     #[test]
     fn t_box_triangulated_indices() {
@@ -78,5 +78,38 @@ mod test {
                 0, 4, 7, 4, 5, 7, 5, 6
             ]
         );
+    }
+
+    #[test]
+    fn t_box_triangulate_face() {
+        let mut qbox = quad_box();
+        qbox.triangulate_face(5.into())
+            .expect("Failed to triangulate face");
+        let qbox = qbox;
+        assert_eq!(7, qbox.num_faces());
+        assert_eq!(
+            (2, 5),
+            qbox.faces().fold((0usize, 0usize), |(t, q), f| {
+                match qbox.face_valence(f) {
+                    3 => (t + 1, q),
+                    4 => (t, 1 + q),
+                    _ => (t, q),
+                }
+            })
+        );
+        assert_eq!(13, qbox.num_edges());
+        assert_eq!(26, qbox.num_halfedges());
+        assert_eq!(
+            iterator::fv_ccw_iter(&qbox, 5.into())
+                .map(|v| v.index())
+                .collect::<Vec<_>>(),
+            &[5, 6, 7]
+        );
+        assert_eq!(
+            iterator::fv_ccw_iter(&qbox, 6.into())
+                .map(|v| v.index())
+                .collect::<Vec<_>>(),
+            &[4, 5, 7]
+        )
     }
 }
