@@ -210,7 +210,7 @@ impl Topology {
         &self.vertices[v.index() as usize]
     }
 
-    fn vertex_mut(&mut self, v: VH) -> &mut Vertex {
+    pub(crate) fn vertex_mut(&mut self, v: VH) -> &mut Vertex {
         &mut self.vertices[v.index() as usize]
     }
 
@@ -218,11 +218,11 @@ impl Topology {
         &self.edges[(h.index() >> 1) as usize].halfedges[(h.index() & 1) as usize]
     }
 
-    fn halfedge_mut(&mut self, h: HH) -> &mut Halfedge {
+    pub(crate) fn halfedge_mut(&mut self, h: HH) -> &mut Halfedge {
         &mut self.edges[(h.index() >> 1) as usize].halfedges[(h.index() & 1) as usize]
     }
 
-    fn face_mut(&mut self, f: FH) -> &mut Face {
+    pub(crate) fn face_mut(&mut self, f: FH) -> &mut Face {
         &mut self.faces[f.index() as usize]
     }
 
@@ -337,19 +337,6 @@ impl Topology {
         iterator::voh_ccw_iter(self, v)
             .skip(1)
             .all(|h| !self.is_boundary_halfedge(h))
-    }
-
-    pub fn triangulated_face_vertices(&self, f: FH) -> impl Iterator<Item = [VH; 3]> + use<'_> {
-        let hstart = self.face_halfedge(f);
-        let vstart = self.from_vertex(hstart);
-        iterator::loop_ccw_iter(self, self.next_halfedge(hstart))
-            .take_while(move |h| self.to_vertex(*h) != vstart)
-            .map(move |h| [vstart, self.from_vertex(h), self.to_vertex(h)])
-    }
-
-    pub fn triangulated_vertices(&self) -> impl Iterator<Item = [VH; 3]> + use<'_> {
-        self.faces()
-            .flat_map(move |f| self.triangulated_face_vertices(f))
     }
 
     fn adjust_outgoing_halfedge(&mut self, v: VH) {
@@ -1675,21 +1662,6 @@ mod test {
             qbox.vertices()
                 .filter(|v| qbox.is_boundary_vertex(*v))
                 .count()
-        );
-    }
-
-    #[test]
-    fn t_box_triangulated_indices() {
-        let qbox = quad_box();
-        assert_eq!(
-            qbox.triangulated_vertices()
-                .flatten()
-                .map(|v| v.index())
-                .collect::<Vec<_>>(),
-            &[
-                1, 0, 3, 1, 3, 2, 4, 0, 1, 4, 1, 5, 5, 1, 2, 5, 2, 6, 6, 2, 3, 6, 3, 7, 7, 3, 0, 7,
-                0, 4, 7, 4, 5, 7, 5, 6
-            ]
         );
     }
 

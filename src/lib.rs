@@ -10,6 +10,7 @@ pub mod vector;
 
 mod iterator;
 mod macros;
+mod triangulate;
 
 pub type PolyMeshF32 = mesh::PolyMeshF32;
 pub type Topology = topol::Topology;
