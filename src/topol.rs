@@ -403,7 +403,7 @@ impl Topology {
         Ok(fi.into())
     }
 
-    pub fn set_next_halfedge(&mut self, hprev: HH, hnext: HH) {
+    pub fn link_halfedges(&mut self, hprev: HH, hnext: HH) {
         self.halfedge_mut(hprev).next = hnext;
         self.halfedge_mut(hnext).prev = hprev;
     }
@@ -619,7 +619,7 @@ impl Topology {
         }
         // Process next halfedge cache.
         for (prev, next) in cache.next_cache.drain(..) {
-            self.set_next_halfedge(prev, next);
+            self.link_halfedges(prev, next);
         }
         // Adjust vertices' halfedge handles.
         for (i, vert) in verts.iter().enumerate() {
@@ -735,8 +735,8 @@ impl Topology {
             let next1 = self.next_halfedge(h1);
             let prev1 = self.prev_halfedge(h1);
             // Adjust halfedge links and mark edge and halfedges deleted.
-            self.set_next_halfedge(prev0, next1);
-            self.set_next_halfedge(prev1, next0);
+            self.link_halfedges(prev0, next1);
+            self.link_halfedges(prev1, next0);
             self.edge_status_mut(e)?.set_deleted(true);
             {
                 let mut hstatus = self.hstatus.try_borrow_mut()?;
@@ -891,7 +891,7 @@ impl Topology {
         }
         // Update halfedge connectivity.
         for h in self.halfedges() {
-            self.set_next_halfedge(h, hmap[self.next_halfedge(h).index() as usize]);
+            self.link_halfedges(h, hmap[self.next_halfedge(h).index() as usize]);
             if let Some(f) = self.halfedge_face(h) {
                 self.halfedge_mut(h).face = Some(fmap[f.index() as usize]);
             }
@@ -1053,8 +1053,8 @@ impl Topology {
         debug_assert_eq!(self.next_halfedge(h1), h);
         debug_assert_ne!(h1, o);
         // Rewire halfedge -> halfedge.
-        self.set_next_halfedge(h1, self.next_halfedge(o));
-        self.set_next_halfedge(self.prev_halfedge(o), h1);
+        self.link_halfedges(h1, self.next_halfedge(o));
+        self.link_halfedges(self.prev_halfedge(o), h1);
         // Rewire halfedge -> face.
         self.halfedge_mut(h1).face = fo;
         // Rewire vertex -> halfedge.
@@ -1105,8 +1105,8 @@ impl Topology {
             self.halfedge_mut(ih).vertex = vh;
         }
         // Rewire halfedge -> halfedge
-        self.set_next_halfedge(hp, hn);
-        self.set_next_halfedge(op, on);
+        self.link_halfedges(hp, hn);
+        self.link_halfedges(op, on);
         // Rewire face -> halfedge
         if let Some(fh) = fh {
             self.face_mut(fh).halfedge = hn;
