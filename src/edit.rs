@@ -358,6 +358,12 @@ where
     pub fn triangulate(&mut self) -> Result<(), Error> {
         self.topology_mut().triangulate()
     }
+
+    pub fn split_edge(&mut self, e: EH, pos: VecT, copy_props: bool) -> Result<(VH, EH), Error> {
+        let v = self.add_vertex(pos)?;
+        let enew = self.topology_mut().split_edge(e, v, copy_props)?;
+        Ok((v, enew))
+    }
 }
 
 #[cfg(test)]
