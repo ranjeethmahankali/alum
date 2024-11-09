@@ -1776,7 +1776,18 @@ mod test {
                 })
             );
         }
-        // Collapse another edge and check. Now the topology is a trianglular prism.
+    }
+
+    #[test]
+    fn t_box_double_edge_collapse() {
+        let mut qbox = quad_box();
+        let mut cache = TopolCache::default();
+        // Collapse two opposite edges of a face, to produce a triangular prism.
+        let h = qbox
+            .find_halfedge(5.into(), 6.into())
+            .expect("Cannot find halfedge");
+        qbox.try_collapse_edge(h, &mut cache)
+            .expect("Cannot collapse edges");
         let h = qbox
             .find_halfedge(4.into(), 7.into())
             .expect("Cannot find halfedge");
