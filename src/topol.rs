@@ -1054,7 +1054,7 @@ impl Topology {
         Ok(self.check_edge_collapse(h, &estatus, &mut vstatus))
     }
 
-    fn collapse_triangular_loop(
+    fn collapse_degenerate_triangle(
         &mut self,
         h: HH,
         hstatus: &mut [Status],
@@ -1150,10 +1150,10 @@ impl Topology {
         // and deleted had a valance of 3, they are now degenerate. So we need
         // to collapse those loops.
         if self.next_halfedge(hn) == hp {
-            self.collapse_triangular_loop(hn, hstatus, estatus, fstatus);
+            self.collapse_degenerate_triangle(hn, hstatus, estatus, fstatus);
         }
         if self.next_halfedge(on) == op {
-            self.collapse_triangular_loop(on, hstatus, estatus, fstatus);
+            self.collapse_degenerate_triangle(on, hstatus, estatus, fstatus);
         }
     }
 
