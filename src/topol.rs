@@ -342,7 +342,7 @@ impl Topology {
     fn adjust_outgoing_halfedge(&mut self, v: VH) {
         let h = iterator::voh_ccw_iter(self, v).find(|h| self.is_boundary_halfedge(*h));
         if let Some(h) = h {
-            self.set_vertex_halfedge(v, h)
+            self.vertex_mut(v).halfedge = Some(h);
         }
     }
 
@@ -401,14 +401,6 @@ impl Topology {
         self.fprops.push_value()?;
         self.faces.push(Face { halfedge });
         Ok(fi.into())
-    }
-
-    pub fn set_halfedge_face(&mut self, h: HH, f: FH) {
-        self.halfedge_mut(h).face = Some(f);
-    }
-
-    pub fn set_vertex_halfedge(&mut self, v: VH, h: HH) {
-        self.vertices[v.index() as usize].halfedge = Some(h);
     }
 
     pub fn set_next_halfedge(&mut self, hprev: HH, hnext: HH) {
@@ -530,7 +522,7 @@ impl Topology {
                     *opp_prev = Some(boundprev);
                     cache.next_cache.push((innerprev, innernext));
                     *next = Some(innernext);
-                    self.set_vertex_halfedge(v, outernext);
+                    self.vertex_mut(v).halfedge = Some(outernext);
                 }
                 (
                     TentativeEdge::Old(innerprev),
@@ -549,7 +541,7 @@ impl Topology {
                     *opp_next = Some(boundnext);
                     cache.next_cache.push((innerprev, innernext));
                     *prev = Some(innerprev);
-                    self.set_vertex_halfedge(v, boundnext);
+                    self.vertex_mut(v).halfedge = Some(boundnext);
                 }
                 (
                     TentativeEdge::New {
@@ -579,7 +571,7 @@ impl Topology {
                         *prev = Some(innerprev);
                         *opp_next = Some(boundnext);
                     } else {
-                        self.set_vertex_halfedge(v, outernext);
+                        self.vertex_mut(v).halfedge = Some(outernext);
                         *next = Some(innernext);
                         *opp_prev = Some(outerprev);
                         *prev = Some(innerprev);
@@ -761,7 +753,7 @@ impl Topology {
                     }
                     self.vertex_mut(v0).halfedge = None;
                 } else {
-                    self.set_vertex_halfedge(v0, next0);
+                    self.vertex_mut(v0).halfedge = Some(next0);
                 }
             }
             if self.vertex_halfedge(v1) == Some(h0) {
@@ -772,7 +764,7 @@ impl Topology {
                     }
                     self.vertex_mut(v1).halfedge = None;
                 } else {
-                    self.set_vertex_halfedge(v1, next1);
+                    self.vertex_mut(v1).halfedge = Some(next1);
                 }
             }
         }
@@ -901,7 +893,7 @@ impl Topology {
         for h in self.halfedges() {
             self.set_next_halfedge(h, hmap[self.next_halfedge(h).index() as usize]);
             if let Some(f) = self.halfedge_face(h) {
-                self.set_halfedge_face(h, fmap[f.index() as usize]);
+                self.halfedge_mut(h).face = Some(fmap[f.index() as usize]);
             }
         }
         // Update handles of faces.
@@ -1124,7 +1116,7 @@ impl Topology {
         }
         // Rewire vertex -> halfedge
         if self.vertex_halfedge(vh) == Some(o) {
-            self.set_vertex_halfedge(vh, hn);
+            self.vertex_mut(vh).halfedge = Some(hn);
         }
         self.adjust_outgoing_halfedge(vh);
         self.vertex_mut(vo).halfedge = None;
