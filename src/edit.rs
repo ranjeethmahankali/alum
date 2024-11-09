@@ -247,14 +247,15 @@ impl Topology {
         let mut estatus = estatus.try_borrow_mut()?;
         let mut fstatus = self.fstatus.clone();
         let mut fstatus = fstatus.try_borrow_mut()?;
-        Ok(self.collapse_edge(
+        self.collapse_edge(
             h,
             &mut vstatus,
             &mut hstatus,
             &mut estatus,
             &mut fstatus,
             cache,
-        ))
+        );
+        Ok(())
     }
 
     pub fn triangulated_face_vertices(&self, f: FH) -> impl Iterator<Item = [VH; 3]> + use<'_> {
