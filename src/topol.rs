@@ -53,10 +53,10 @@ pub struct Topology {
     pub(crate) hstatus: HProperty<Status>,
     pub(crate) estatus: EProperty<Status>,
     pub(crate) fstatus: FProperty<Status>,
-    vprops: PropertyContainer<VH>,
-    hprops: PropertyContainer<HH>,
-    eprops: PropertyContainer<EH>,
-    fprops: PropertyContainer<FH>,
+    pub(crate) vprops: PropertyContainer<VH>,
+    pub(crate) hprops: PropertyContainer<HH>,
+    pub(crate) eprops: PropertyContainer<EH>,
+    pub(crate) fprops: PropertyContainer<FH>,
 }
 
 impl Topology {
@@ -365,7 +365,7 @@ impl Topology {
         Ok(())
     }
 
-    fn new_edge(
+    pub(crate) fn new_edge(
         &mut self,
         from: VH,
         to: VH,
@@ -373,7 +373,7 @@ impl Topology {
         next: HH,
         opp_prev: HH,
         opp_next: HH,
-    ) -> Result<u32, Error> {
+    ) -> Result<EH, Error> {
         let ei = self.edges.len() as u32;
         self.eprops.push_value()?;
         self.hprops.push_values(2)?;
@@ -393,10 +393,10 @@ impl Topology {
                 },
             ],
         });
-        Ok(ei)
+        Ok(ei.into())
     }
 
-    fn new_face(&mut self, halfedge: HH) -> Result<FH, Error> {
+    pub(crate) fn new_face(&mut self, halfedge: HH) -> Result<FH, Error> {
         let fi = self.faces.len() as u32;
         self.fprops.push_value()?;
         self.faces.push(Face { halfedge });
@@ -603,7 +603,7 @@ impl Topology {
                         opp_prev.expect(ERR),
                         opp_next.expect(ERR),
                     )?;
-                    assert_eq!(*index >> 1, ei, "Failed to create an edge loop");
+                    assert_eq!(*index >> 1, ei.index(), "Failed to create an edge loop");
                     index.into()
                 }
             };

@@ -9,19 +9,28 @@ use crate::{
     error::Error,
 };
 
-pub(crate) struct PropertyContainer<H> {
+pub(crate) struct PropertyContainer<H>
+where
+    H: Handle,
+{
     props: Vec<Box<dyn GenericProperty>>,
     length: usize,
     _phantom: PhantomData<H>,
 }
 
-impl<H> Default for PropertyContainer<H> {
+impl<H> Default for PropertyContainer<H>
+where
+    H: Handle,
+{
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<T> PropertyContainer<T> {
+impl<H> PropertyContainer<H>
+where
+    H: Handle,
+{
     pub fn new() -> Self {
         PropertyContainer {
             props: Vec::new(),
@@ -108,6 +117,13 @@ impl<T> PropertyContainer<T> {
         Ok(())
     }
 
+    pub fn copy(&mut self, src: H, dst: H) -> Result<(), Error> {
+        for prop in self.props.iter_mut() {
+            prop.copy(src.index() as usize, dst.index() as usize)?;
+        }
+        Ok(())
+    }
+
     pub fn len(&self) -> usize {
         self.length
     }
@@ -155,6 +171,8 @@ trait GenericProperty {
     fn push_many(&mut self, num: usize) -> Result<(), Error>;
 
     fn swap(&mut self, i: usize, j: usize) -> Result<(), Error>;
+
+    fn copy(&mut self, i: usize, j: usize) -> Result<(), Error>;
 
     fn is_valid(&self) -> bool;
 }
@@ -294,6 +312,17 @@ impl<T: TPropData> GenericProperty for PropertyRef<T> {
             prop.try_borrow_mut()
                 .map_err(|_| Error::BorrowedPropertyAccess)?
                 .swap(i, j);
+        }
+        Ok(())
+    }
+
+    fn copy(&mut self, src: usize, dst: usize) -> Result<(), Error> {
+        if let Some(prop) = self.data.upgrade() {
+            let mut buf = prop
+                .try_borrow_mut()
+                .map_err(|_| Error::BorrowedPropertyAccess)?;
+            let buf: &mut [T] = &mut buf;
+            buf[dst] = buf[src];
         }
         Ok(())
     }
