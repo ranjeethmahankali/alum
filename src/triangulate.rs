@@ -1,7 +1,10 @@
 use crate::{
     element::{FH, VH},
     error::Error,
-    iterator, Topology,
+    iterator,
+    mesh::PolyMeshT,
+    vector::TVec,
+    Topology,
 };
 
 impl Topology {
@@ -58,6 +61,19 @@ impl Topology {
             self.triangulate_face(f)?;
         }
         Ok(())
+    }
+}
+
+impl<VecT, const DIM: usize> PolyMeshT<VecT, DIM>
+where
+    VecT: TVec<DIM>,
+{
+    pub fn triangulate_face(&mut self, f: FH) -> Result<(), Error> {
+        self.topology_mut().triangulate_face(f)
+    }
+
+    pub fn triangulate(&mut self) -> Result<(), Error> {
+        self.topology_mut().triangulate()
     }
 }
 
