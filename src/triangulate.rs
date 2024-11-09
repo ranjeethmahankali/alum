@@ -20,12 +20,11 @@ impl Topology {
 
 #[cfg(test)]
 mod test {
-    use crate::{element::Handle, PolyMeshF32};
+    use crate::{element::Handle, topol::test::quad_box};
 
     #[test]
     fn t_box_triangulated_indices() {
-        let qbox = PolyMeshF32::quad_box(glam::Vec3::splat(0.), glam::Vec3::splat(1.))
-            .expect("Cannot create a quad box");
+        let qbox = quad_box();
         assert_eq!(
             qbox.triangulated_vertices()
                 .flatten()

@@ -916,7 +916,7 @@ impl Default for Topology {
 }
 
 #[cfg(test)]
-mod test {
+pub(crate) mod test {
     use arrayvec::ArrayVec;
 
     use crate::{
@@ -941,7 +941,7 @@ mod test {
      *   0-----------1
      * ```
      */
-    fn quad_box() -> Topology {
+    pub fn quad_box() -> Topology {
         let mut topol = Topology::with_capacity(8, 12, 6);
         let verts: Vec<_> = (0..8)
             .map(|_| topol.add_vertex().expect("Unable to add a vertex").index())
@@ -971,7 +971,7 @@ mod test {
         topol
     }
 
-    fn loop_mesh() -> Topology {
+    pub fn loop_mesh() -> Topology {
         /*
 
                             12---------13---------14---------15
@@ -1408,175 +1408,5 @@ mod test {
                 .filter(|v| qbox.is_boundary_vertex(*v))
                 .count()
         );
-    }
-
-    #[test]
-    fn t_box_check_edge_collapse() {
-        let qbox = quad_box();
-        for h in qbox.halfedges() {
-            assert!(qbox
-                .try_check_edge_collapse(h)
-                .expect("Cannot check halfedge collapse"));
-        }
-    }
-
-    #[test]
-    fn t_loop_mesh_check_edge_collapse() {
-        let mesh = loop_mesh();
-        assert_eq!(48, mesh.num_halfedges());
-        // The edges spanning different boundary loops cannot be
-        // collapsed. There are 8 of them, i.e. 16 halfedges. The remaining 32
-        // can be collapsed.
-        assert_eq!(
-            (32, 16),
-            mesh.halfedges().fold((0usize, 0usize), |(can, cannot), h| {
-                if mesh
-                    .try_check_edge_collapse(h)
-                    .expect("Cannot check collapse")
-                {
-                    (can + 1, cannot)
-                } else {
-                    (can, 1 + cannot)
-                }
-            })
-        );
-    }
-
-    #[test]
-    fn t_box_edge_collapse() {
-        let mut qbox = quad_box();
-        let mut cache = TopolCache::default();
-        let h = qbox
-            .find_halfedge(5.into(), 6.into())
-            .expect("Cannot find halfedge");
-        qbox.try_collapse_edge(h, &mut cache)
-            .expect("Cannot collapse edges");
-        assert_eq!(qbox.num_faces(), 6);
-        assert_eq!(
-            (2, 4),
-            qbox.faces()
-                .fold((0usize, 0usize), |(t, q), f| match qbox.face_valence(f) {
-                    3 => (t + 1, q),
-                    4 => (t, q + 1),
-                    _ => (t, q),
-                })
-        );
-        {
-            let estatus = qbox
-                .estatus
-                .try_borrow()
-                .expect("Cannot borrow the edge status property");
-            assert_eq!(
-                (1, 11),
-                qbox.edges().fold((0usize, 0usize), |(del, ndel), e| {
-                    if estatus[e.index() as usize].deleted() {
-                        (del + 1, ndel)
-                    } else {
-                        (del, 1 + ndel)
-                    }
-                })
-            );
-        }
-        {
-            let hstatus = qbox
-                .hstatus
-                .try_borrow()
-                .expect("Cannot borrow the halfedge status property");
-            assert_eq!(
-                (2, 22),
-                qbox.halfedges().fold((0usize, 0usize), |(del, ndel), h| {
-                    if hstatus[h.index() as usize].deleted() {
-                        (del + 1, ndel)
-                    } else {
-                        (del, 1 + ndel)
-                    }
-                })
-            );
-        }
-    }
-
-    #[test]
-    fn t_box_double_edge_collapse() {
-        let mut qbox = quad_box();
-        let mut cache = TopolCache::default();
-        // Collapse two opposite edges of a face, to produce a triangular prism.
-        let h = qbox
-            .find_halfedge(5.into(), 6.into())
-            .expect("Cannot find halfedge");
-        qbox.try_collapse_edge(h, &mut cache)
-            .expect("Cannot collapse edges");
-        let h = qbox
-            .find_halfedge(4.into(), 7.into())
-            .expect("Cannot find halfedge");
-        qbox.try_collapse_edge(h, &mut cache)
-            .expect("Cannot collapse edge");
-        {
-            let estatus = qbox
-                .estatus
-                .try_borrow()
-                .expect("Cannot borrow the edge status property");
-            assert_eq!(
-                (3, 9),
-                qbox.edges().fold((0usize, 0usize), |(del, ndel), e| {
-                    if estatus[e.index() as usize].deleted() {
-                        (del + 1, ndel)
-                    } else {
-                        (del, 1 + ndel)
-                    }
-                })
-            );
-        }
-        {
-            let hstatus = qbox
-                .hstatus
-                .try_borrow()
-                .expect("Cannot borrow the halfedge status property");
-            assert_eq!(
-                (6, 18),
-                qbox.halfedges().fold((0usize, 0usize), |(del, ndel), h| {
-                    if hstatus[h.index() as usize].deleted() {
-                        (del + 1, ndel)
-                    } else {
-                        (del, 1 + ndel)
-                    }
-                })
-            );
-        }
-        {
-            let fstatus = qbox
-                .fstatus
-                .try_borrow()
-                .expect("Cannot borrow the halfedge status property");
-            assert_eq!(
-                (1, 5),
-                qbox.faces().fold((0usize, 0usize), |(del, ndel), h| {
-                    if fstatus[h.index() as usize].deleted() {
-                        (del + 1, ndel)
-                    } else {
-                        (del, 1 + ndel)
-                    }
-                })
-            );
-            assert_eq!(
-                (2, 3),
-                qbox.faces().fold((0usize, 0usize), |(t, q), f| {
-                    if fstatus[f.index() as usize].deleted() {
-                        (t, q)
-                    } else {
-                        match qbox.face_valence(f) {
-                            3 => (t + 1, q),
-                            4 => (t, q + 1),
-                            _ => (t, q),
-                        }
-                    }
-                })
-            );
-        }
-        qbox.garbage_collection(&mut cache)
-            .expect("Garbage collection failed");
-        assert_eq!(6, qbox.num_vertices());
-        assert_eq!(18, qbox.num_halfedges());
-        assert_eq!(9, qbox.num_edges());
-        assert_eq!(5, qbox.num_faces());
     }
 }
