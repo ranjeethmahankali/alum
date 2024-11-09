@@ -82,10 +82,12 @@ mod test {
 
     #[test]
     fn t_box_triangulate_face() {
-        let mut qbox = quad_box();
-        qbox.triangulate_face(5.into())
-            .expect("Failed to triangulate face");
-        let qbox = qbox;
+        let qbox = {
+            let mut mesh = quad_box();
+            mesh.triangulate_face(5.into())
+                .expect("Failed to triangulate face");
+            mesh
+        };
         assert_eq!(7, qbox.num_faces());
         assert_eq!(
             (2, 5),
@@ -111,5 +113,28 @@ mod test {
                 .collect::<Vec<_>>(),
             &[4, 5, 7]
         )
+    }
+
+    #[test]
+    fn t_box_triangulate() {
+        let qbox = {
+            let mut mesh = quad_box();
+            mesh.triangulate().expect("Cannot triangulate mesh");
+            mesh
+        };
+        assert_eq!(12, qbox.num_faces());
+        assert_eq!(18, qbox.num_edges());
+        assert_eq!(36, qbox.num_halfedges());
+        assert_eq!(8, qbox.num_vertices());
+        assert_eq!(
+            qbox.faces()
+                .flat_map(|f| iterator::fv_ccw_iter(&qbox, f))
+                .map(|v| v.index())
+                .collect::<Vec<_>>(),
+            &[
+                3, 2, 1, 1, 5, 4, 2, 6, 5, 3, 7, 6, 0, 4, 7, 5, 6, 7, 0, 3, 1, 0, 1, 4, 1, 2, 5, 2,
+                3, 6, 3, 0, 7, 4, 5, 7
+            ]
+        );
     }
 }
