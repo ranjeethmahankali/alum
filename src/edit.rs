@@ -313,7 +313,7 @@ impl Topology {
         Ok(())
     }
 
-    pub fn split_edge(&mut self, e: EH, v: VH) -> Result<EH, Error> {
+    pub fn split_edge(&mut self, e: EH, v: VH, copy_props: bool) -> Result<EH, Error> {
         let (h0, h1) = (self.edge_halfedge(e, false), self.edge_halfedge(e, true));
         let vfrom = self.from_vertex(h0);
         let (ph0, nh1) = (self.prev_halfedge(h0), self.next_halfedge(h1));
@@ -338,6 +338,10 @@ impl Topology {
         if self.vertex_halfedge(vfrom) == Some(h0) {
             self.vertex_mut(vfrom).halfedge = Some(hnew);
             self.adjust_outgoing_halfedge(vfrom);
+        }
+        if copy_props {
+            self.eprops.copy(e, enew)?;
+            self.hprops.copy_many(&[h0, h1], &[hnew, ohnew])?;
         }
         Ok(enew)
     }
