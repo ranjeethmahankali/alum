@@ -15,10 +15,11 @@ pub enum Error {
     HalfedgeNotFound,
     PatchRelinkingFailed,
     DeletedFace(FH),
-    MismatchedArrayLengths(usize, usize),
     // Obj.
     InvalidObjFile(PathBuf),
     ObjLoadFailed(String),
     IncorrectNumberOfCoordinates(usize),
     IncorrectIndexCount(usize),
+    // Other,
+    MismatchedArrayLengths(usize, usize),
 }

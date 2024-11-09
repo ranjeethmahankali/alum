@@ -13,7 +13,7 @@ pub(crate) struct PropertyContainer<H>
 where
     H: Handle,
 {
-    props: Vec<Box<dyn GenericProperty>>,
+    props: Vec<Box<dyn GenericProperty<H>>>,
     length: usize,
     _phantom: PhantomData<H>,
 }
@@ -39,7 +39,7 @@ where
         }
     }
 
-    fn push_property(&mut self, prop: Box<dyn GenericProperty>) {
+    fn push_property(&mut self, prop: Box<dyn GenericProperty<H>>) {
         self.props.push(prop);
     }
 
@@ -124,6 +124,13 @@ where
         Ok(())
     }
 
+    pub fn copy_many(&mut self, src: &[H], dst: &[H]) -> Result<(), Error> {
+        for prop in self.props.iter_mut() {
+            prop.copy_many(src, dst)?;
+        }
+        Ok(())
+    }
+
     pub fn len(&self) -> usize {
         self.length
     }
@@ -159,7 +166,10 @@ impl TPropData for bool {}
 impl TPropData for char {}
 impl TPropData for glam::Vec3 {}
 
-trait GenericProperty {
+trait GenericProperty<H>
+where
+    H: Handle,
+{
     fn reserve(&mut self, n: usize) -> Result<(), Error>;
 
     fn resize(&mut self, n: usize) -> Result<(), Error>;
@@ -172,7 +182,9 @@ trait GenericProperty {
 
     fn swap(&mut self, i: usize, j: usize) -> Result<(), Error>;
 
-    fn copy(&mut self, i: usize, j: usize) -> Result<(), Error>;
+    fn copy(&mut self, src: usize, dst: usize) -> Result<(), Error>;
+
+    fn copy_many(&mut self, src: &[H], dst: &[H]) -> Result<(), Error>;
 
     fn is_valid(&self) -> bool;
 }
@@ -204,7 +216,7 @@ impl<H: Handle, T: TPropData> Property<H, T> {
         prop
     }
 
-    fn generic_ref(&self) -> Box<dyn GenericProperty> {
+    fn generic_ref(&self) -> Box<dyn GenericProperty<H>> {
         Box::new(PropertyRef {
             data: Rc::downgrade(&self.data),
         })
@@ -259,7 +271,7 @@ struct PropertyRef<T: TPropData> {
     data: Weak<RefCell<Vec<T>>>,
 }
 
-impl<T: TPropData> GenericProperty for PropertyRef<T> {
+impl<T: TPropData, H: Handle> GenericProperty<H> for PropertyRef<T> {
     fn reserve(&mut self, n: usize) -> Result<(), Error> {
         if let Some(prop) = self.data.upgrade() {
             prop.try_borrow_mut()
@@ -323,6 +335,26 @@ impl<T: TPropData> GenericProperty for PropertyRef<T> {
                 .map_err(|_| Error::BorrowedPropertyAccess)?;
             let buf: &mut [T] = &mut buf;
             buf[dst] = buf[src];
+        }
+        Ok(())
+    }
+
+    fn copy_many(&mut self, src: &[H], dst: &[H]) -> Result<(), Error> {
+        if let Some(prop) = self.data.upgrade() {
+            if src.len() != dst.len() {
+                return Err(Error::MismatchedArrayLengths(src.len(), dst.len()));
+            }
+            let mut buf = prop
+                .try_borrow_mut()
+                .map_err(|_| Error::BorrowedPropertyAccess)?;
+            let buf: &mut [T] = &mut buf;
+            for (src, dst) in src
+                .iter()
+                .map(|h| h.index() as usize)
+                .zip(dst.iter().map(|h| h.index() as usize))
+            {
+                buf[dst] = buf[src];
+            }
         }
         Ok(())
     }
