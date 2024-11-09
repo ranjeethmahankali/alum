@@ -1,5 +1,5 @@
 use crate::{
-    element::{Handle, FH, HH, VH},
+    element::{Handle, EH, FH, HH, VH},
     error::Error,
     iterator,
     mesh::PolyMeshT,
@@ -310,6 +310,35 @@ impl Topology {
             self.triangulate_face(f)?;
         }
         Ok(())
+    }
+
+    pub fn split_edge(&mut self, e: EH, v: VH) -> Result<EH, Error> {
+        let (h0, h1) = (self.edge_halfedge(e, false), self.edge_halfedge(e, true));
+        let vfrom = self.from_vertex(h0);
+        let (ph0, nh1) = (self.prev_halfedge(h0), self.next_halfedge(h1));
+        let (f0, f1) = (self.halfedge_face(h0), self.halfedge_face(h1));
+        // Create a new edge and rewire topology.
+        let enew = self.new_edge(vfrom, v, ph0, h0, h1, nh1)?;
+        let hnew = self.edge_halfedge(enew, false);
+        let ohnew = self.edge_halfedge(enew, true);
+        // Rewire halfedge -> vertex.
+        self.halfedge_mut(h1).vertex = v;
+        // Rewire halfedge -> halfedge.
+        self.link_halfedges(hnew, h0);
+        self.link_halfedges(h1, ohnew);
+        self.link_halfedges(ph0, hnew);
+        self.link_halfedges(ohnew, nh1);
+        // Rewire halfedge -> face.
+        self.halfedge_mut(hnew).face = f0;
+        self.halfedge_mut(ohnew).face = f1;
+        // Rewire vertex -> halfedge.
+        self.vertex_mut(v).halfedge = Some(h0);
+        self.adjust_outgoing_halfedge(v);
+        if self.vertex_halfedge(vfrom) == Some(h0) {
+            self.vertex_mut(vfrom).halfedge = Some(hnew);
+            self.adjust_outgoing_halfedge(vfrom);
+        }
+        Ok(enew)
     }
 }
 
