@@ -6,10 +6,9 @@ pub mod primitive;
 pub mod property;
 pub mod status;
 pub mod topol;
-pub mod triangulate;
 pub mod vector;
 
-mod collapse;
+mod edit;
 mod iterator;
 mod macros;
 
