@@ -36,14 +36,19 @@ impl FromFloat for f64 {
 pub trait TVec<const DIM: usize>: TPropData {
     type Scalar;
 
+    /// Create a new vector with the given coordinates.
     fn new(coords: [Self::Scalar; DIM]) -> Self;
 
+    /// Create a vector with all coordinates set to zero.
     fn zero() -> Self;
 
+    /// Get the coordinate at the given index.
     fn coord(&self, i: usize) -> Self::Scalar;
 
+    /// Get the norm of the vector, i.e. the length.
     fn norm(self) -> Self::Scalar;
 
+    /// Get a vector of unit length parallel to this vector.
     fn normalized(self) -> Self
     where
         Self::Scalar: FromFloat + Div<Output = Self::Scalar> + PartialOrd,
@@ -57,6 +62,7 @@ pub trait TVec<const DIM: usize>: TPropData {
         }
     }
 
+    /// Compute the dot product of two vectors.
     fn dot(a: Self, b: Self) -> Self::Scalar
     where
         Self::Scalar: Mul<Output = Self::Scalar> + AddAssign + FromFloat,
@@ -68,10 +74,12 @@ pub trait TVec<const DIM: usize>: TPropData {
         out
     }
 
+    /// Compute the angle between two vectors.
     fn angle(a: Self, b: Self) -> Self::Scalar;
 }
 
 pub trait CrossProduct3 {
+    /// Cross product of three dimensional vectors.
     fn cross(a: Self, b: Self) -> Self;
 }
 
@@ -122,12 +130,20 @@ where
         + PartialOrd,
     VecT: TVec<3> + Add<Output = VecT> + Sub<Output = VecT> + Div<VecT::Scalar, Output = VecT>,
 {
+    /// This is similar to `calc_face_normal`, except this function attempts to
+    /// borrow the necessary properties and return an error if borrowing fails.
     pub fn try_calc_face_normal(&self, f: FH) -> Result<VecT, Error> {
         let points = self.points();
         let points = points.try_borrow()?;
         Ok(self.calc_face_normal(f, &points))
     }
 
+    /// Compute the face normal using Newell's method. The `points` must
+    /// represent the positions of the vertices.
+    ///
+    /// Calling this function in a hot loop with borrowed points property, can
+    /// be faster than `try_calc_face_normal` because it avoids repeated
+    /// borrows.
     pub fn calc_face_normal(&self, f: FH, points: &[VecT]) -> VecT {
         // Use newell's method to compute the normal.
         let (nverts, x, y, z) = {
@@ -160,10 +176,8 @@ where
         VecT::new([x, y, z]).normalized()
     }
 
-    /**
-     * Compute the face normals. If the face normals property is not available,
-     * it is initialized before computing the face normals.
-     */
+    /// Compute the face normals. If the face normals property is not available,
+    /// it is initialized before computing the face normals.
     pub fn update_face_normals(&mut self) -> Result<FProperty<VecT>, Error> {
         let mut fprop = self.request_face_normals();
         {
@@ -188,6 +202,13 @@ where
         + Div<VecT::Scalar, Output = VecT>
         + CrossProduct3,
 {
+    /// Compute the vertex normals accurately.
+    ///
+    /// The vertex normal is computed as the average of the normals of the
+    /// sectors around the vertex. The `points` argument must be the positions
+    /// of the vertices. Calling this function with borrowed `points` in a hot
+    /// loop can be faster than `try_calc_vertex_normal_accurate` by avoiding
+    /// repeated borrows.
     pub fn calc_vertex_normal_accurate(&self, v: VH, points: &[VecT]) -> VecT {
         let topol = self.topology();
         match topol.vertex_halfedge(v) {
@@ -213,17 +234,18 @@ where
         .normalized()
     }
 
+    /// This is similar to `calc_vertex_normal_accurate`, except this function
+    /// will attempt to borrow the required properties and return an error if
+    /// borrowing fails.
     pub fn try_calc_vertex_normal_accurate(&self, v: VH) -> Result<VecT, Error> {
         let points = self.points();
         let points = points.try_borrow()?;
         Ok(self.calc_vertex_normal_accurate(v, &points))
     }
 
-    /**
-     * Compute accurate vertex normals. This can be slower than the fast
-     * approximation. If the vertex normals property is not available, it is
-     * initialized before computing the vertex normals.
-     */
+    /// Compute accurate vertex normals. This can be slower than the fast
+    /// approximation. If the vertex normals property is not available, it is
+    /// initialized before computing the vertex normals.
     pub fn update_vertex_normals_accurate(&mut self) -> Result<VProperty<VecT>, Error> {
         let mut vprop = self.request_vertex_normals();
         {

@@ -10,21 +10,20 @@ impl<VecT> PolyMeshT<VecT, 3>
 where
     VecT: TVec<3>,
 {
-    /**
-     * Makes a box with the following topology, spanning from the min point to the max point.
-     *
-     * ```text
-     *      7-----------6
-     *     /|          /|
-     *    / |         / |
-     *   4-----------5  |
-     *   |  |        |  |
-     *   |  3--------|--2
-     *   | /         | /
-     *   |/          |/
-     *   0-----------1
-     * ```
-     */
+    /// Makes a box with the following topology, spanning from the min point to
+    /// the max point.
+    ///
+    ///  ```text
+    ///       7-----------6
+    ///      /|          /|
+    ///     / |         / |
+    ///    4-----------5  |
+    ///    |  |        |  |
+    ///    |  3--------|--2
+    ///    | /         | /
+    ///    |/          |/
+    ///    0-----------1
+    ///  ```
     pub fn quad_box(min: VecT, max: VecT) -> Result<Self, Error> {
         const BOX_POS: [(bool, bool, bool); 8] = [
             (false, false, false),
@@ -66,6 +65,8 @@ where
         Ok(qbox)
     }
 
+    /// Create a mesh representing a box with quadrilateral faces, of size 1,
+    /// spanning from the origin to (1, 1, 1).
     pub fn unit_box() -> Result<Self, Error>
     where
         VecT::Scalar: FromFloat + TPropData,

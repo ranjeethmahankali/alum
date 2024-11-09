@@ -19,8 +19,8 @@ pub struct PolyMeshT<VecT, const DIM: usize>
 where
     VecT: TVec<DIM>,
 {
-    topol: Topology,
-    cache: TopolCache,
+    pub(crate) topol: Topology,
+    pub(crate) cache: TopolCache,
     points: VProperty<VecT>,
     vnormals: Option<VProperty<VecT>>,
     fnormals: Option<FProperty<VecT>>,
@@ -145,12 +145,8 @@ where
         self.topol.num_faces()
     }
 
-    pub(crate) fn topology(&self) -> &Topology {
+    pub fn topology(&self) -> &Topology {
         &self.topol
-    }
-
-    pub(crate) fn topology_mut(&mut self) -> &mut Topology {
-        &mut self.topol
     }
 
     /**
