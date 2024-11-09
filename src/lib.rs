@@ -8,6 +8,7 @@ pub mod status;
 pub mod topol;
 pub mod vector;
 
+mod edit;
 mod iterator;
 mod macros;
 

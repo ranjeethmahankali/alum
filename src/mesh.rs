@@ -149,6 +149,10 @@ where
         &self.topol
     }
 
+    pub(crate) fn topology_mut(&mut self) -> &mut Topology {
+        &mut self.topol
+    }
+
     /**
      * Iterator over the vertices of the mesh.
      */

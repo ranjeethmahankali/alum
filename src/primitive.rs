@@ -1,4 +1,10 @@
-use crate::{element::VH, error::Error, mesh::PolyMeshT, vector::TVec};
+use crate::{
+    element::VH,
+    error::Error,
+    mesh::PolyMeshT,
+    property::TPropData,
+    vector::{FromFloat, TVec},
+};
 
 impl<VecT> PolyMeshT<VecT, 3>
 where
@@ -58,6 +64,16 @@ where
             qbox.add_quad_face(verts[a], verts[b], verts[c], verts[d])?;
         }
         Ok(qbox)
+    }
+
+    pub fn unit_box() -> Result<Self, Error>
+    where
+        VecT::Scalar: FromFloat + TPropData,
+    {
+        Self::quad_box(
+            VecT::new([VecT::Scalar::from_f64(0.); 3]),
+            VecT::new([VecT::Scalar::from_f64(1.); 3]),
+        )
     }
 }
 

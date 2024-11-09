@@ -9,19 +9,28 @@ use crate::{
     error::Error,
 };
 
-pub(crate) struct PropertyContainer<H> {
-    props: Vec<Box<dyn GenericProperty>>,
+pub(crate) struct PropertyContainer<H>
+where
+    H: Handle,
+{
+    props: Vec<Box<dyn GenericProperty<H>>>,
     length: usize,
     _phantom: PhantomData<H>,
 }
 
-impl<H> Default for PropertyContainer<H> {
+impl<H> Default for PropertyContainer<H>
+where
+    H: Handle,
+{
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<T> PropertyContainer<T> {
+impl<H> PropertyContainer<H>
+where
+    H: Handle,
+{
     pub fn new() -> Self {
         PropertyContainer {
             props: Vec::new(),
@@ -30,7 +39,7 @@ impl<T> PropertyContainer<T> {
         }
     }
 
-    fn push_property(&mut self, prop: Box<dyn GenericProperty>) {
+    fn push_property(&mut self, prop: Box<dyn GenericProperty<H>>) {
         self.props.push(prop);
     }
 
@@ -108,6 +117,20 @@ impl<T> PropertyContainer<T> {
         Ok(())
     }
 
+    pub fn copy(&mut self, src: H, dst: H) -> Result<(), Error> {
+        for prop in self.props.iter_mut() {
+            prop.copy(src.index() as usize, dst.index() as usize)?;
+        }
+        Ok(())
+    }
+
+    pub fn copy_many(&mut self, src: &[H], dst: &[H]) -> Result<(), Error> {
+        for prop in self.props.iter_mut() {
+            prop.copy_many(src, dst)?;
+        }
+        Ok(())
+    }
+
     pub fn len(&self) -> usize {
         self.length
     }
@@ -143,7 +166,10 @@ impl TPropData for bool {}
 impl TPropData for char {}
 impl TPropData for glam::Vec3 {}
 
-trait GenericProperty {
+trait GenericProperty<H>
+where
+    H: Handle,
+{
     fn reserve(&mut self, n: usize) -> Result<(), Error>;
 
     fn resize(&mut self, n: usize) -> Result<(), Error>;
@@ -155,6 +181,10 @@ trait GenericProperty {
     fn push_many(&mut self, num: usize) -> Result<(), Error>;
 
     fn swap(&mut self, i: usize, j: usize) -> Result<(), Error>;
+
+    fn copy(&mut self, src: usize, dst: usize) -> Result<(), Error>;
+
+    fn copy_many(&mut self, src: &[H], dst: &[H]) -> Result<(), Error>;
 
     fn is_valid(&self) -> bool;
 }
@@ -186,7 +216,7 @@ impl<H: Handle, T: TPropData> Property<H, T> {
         prop
     }
 
-    fn generic_ref(&self) -> Box<dyn GenericProperty> {
+    fn generic_ref(&self) -> Box<dyn GenericProperty<H>> {
         Box::new(PropertyRef {
             data: Rc::downgrade(&self.data),
         })
@@ -241,7 +271,7 @@ struct PropertyRef<T: TPropData> {
     data: Weak<RefCell<Vec<T>>>,
 }
 
-impl<T: TPropData> GenericProperty for PropertyRef<T> {
+impl<T: TPropData, H: Handle> GenericProperty<H> for PropertyRef<T> {
     fn reserve(&mut self, n: usize) -> Result<(), Error> {
         if let Some(prop) = self.data.upgrade() {
             prop.try_borrow_mut()
@@ -294,6 +324,37 @@ impl<T: TPropData> GenericProperty for PropertyRef<T> {
             prop.try_borrow_mut()
                 .map_err(|_| Error::BorrowedPropertyAccess)?
                 .swap(i, j);
+        }
+        Ok(())
+    }
+
+    fn copy(&mut self, src: usize, dst: usize) -> Result<(), Error> {
+        if let Some(prop) = self.data.upgrade() {
+            let mut buf = prop
+                .try_borrow_mut()
+                .map_err(|_| Error::BorrowedPropertyAccess)?;
+            let buf: &mut [T] = &mut buf;
+            buf[dst] = buf[src];
+        }
+        Ok(())
+    }
+
+    fn copy_many(&mut self, src: &[H], dst: &[H]) -> Result<(), Error> {
+        if let Some(prop) = self.data.upgrade() {
+            if src.len() != dst.len() {
+                return Err(Error::MismatchedArrayLengths(src.len(), dst.len()));
+            }
+            let mut buf = prop
+                .try_borrow_mut()
+                .map_err(|_| Error::BorrowedPropertyAccess)?;
+            let buf: &mut [T] = &mut buf;
+            for (src, dst) in src
+                .iter()
+                .map(|h| h.index() as usize)
+                .zip(dst.iter().map(|h| h.index() as usize))
+            {
+                buf[dst] = buf[src];
+            }
         }
         Ok(())
     }
