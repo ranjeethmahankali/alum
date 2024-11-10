@@ -1,3 +1,5 @@
+use std::ops::{Mul, Neg};
+
 use crate::{
     element::VH,
     error::Error,
@@ -75,6 +77,38 @@ where
             VecT::new([VecT::Scalar::from_f64(0.); 3]),
             VecT::new([VecT::Scalar::from_f64(1.); 3]),
         )
+    }
+
+    pub fn tetrahedron(radius: VecT::Scalar) -> Result<Self, Error>
+    where
+        VecT::Scalar:
+            TPropData + FromFloat + Mul<Output = VecT::Scalar> + Neg<Output = VecT::Scalar>,
+    {
+        let mut mesh = Self::with_capacity(4, 6, 4);
+        let a = radius * VecT::Scalar::from_f64(1.0f64 / 3.0);
+        let b = radius * VecT::Scalar::from_f64((8.0 / 9.0f64).sqrt());
+        let c = radius * VecT::Scalar::from_f64((2.0 / 9.0f64).sqrt());
+        let d = radius * VecT::Scalar::from_f64((2.0 / 3.0f64).sqrt());
+        let verts = {
+            let mut verts: [VH; 4] = [0.into(); 4];
+            let pos = [
+                VecT::new([
+                    VecT::Scalar::from_f64(0.0),
+                    VecT::Scalar::from_f64(0.0),
+                    VecT::Scalar::from_f64(1.0),
+                ]),
+                VecT::new([-c, d, -a]),
+                VecT::new([-c, -d, -a]),
+                VecT::new([b, VecT::Scalar::from_f64(0.0), -a]),
+            ];
+            mesh.add_vertices(&pos, &mut verts)?;
+            verts
+        };
+        mesh.add_tri_face(verts[0], verts[1], verts[2])?;
+        mesh.add_tri_face(verts[0], verts[2], verts[3])?;
+        mesh.add_tri_face(verts[0], verts[3], verts[1])?;
+        mesh.add_tri_face(verts[3], verts[2], verts[1])?;
+        Ok(mesh)
     }
 }
 
