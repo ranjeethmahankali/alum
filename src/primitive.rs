@@ -290,4 +290,13 @@ mod test {
             oct.try_calc_volume().expect("Cannot compute volume")
         );
     }
+
+    #[test]
+    fn t_icosahedron() {
+        let ico = PolyMeshF32::icosahedron(1.0).expect("Cannot create icosahedron");
+        assert_eq!(12, ico.num_vertices());
+        assert_eq!(60, ico.num_halfedges());
+        assert_eq!(30, ico.num_edges());
+        assert_eq!(20, ico.num_faces());
+    }
 }
