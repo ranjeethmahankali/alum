@@ -78,12 +78,15 @@ where
             VecT::new([VecT::Scalar::from_f64(1.); 3]),
         )
     }
+}
 
-    pub fn tetrahedron(radius: VecT::Scalar) -> Result<Self, Error>
-    where
-        VecT::Scalar:
-            TPropData + FromFloat + Mul<Output = VecT::Scalar> + Neg<Output = VecT::Scalar>,
-    {
+/// Platonic solids.
+impl<VecT> PolyMeshT<VecT, 3>
+where
+    VecT: TVec<3>,
+    VecT::Scalar: TPropData + FromFloat + Mul<Output = VecT::Scalar> + Neg<Output = VecT::Scalar>,
+{
+    pub fn tetrahedron(radius: VecT::Scalar) -> Result<Self, Error> {
         let mut mesh = Self::with_capacity(4, 6, 4);
         let a = radius * VecT::Scalar::from_f64(1.0f64 / 3.0);
         let b = radius * VecT::Scalar::from_f64((8.0 / 9.0f64).sqrt());
@@ -91,23 +94,83 @@ where
         let d = radius * VecT::Scalar::from_f64((2.0 / 3.0f64).sqrt());
         let verts = {
             let mut verts: [VH; 4] = [0.into(); 4];
-            let pos = [
-                VecT::new([
-                    VecT::Scalar::from_f64(0.0),
-                    VecT::Scalar::from_f64(0.0),
-                    VecT::Scalar::from_f64(1.0),
-                ]),
-                VecT::new([-c, d, -a]),
-                VecT::new([-c, -d, -a]),
-                VecT::new([b, VecT::Scalar::from_f64(0.0), -a]),
-            ];
-            mesh.add_vertices(&pos, &mut verts)?;
+            mesh.add_vertices(
+                &[
+                    VecT::new([
+                        VecT::Scalar::from_f64(0.0),
+                        VecT::Scalar::from_f64(0.0),
+                        VecT::Scalar::from_f64(1.0),
+                    ]),
+                    VecT::new([-c, d, -a]),
+                    VecT::new([-c, -d, -a]),
+                    VecT::new([b, VecT::Scalar::from_f64(0.0), -a]),
+                ],
+                &mut verts,
+            )?;
             verts
         };
         mesh.add_tri_face(verts[0], verts[1], verts[2])?;
         mesh.add_tri_face(verts[0], verts[2], verts[3])?;
         mesh.add_tri_face(verts[0], verts[3], verts[1])?;
         mesh.add_tri_face(verts[3], verts[2], verts[1])?;
+        Ok(mesh)
+    }
+
+    pub fn hexahedron(radius: VecT::Scalar) -> Result<Self, Error> {
+        let a = radius * VecT::Scalar::from_f64(1.0f64 / 3.0f64.sqrt());
+        let mut mesh = Self::with_capacity(8, 12, 6);
+        let verts = {
+            let mut verts: [VH; 8] = [0.into(); 8];
+            mesh.add_vertices(
+                &[
+                    VecT::new([-a, -a, -a]),
+                    VecT::new([a, -a, -a]),
+                    VecT::new([a, a, -a]),
+                    VecT::new([-a, a, -a]),
+                    VecT::new([-a, -a, a]),
+                    VecT::new([a, -a, a]),
+                    VecT::new([a, a, a]),
+                    VecT::new([-a, a, a]),
+                ],
+                &mut verts,
+            )?;
+            verts
+        };
+        mesh.add_quad_face(verts[3], verts[2], verts[1], verts[0])?;
+        mesh.add_quad_face(verts[2], verts[6], verts[5], verts[1])?;
+        mesh.add_quad_face(verts[5], verts[6], verts[7], verts[4])?;
+        mesh.add_quad_face(verts[0], verts[4], verts[7], verts[3])?;
+        mesh.add_quad_face(verts[3], verts[7], verts[6], verts[2])?;
+        mesh.add_quad_face(verts[1], verts[5], verts[4], verts[0])?;
+        Ok(mesh)
+    }
+
+    pub fn octahedron(radius: VecT::Scalar) -> Result<Self, Error> {
+        let mut mesh = Self::with_capacity(6, 12, 8);
+        let verts = {
+            let mut verts: [VH; 6] = [0.into(); 6];
+            let zero = VecT::Scalar::from_f64(0.);
+            mesh.add_vertices(
+                &[
+                    VecT::new([radius, zero, zero]),
+                    VecT::new([zero, radius, zero]),
+                    VecT::new([-radius, zero, zero]),
+                    VecT::new([zero, -radius, zero]),
+                    VecT::new([zero, zero, radius]),
+                    VecT::new([zero, zero, -radius]),
+                ],
+                &mut verts,
+            )?;
+            verts
+        };
+        mesh.add_tri_face(verts[0], verts[4], verts[3])?;
+        mesh.add_tri_face(verts[1], verts[4], verts[0])?;
+        mesh.add_tri_face(verts[2], verts[4], verts[1])?;
+        mesh.add_tri_face(verts[3], verts[4], verts[2])?;
+        mesh.add_tri_face(verts[3], verts[5], verts[0])?;
+        mesh.add_tri_face(verts[0], verts[5], verts[1])?;
+        mesh.add_tri_face(verts[1], verts[5], verts[2])?;
+        mesh.add_tri_face(verts[2], verts[5], verts[3])?;
         Ok(mesh)
     }
 }
