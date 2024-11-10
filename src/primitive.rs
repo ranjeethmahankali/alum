@@ -226,7 +226,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::mesh::PolyMeshF32;
+    use crate::{macros::assert_f32_eq, mesh::PolyMeshF32};
 
     #[test]
     fn t_quad_box() {
@@ -239,5 +239,55 @@ mod test {
         for v in qbox.vertices() {
             assert_eq!(qbox.vf_ccw_iter(v).count(), 3);
         }
+        assert_eq!(1., qbox.try_calc_volume().expect("Cannot compute volume"));
+        assert_eq!(6., qbox.try_calc_area().expect("Cannot compute area"));
+    }
+
+    #[test]
+    fn t_tetrahedron() {
+        let tet = PolyMeshF32::tetrahedron(1.0).expect("Cannot create a tetrahedron");
+        assert_eq!(4, tet.num_vertices());
+        assert_eq!(12, tet.num_halfedges());
+        assert_eq!(6, tet.num_edges());
+        assert_eq!(4, tet.num_faces());
+        assert_eq!(
+            8.0 / 3.0f32.sqrt(),
+            tet.try_calc_area().expect("Cannot compute area")
+        );
+        assert_f32_eq!(
+            8.0 / (9.0 * 3.0f32.sqrt()),
+            tet.try_calc_volume().expect("Cannot compute volume")
+        );
+    }
+
+    #[test]
+    fn t_hexahedron() {
+        let hex = PolyMeshF32::hexahedron(1.0).expect("Cannot create hexahedron");
+        assert_eq!(hex.num_vertices(), 8);
+        assert_eq!(hex.num_halfedges(), 24);
+        assert_eq!(hex.num_edges(), 12);
+        assert_eq!(hex.num_faces(), 6);
+        assert_f32_eq!(8.0, hex.try_calc_area().expect("Cannot compute area"), 1e-6);
+        assert_f32_eq!(
+            8.0 / (3.0 * 3.0f32.sqrt()),
+            hex.try_calc_volume().expect("Cannot compute volume")
+        );
+    }
+
+    #[test]
+    fn t_octahedron() {
+        let oct = PolyMeshF32::octahedron(1.0).expect("Cannot create octahedron");
+        assert_eq!(oct.num_vertices(), 6);
+        assert_eq!(oct.num_halfedges(), 24);
+        assert_eq!(oct.num_edges(), 12);
+        assert_eq!(oct.num_faces(), 8);
+        assert_eq!(
+            4.0 * 3.0f32.sqrt(),
+            oct.try_calc_area().expect("Cannot compute area")
+        );
+        assert_f32_eq!(
+            4.0 / 3.0,
+            oct.try_calc_volume().expect("Cannot compute volume")
+        );
     }
 }
