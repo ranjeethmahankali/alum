@@ -14,4 +14,3 @@ mod macros;
 
 pub type PolyMeshF32 = mesh::PolyMeshF32;
 pub type Topology = topol::Topology;
-pub use glam;
