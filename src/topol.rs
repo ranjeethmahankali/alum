@@ -1409,4 +1409,26 @@ pub(crate) mod test {
                 .count()
         );
     }
+
+    #[test]
+    fn t_quad_box_delete_three_faces() {
+        let mut qbox = quad_box();
+        let mut cache = TopolCache::default();
+        for fi in 0..3u32 {
+            qbox.delete_face(
+                fi.into(),
+                true,
+                &mut cache.halfedges,
+                &mut cache.edges,
+                &mut cache.vertices,
+            )
+            .expect("Cannot delete faces");
+        }
+        qbox.garbage_collection(&mut cache)
+            .expect("Failed to garbage collect");
+        assert_eq!(3, qbox.num_faces());
+        assert_eq!(9, qbox.num_edges());
+        assert_eq!(18, qbox.num_halfedges());
+        assert_eq!(7, qbox.num_vertices());
+    }
 }
