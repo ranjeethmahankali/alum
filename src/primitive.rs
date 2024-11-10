@@ -203,29 +203,31 @@ where
         mesh.add_tri_face(verts[2], verts[1], verts[0])?;
         mesh.add_tri_face(verts[1], verts[2], verts[3])?;
         mesh.add_tri_face(verts[5], verts[4], verts[3])?;
-        mesh.add_tri_face(verts[4], verts[9], verts[3])?;
+        mesh.add_tri_face(verts[4], verts[8], verts[3])?;
         mesh.add_tri_face(verts[7], verts[6], verts[0])?;
         mesh.add_tri_face(verts[6], verts[9], verts[0])?;
         mesh.add_tri_face(verts[11], verts[10], verts[4])?;
         mesh.add_tri_face(verts[10], verts[11], verts[6])?;
         mesh.add_tri_face(verts[9], verts[5], verts[2])?;
         mesh.add_tri_face(verts[5], verts[9], verts[11])?;
-        mesh.add_tri_face(verts[9], verts[7], verts[1])?;
-        mesh.add_tri_face(verts[7], verts[9], verts[10])?;
+        mesh.add_tri_face(verts[8], verts[7], verts[1])?;
+        mesh.add_tri_face(verts[7], verts[8], verts[10])?;
         mesh.add_tri_face(verts[2], verts[5], verts[3])?;
-        mesh.add_tri_face(verts[9], verts[1], verts[3])?;
+        mesh.add_tri_face(verts[8], verts[1], verts[3])?;
         mesh.add_tri_face(verts[9], verts[2], verts[0])?;
         mesh.add_tri_face(verts[1], verts[7], verts[0])?;
         mesh.add_tri_face(verts[11], verts[9], verts[6])?;
         mesh.add_tri_face(verts[7], verts[10], verts[6])?;
         mesh.add_tri_face(verts[5], verts[11], verts[4])?;
-        mesh.add_tri_face(verts[10], verts[9], verts[4])?;
+        mesh.add_tri_face(verts[10], verts[8], verts[4])?;
         Ok(mesh)
     }
 }
 
 #[cfg(test)]
 mod test {
+    use core::f32;
+
     use crate::{macros::assert_f32_eq, mesh::PolyMeshF32};
 
     #[test]
@@ -298,5 +300,12 @@ mod test {
         assert_eq!(60, ico.num_halfedges());
         assert_eq!(30, ico.num_edges());
         assert_eq!(20, ico.num_faces());
+        assert_eq!(
+            {
+                let phi = (1.0 + 5.0f32.sqrt()) / 2.0;
+                20.0 * 3.0f32.sqrt() / (phi * phi + 1.0)
+            },
+            ico.try_calc_area().expect("Cannot compute area")
+        );
     }
 }
