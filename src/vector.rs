@@ -121,6 +121,36 @@ impl CrossProduct3 for glam::Vec3 {
     }
 }
 
+impl TVec<3> for glam::DVec3 {
+    type Scalar = f64;
+
+    fn new(coords: [Self::Scalar; 3]) -> Self {
+        glam::dvec3(coords[0], coords[1], coords[2])
+    }
+
+    fn zero() -> Self {
+        glam::DVec3::splat(0.)
+    }
+
+    fn coord(&self, i: usize) -> Self::Scalar {
+        self[i]
+    }
+
+    fn norm(self) -> Self::Scalar {
+        self.length()
+    }
+
+    fn angle(a: Self, b: Self) -> Self::Scalar {
+        Self::angle_between(a, b)
+    }
+}
+
+impl CrossProduct3 for glam::DVec3 {
+    fn cross(a: Self, b: Self) -> Self {
+        a.cross(b)
+    }
+}
+
 impl<VecT> PolyMeshT<VecT, 3>
 where
     VecT::Scalar: FromFloat

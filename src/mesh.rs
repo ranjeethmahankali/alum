@@ -25,6 +25,7 @@ where
 }
 
 pub type PolyMeshF32 = PolyMeshT<glam::Vec3, 3>;
+pub type PolyMeshF64 = PolyMeshT<glam::DVec3, 3>;
 
 impl<VecT, const DIM: usize> Default for PolyMeshT<VecT, DIM>
 where
