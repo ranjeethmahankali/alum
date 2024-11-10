@@ -173,6 +173,55 @@ where
         mesh.add_tri_face(verts[2], verts[5], verts[3])?;
         Ok(mesh)
     }
+
+    pub fn icosahedron(radius: VecT::Scalar) -> Result<Self, Error> {
+        let a = radius * VecT::Scalar::from_f64(1.0f64);
+        let b = radius * VecT::Scalar::from_f64(1.0 / ((1.0f64 + 5.0f64.sqrt()) * 0.5f64));
+        let zero = VecT::Scalar::from_f64(0.0f64);
+        let mut mesh = Self::with_capacity(12, 30, 20);
+        let verts = {
+            let mut verts: [VH; 12] = [0.into(); 12];
+            mesh.add_vertices(
+                &[
+                    VecT::new([zero, b, -a]),
+                    VecT::new([b, a, zero]),
+                    VecT::new([-b, a, zero]),
+                    VecT::new([zero, b, a]),
+                    VecT::new([zero, -b, a]),
+                    VecT::new([-a, zero, b]),
+                    VecT::new([zero, -b, -a]),
+                    VecT::new([a, zero, -b]),
+                    VecT::new([a, zero, b]),
+                    VecT::new([-a, zero, -b]),
+                    VecT::new([b, -a, zero]),
+                    VecT::new([-b, -a, zero]),
+                ],
+                &mut verts,
+            )?;
+            verts
+        };
+        mesh.add_tri_face(verts[2], verts[1], verts[0])?;
+        mesh.add_tri_face(verts[1], verts[2], verts[3])?;
+        mesh.add_tri_face(verts[5], verts[4], verts[3])?;
+        mesh.add_tri_face(verts[4], verts[9], verts[3])?;
+        mesh.add_tri_face(verts[7], verts[6], verts[0])?;
+        mesh.add_tri_face(verts[6], verts[9], verts[0])?;
+        mesh.add_tri_face(verts[11], verts[10], verts[4])?;
+        mesh.add_tri_face(verts[10], verts[11], verts[6])?;
+        mesh.add_tri_face(verts[9], verts[5], verts[2])?;
+        mesh.add_tri_face(verts[5], verts[9], verts[11])?;
+        mesh.add_tri_face(verts[9], verts[7], verts[1])?;
+        mesh.add_tri_face(verts[7], verts[9], verts[10])?;
+        mesh.add_tri_face(verts[2], verts[5], verts[3])?;
+        mesh.add_tri_face(verts[9], verts[1], verts[3])?;
+        mesh.add_tri_face(verts[9], verts[2], verts[0])?;
+        mesh.add_tri_face(verts[1], verts[7], verts[0])?;
+        mesh.add_tri_face(verts[11], verts[9], verts[6])?;
+        mesh.add_tri_face(verts[7], verts[10], verts[6])?;
+        mesh.add_tri_face(verts[5], verts[11], verts[4])?;
+        mesh.add_tri_face(verts[10], verts[9], verts[4])?;
+        Ok(mesh)
+    }
 }
 
 #[cfg(test)]
