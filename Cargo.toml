@@ -11,7 +11,7 @@ keywords = ["mesh", "polygon", "halfedge", "geometry", "topology"]
 categories = ["mathematics", "graphics", "rendering"]
 
 [dependencies]
-glam = "0.8.5"
+glam = "0.29.2"
 tobj = "4.0.2"
 
 [dev-dependencies]
