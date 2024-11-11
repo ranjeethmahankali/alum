@@ -1,10 +1,9 @@
 use std::ops::{Add, Div, Mul, Neg};
 
 use crate::{
-    adaptor::{Adaptor, FloatScalarAdaptor},
     element::{Handle, VH},
     error::Error,
-    mesh::PolyMeshT,
+    mesh::{Adaptor, FloatScalarAdaptor, PolyMeshT},
 };
 
 impl<A> PolyMeshT<3, A>
@@ -438,6 +437,7 @@ where
 }
 
 #[cfg(test)]
+#[cfg(feature = "use_glam")]
 mod test {
     use core::f32;
 

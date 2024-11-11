@@ -1,9 +1,8 @@
 use std::path::Path;
 
 use crate::{
-    adaptor::{Adaptor, FloatScalarAdaptor},
     error::Error,
-    mesh::PolyMeshT,
+    mesh::{Adaptor, FloatScalarAdaptor, PolyMeshT},
 };
 
 impl<A> PolyMeshT<3, A>
@@ -80,6 +79,7 @@ where
 }
 
 #[cfg(test)]
+#[cfg(feature = "use_glam")]
 mod test {
     use crate::PolyMeshF32;
     use std::path::PathBuf;

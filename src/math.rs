@@ -1,12 +1,11 @@
 use crate::{
-    adaptor::{
-        Adaptor, CrossProductAdaptor, DotProductAdaptor, FloatScalarAdaptor, VectorAngleAdaptor,
-        VectorLengthAdaptor, VectorNormalizeAdaptor,
-    },
     element::{Handle, EH, FH, HH, VH},
     error::Error,
     iterator,
-    mesh::PolyMeshT,
+    mesh::{
+        Adaptor, CrossProductAdaptor, DotProductAdaptor, FloatScalarAdaptor, PolyMeshT,
+        VectorAngleAdaptor, VectorLengthAdaptor, VectorNormalizeAdaptor,
+    },
     property::{FProperty, VProperty},
 };
 use std::ops::{Add, AddAssign, Div, Mul, Neg, Sub};
@@ -520,6 +519,7 @@ where
 }
 
 #[cfg(test)]
+#[cfg(feature = "use_glam")]
 mod test {
     use core::f32;
 

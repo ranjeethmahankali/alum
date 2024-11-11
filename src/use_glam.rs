@@ -1,43 +1,7 @@
-pub trait Adaptor<const DIM: usize>
-where
-    Self::Vector: Clone + Copy,
-    Self::Scalar: Clone + Copy,
-{
-    type Vector;
-    type Scalar;
-
-    fn vector(coords: [Self::Scalar; DIM]) -> Self::Vector;
-
-    fn zero_vector() -> Self::Vector;
-
-    fn vector_coord(v: &Self::Vector, i: usize) -> Self::Scalar;
-}
-
-pub trait VectorLengthAdaptor<const DIM: usize>: Adaptor<DIM> {
-    fn vector_length(v: Self::Vector) -> Self::Scalar;
-}
-
-pub trait VectorNormalizeAdaptor<const DIM: usize>: Adaptor<DIM> {
-    fn normalized_vec(v: Self::Vector) -> Self::Vector;
-}
-
-pub trait DotProductAdaptor<const DIM: usize>: Adaptor<DIM> {
-    fn dot_product(a: Self::Vector, b: Self::Vector) -> Self::Scalar;
-}
-
-pub trait VectorAngleAdaptor: Adaptor<3> {
-    fn vector_angle(a: Self::Vector, b: Self::Vector) -> Self::Scalar;
-}
-
-pub trait CrossProductAdaptor: Adaptor<3> {
-    fn cross_product(a: Self::Vector, b: Self::Vector) -> Self::Vector;
-}
-
-pub trait FloatScalarAdaptor<const DIM: usize>: Adaptor<DIM> {
-    fn scalarf32(val: f32) -> Self::Scalar;
-
-    fn scalarf64(val: f64) -> Self::Scalar;
-}
+use crate::mesh::{
+    Adaptor, CrossProductAdaptor, DotProductAdaptor, FloatScalarAdaptor, VectorAngleAdaptor,
+    VectorLengthAdaptor, VectorNormalizeAdaptor,
+};
 
 pub struct DefaultAdaptorF32 {}
 
