@@ -1,7 +1,7 @@
 pub trait Adaptor<const DIM: usize>
 where
-    Self::Vector: Default + Clone + Copy,
-    Self::Scalar: Default + Clone + Copy,
+    Self::Vector: Clone + Copy,
+    Self::Scalar: Clone + Copy,
 {
     type Vector;
     type Scalar;

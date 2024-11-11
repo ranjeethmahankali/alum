@@ -172,35 +172,35 @@ impl Topology {
 
     pub fn new_vprop<T>(&mut self, default: T) -> VProperty<T>
     where
-        T: Default + Clone + Copy + 'static,
+        T: Clone + Copy + 'static,
     {
         VProperty::<T>::new(&mut self.vprops, default)
     }
 
     pub fn new_hprop<T>(&mut self, default: T) -> HProperty<T>
     where
-        T: Default + Clone + Copy + 'static,
+        T: Clone + Copy + 'static,
     {
         HProperty::<T>::new(&mut self.hprops, default)
     }
 
     pub fn new_eprop<T>(&mut self, default: T) -> EProperty<T>
     where
-        T: Default + Clone + Copy + 'static,
+        T: Clone + Copy + 'static,
     {
         EProperty::<T>::new(&mut self.eprops, default)
     }
 
     pub fn new_fprop<T>(&mut self, default: T) -> FProperty<T>
     where
-        T: Default + Clone + Copy + 'static,
+        T: Clone + Copy + 'static,
     {
         FProperty::<T>::new(&mut self.fprops, default)
     }
 
     pub fn new_vprop_with_capacity<T>(&mut self, n: usize, default: T) -> VProperty<T>
     where
-        T: Default + Clone + Copy + 'static,
+        T: Clone + Copy + 'static,
     {
         VProperty::<T>::with_capacity(n, &mut self.vprops, default)
     }

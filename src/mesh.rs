@@ -71,7 +71,7 @@ where
     /// Create a new vertex property of type T.
     pub fn create_vertex_prop<T>(&mut self, default: T) -> VProperty<T>
     where
-        T: Default + Clone + Copy + 'static,
+        T: Clone + Copy + 'static,
     {
         self.topol.new_vprop(default)
     }
@@ -79,7 +79,7 @@ where
     /// Create a new halfedge property of type T.
     pub fn create_halfedge_prop<T>(&mut self, default: T) -> HProperty<T>
     where
-        T: Default + Clone + Copy + 'static,
+        T: Clone + Copy + 'static,
     {
         self.topol.new_hprop(default)
     }
@@ -87,7 +87,7 @@ where
     /// Create a new edge property of type T.
     pub fn create_edge_prop<T>(&mut self, default: T) -> EProperty<T>
     where
-        T: Default + Clone + Copy + 'static,
+        T: Clone + Copy + 'static,
     {
         self.topol.new_eprop(default)
     }
@@ -95,7 +95,7 @@ where
     /// Create a new face property of type T.
     pub fn create_face_prop<T>(&mut self, default: T) -> FProperty<T>
     where
-        T: Default + Clone + Copy + 'static,
+        T: Clone + Copy + 'static,
     {
         self.topol.new_fprop(default)
     }
