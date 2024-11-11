@@ -1,15 +1,11 @@
 use std::path::Path;
 
-use crate::{
-    error::Error,
-    math::{FromFloat, TVec},
-    mesh::PolyMeshT,
-};
+use crate::{adaptor::Adaptor, error::Error, mesh::PolyMeshT};
 
-impl<VecT> PolyMeshT<VecT, 3>
+impl<A> PolyMeshT<3, A>
 where
-    VecT: TVec<3>,
-    VecT::Scalar: FromFloat,
+    A: Adaptor<3>,
+    A::Scalar: From<f32>,
 {
     /**
      * Load a polygon mesh from an obj file.
@@ -37,7 +33,7 @@ where
                 )
             });
         let nedges = nfaces * 3 / 2; // Estimate.
-        let mut outmesh = PolyMeshT::<VecT, 3>::with_capacity(nverts, nedges, nfaces);
+        let mut outmesh = PolyMeshT::<3, A>::with_capacity(nverts, nedges, nfaces);
         let mut positions = Vec::new();
         let mut vertices = Vec::new();
         let mut fvs = Vec::new();
@@ -47,13 +43,11 @@ where
                 return Err(Error::IncorrectNumberOfCoordinates(mesh.positions.len()));
             }
             positions.clear();
-            positions.extend(mesh.positions.chunks(3).map(|triplet| {
-                VecT::new([
-                    VecT::Scalar::from_f32(triplet[0]),
-                    VecT::Scalar::from_f32(triplet[1]),
-                    VecT::Scalar::from_f32(triplet[2]),
-                ])
-            }));
+            positions.extend(
+                mesh.positions.chunks(3).map(|triplet| {
+                    A::vec([triplet[0].into(), triplet[1].into(), triplet[2].into()])
+                }),
+            );
             vertices.resize(positions.len(), 0u32.into());
             outmesh.add_vertices(&positions, &mut vertices)?;
             // Faces.
@@ -82,9 +76,8 @@ where
 
 #[cfg(test)]
 mod test {
+    use crate::PolyMeshF32;
     use std::path::PathBuf;
-
-    use crate::mesh::PolyMeshF32;
 
     fn bunny_mesh() -> PolyMeshF32 {
         let path = {

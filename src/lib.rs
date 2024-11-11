@@ -13,5 +13,6 @@ mod edit;
 mod iterator;
 mod macros;
 
-pub type PolyMeshF32 = mesh::PolyMeshF32;
+pub type PolyMeshF32 = mesh::PolyMeshT<3, adaptor::DefaultAdaptorF32>;
+pub type PolyMeshF64 = mesh::PolyMeshT<3, adaptor::DefaultAdaptorF64>;
 pub type Topology = topol::Topology;
