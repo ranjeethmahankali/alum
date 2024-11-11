@@ -37,7 +37,7 @@ where
             (true, true, true),
             (false, true, true),
         ];
-        const BOX_IDX: [(usize, usize, usize, usize); 6] = [
+        const BOX_IDX: [(u32, u32, u32, u32); 6] = [
             (0, 3, 2, 1),
             (0, 1, 5, 4),
             (1, 2, 6, 5),
@@ -46,7 +46,7 @@ where
             (4, 5, 6, 7),
         ];
         let mut qbox = Self::with_capacity(8, 12, 6);
-        let verts = {
+        let _verts = {
             let mut pos: [VecT; 8] = [VecT::zero(); 8];
             for (i, &(xf, yf, zf)) in BOX_POS.iter().enumerate() {
                 pos[i] = VecT::new([
@@ -62,7 +62,7 @@ where
         // TODO: Find a more efficient way of adding a large number of faces
         // that doesn't require repeatedly borrowing the property buffers.
         for (a, b, c, d) in BOX_IDX {
-            qbox.add_quad_face(verts[a], verts[b], verts[c], verts[d])?;
+            qbox.add_quad_face(a.into(), b.into(), c.into(), d.into())?;
         }
         Ok(qbox)
     }
@@ -119,7 +119,7 @@ where
         let b = radius * VecT::Scalar::from_f64((8.0 / 9.0f64).sqrt());
         let c = radius * VecT::Scalar::from_f64((2.0 / 9.0f64).sqrt());
         let d = radius * VecT::Scalar::from_f64((2.0 / 3.0f64).sqrt());
-        let verts = {
+        let _verts = {
             let mut verts: [VH; 4] = [0.into(); 4];
             mesh.add_vertices(
                 &[
@@ -136,17 +136,17 @@ where
             )?;
             verts
         };
-        mesh.add_tri_face(verts[0], verts[1], verts[2])?;
-        mesh.add_tri_face(verts[0], verts[2], verts[3])?;
-        mesh.add_tri_face(verts[0], verts[3], verts[1])?;
-        mesh.add_tri_face(verts[3], verts[2], verts[1])?;
+        mesh.add_tri_face(0.into(), 1.into(), 2.into())?;
+        mesh.add_tri_face(0.into(), 2.into(), 3.into())?;
+        mesh.add_tri_face(0.into(), 3.into(), 1.into())?;
+        mesh.add_tri_face(3.into(), 2.into(), 1.into())?;
         Ok(mesh)
     }
 
     pub fn hexahedron(radius: VecT::Scalar) -> Result<Self, Error> {
         let a = radius * VecT::Scalar::from_f64(1.0f64 / 3.0f64.sqrt());
         let mut mesh = Self::with_capacity(8, 12, 6);
-        let verts = {
+        let _verts = {
             let mut verts: [VH; 8] = [0.into(); 8];
             mesh.add_vertices(
                 &[
@@ -163,18 +163,18 @@ where
             )?;
             verts
         };
-        mesh.add_quad_face(verts[3], verts[2], verts[1], verts[0])?;
-        mesh.add_quad_face(verts[2], verts[6], verts[5], verts[1])?;
-        mesh.add_quad_face(verts[5], verts[6], verts[7], verts[4])?;
-        mesh.add_quad_face(verts[0], verts[4], verts[7], verts[3])?;
-        mesh.add_quad_face(verts[3], verts[7], verts[6], verts[2])?;
-        mesh.add_quad_face(verts[1], verts[5], verts[4], verts[0])?;
+        mesh.add_quad_face(3.into(), 2.into(), 1.into(), 0.into())?;
+        mesh.add_quad_face(2.into(), 6.into(), 5.into(), 1.into())?;
+        mesh.add_quad_face(5.into(), 6.into(), 7.into(), 4.into())?;
+        mesh.add_quad_face(0.into(), 4.into(), 7.into(), 3.into())?;
+        mesh.add_quad_face(3.into(), 7.into(), 6.into(), 2.into())?;
+        mesh.add_quad_face(1.into(), 5.into(), 4.into(), 0.into())?;
         Ok(mesh)
     }
 
     pub fn octahedron(radius: VecT::Scalar) -> Result<Self, Error> {
         let mut mesh = Self::with_capacity(6, 12, 8);
-        let verts = {
+        let _verts = {
             let mut verts: [VH; 6] = [0.into(); 6];
             let zero = VecT::Scalar::from_f64(0.);
             mesh.add_vertices(
@@ -190,20 +190,20 @@ where
             )?;
             verts
         };
-        mesh.add_tri_face(verts[0], verts[4], verts[3])?;
-        mesh.add_tri_face(verts[1], verts[4], verts[0])?;
-        mesh.add_tri_face(verts[2], verts[4], verts[1])?;
-        mesh.add_tri_face(verts[3], verts[4], verts[2])?;
-        mesh.add_tri_face(verts[3], verts[5], verts[0])?;
-        mesh.add_tri_face(verts[0], verts[5], verts[1])?;
-        mesh.add_tri_face(verts[1], verts[5], verts[2])?;
-        mesh.add_tri_face(verts[2], verts[5], verts[3])?;
+        mesh.add_tri_face(0.into(), 4.into(), 3.into())?;
+        mesh.add_tri_face(1.into(), 4.into(), 0.into())?;
+        mesh.add_tri_face(2.into(), 4.into(), 1.into())?;
+        mesh.add_tri_face(3.into(), 4.into(), 2.into())?;
+        mesh.add_tri_face(3.into(), 5.into(), 0.into())?;
+        mesh.add_tri_face(0.into(), 5.into(), 1.into())?;
+        mesh.add_tri_face(1.into(), 5.into(), 2.into())?;
+        mesh.add_tri_face(2.into(), 5.into(), 3.into())?;
         Ok(mesh)
     }
 
     pub fn icosahedron(radius: VecT::Scalar) -> Result<Self, Error> {
         let mut mesh = Self::with_capacity(12, 30, 20);
-        let verts = {
+        let _verts = {
             let mut verts: [VH; 12] = [0.into(); 12];
             mesh.add_vertices(
                 &[
@@ -272,26 +272,26 @@ where
             )?;
             verts
         };
-        mesh.add_tri_face(verts[2], verts[1], verts[0])?;
-        mesh.add_tri_face(verts[1], verts[2], verts[3])?;
-        mesh.add_tri_face(verts[5], verts[4], verts[3])?;
-        mesh.add_tri_face(verts[4], verts[8], verts[3])?;
-        mesh.add_tri_face(verts[7], verts[6], verts[0])?;
-        mesh.add_tri_face(verts[6], verts[9], verts[0])?;
-        mesh.add_tri_face(verts[11], verts[10], verts[4])?;
-        mesh.add_tri_face(verts[10], verts[11], verts[6])?;
-        mesh.add_tri_face(verts[9], verts[5], verts[2])?;
-        mesh.add_tri_face(verts[5], verts[9], verts[11])?;
-        mesh.add_tri_face(verts[8], verts[7], verts[1])?;
-        mesh.add_tri_face(verts[7], verts[8], verts[10])?;
-        mesh.add_tri_face(verts[2], verts[5], verts[3])?;
-        mesh.add_tri_face(verts[8], verts[1], verts[3])?;
-        mesh.add_tri_face(verts[9], verts[2], verts[0])?;
-        mesh.add_tri_face(verts[1], verts[7], verts[0])?;
-        mesh.add_tri_face(verts[11], verts[9], verts[6])?;
-        mesh.add_tri_face(verts[7], verts[10], verts[6])?;
-        mesh.add_tri_face(verts[5], verts[11], verts[4])?;
-        mesh.add_tri_face(verts[10], verts[8], verts[4])?;
+        mesh.add_tri_face(2.into(), 1.into(), 0.into())?;
+        mesh.add_tri_face(1.into(), 2.into(), 3.into())?;
+        mesh.add_tri_face(5.into(), 4.into(), 3.into())?;
+        mesh.add_tri_face(4.into(), 8.into(), 3.into())?;
+        mesh.add_tri_face(7.into(), 6.into(), 0.into())?;
+        mesh.add_tri_face(6.into(), 9.into(), 0.into())?;
+        mesh.add_tri_face(11.into(), 10.into(), 4.into())?;
+        mesh.add_tri_face(10.into(), 11.into(), 6.into())?;
+        mesh.add_tri_face(9.into(), 5.into(), 2.into())?;
+        mesh.add_tri_face(5.into(), 9.into(), 11.into())?;
+        mesh.add_tri_face(8.into(), 7.into(), 1.into())?;
+        mesh.add_tri_face(7.into(), 8.into(), 10.into())?;
+        mesh.add_tri_face(2.into(), 5.into(), 3.into())?;
+        mesh.add_tri_face(8.into(), 1.into(), 3.into())?;
+        mesh.add_tri_face(9.into(), 2.into(), 0.into())?;
+        mesh.add_tri_face(1.into(), 7.into(), 0.into())?;
+        mesh.add_tri_face(11.into(), 9.into(), 6.into())?;
+        mesh.add_tri_face(7.into(), 10.into(), 6.into())?;
+        mesh.add_tri_face(5.into(), 11.into(), 4.into())?;
+        mesh.add_tri_face(10.into(), 8.into(), 4.into())?;
         Ok(mesh)
     }
 
