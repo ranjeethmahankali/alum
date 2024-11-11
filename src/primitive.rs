@@ -436,8 +436,7 @@ where
     }
 }
 
-#[cfg(test)]
-#[cfg(feature = "use_glam")]
+#[cfg(all(test, feature = "use_glam"))]
 mod test {
     use core::f32;
 

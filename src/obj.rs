@@ -78,8 +78,7 @@ where
     }
 }
 
-#[cfg(test)]
-#[cfg(feature = "use_glam")]
+#[cfg(all(test, feature = "use_glam"))]
 mod test {
     use crate::alum_glam::PolyMeshF32;
     use std::path::PathBuf;
