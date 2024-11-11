@@ -1,11 +1,14 @@
 use std::path::Path;
 
-use crate::{adaptor::Adaptor, error::Error, mesh::PolyMeshT};
+use crate::{
+    adaptor::{Adaptor, FloatScalarAdaptor},
+    error::Error,
+    mesh::PolyMeshT,
+};
 
 impl<A> PolyMeshT<3, A>
 where
-    A: Adaptor<3>,
-    A::Scalar: From<f32>,
+    A: Adaptor<3> + FloatScalarAdaptor<3>,
 {
     /**
      * Load a polygon mesh from an obj file.
@@ -43,11 +46,13 @@ where
                 return Err(Error::IncorrectNumberOfCoordinates(mesh.positions.len()));
             }
             positions.clear();
-            positions.extend(
-                mesh.positions.chunks(3).map(|triplet| {
-                    A::vector([triplet[0].into(), triplet[1].into(), triplet[2].into()])
-                }),
-            );
+            positions.extend(mesh.positions.chunks(3).map(|triplet| {
+                A::vector([
+                    A::scalarf64(triplet[0]),
+                    A::scalarf64(triplet[1]),
+                    A::scalarf64(triplet[2]),
+                ])
+            }));
             vertices.resize(positions.len(), 0u32.into());
             outmesh.add_vertices(&positions, &mut vertices)?;
             // Faces.
