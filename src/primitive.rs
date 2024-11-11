@@ -4,7 +4,6 @@ use crate::{
     element::{Handle, VH},
     error::Error,
     mesh::PolyMeshT,
-    property::TPropData,
     vector::{FromFloat, TVec},
 };
 
@@ -71,7 +70,7 @@ where
     /// spanning from the origin to (1, 1, 1).
     pub fn unit_box() -> Result<Self, Error>
     where
-        VecT::Scalar: FromFloat + TPropData,
+        VecT::Scalar: FromFloat + Clone + Copy,
     {
         Self::quad_box(
             VecT::new([VecT::Scalar::from_f64(0.); 3]),
@@ -121,7 +120,12 @@ where
 impl<VecT> PolyMeshT<VecT, 3>
 where
     VecT: TVec<3>,
-    VecT::Scalar: TPropData + FromFloat + Mul<Output = VecT::Scalar> + Neg<Output = VecT::Scalar>,
+    VecT::Scalar: Default
+        + Clone
+        + Copy
+        + FromFloat
+        + Mul<Output = VecT::Scalar>
+        + Neg<Output = VecT::Scalar>,
 {
     /// Create a tetrahedron centered at the origin, with a unit
     /// circumradius. The vertices of the mesh will lie on the unit sphere.

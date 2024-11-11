@@ -140,33 +140,6 @@ where
     }
 }
 
-// 'static lifetime enforces the data stored inside properties is fully owned
-// and doesn't contain any weird references.
-pub trait TPropData: Default + Clone + Copy + 'static {}
-
-// Unsigned integers.
-impl TPropData for u8 {}
-impl TPropData for u16 {}
-impl TPropData for u32 {}
-impl TPropData for u64 {}
-impl TPropData for u128 {}
-impl TPropData for usize {}
-// Signed integers.
-impl TPropData for i8 {}
-impl TPropData for i16 {}
-impl TPropData for i32 {}
-impl TPropData for i64 {}
-impl TPropData for i128 {}
-impl TPropData for isize {}
-// Floating point types.
-impl TPropData for f32 {}
-impl TPropData for f64 {}
-// Other types.
-impl TPropData for bool {}
-impl TPropData for char {}
-impl TPropData for glam::Vec3 {}
-impl TPropData for glam::DVec3 {}
-
 trait GenericProperty<H>
 where
     H: Handle,
@@ -191,12 +164,16 @@ where
 }
 
 #[derive(Clone)]
-pub struct Property<H: Handle, T: TPropData> {
+pub struct Property<H: Handle, T: Default + Clone + Copy> {
     data: Rc<RefCell<Vec<T>>>,
     _phantom: PhantomData<H>,
 }
 
-impl<H: Handle, T: TPropData> Property<H, T> {
+impl<H, T> Property<H, T>
+where
+    H: Handle,
+    T: Default + Clone + Copy + 'static,
+{
     pub(crate) fn new(container: &mut PropertyContainer<H>) -> Self {
         let prop = Property {
             data: Rc::new(RefCell::new(vec![T::default(); container.len()])),
@@ -254,7 +231,11 @@ impl<H: Handle, T: TPropData> Property<H, T> {
     }
 }
 
-impl<H: Handle, T: TPropData> Default for Property<H, T> {
+impl<H, T> Default for Property<H, T>
+where
+    H: Handle,
+    T: Default + Clone + Copy,
+{
     fn default() -> Self {
         Self {
             data: Default::default(),
@@ -268,11 +249,18 @@ pub type HProperty<T> = Property<HH, T>;
 pub type EProperty<T> = Property<EH, T>;
 pub type FProperty<T> = Property<FH, T>;
 
-struct PropertyRef<T: TPropData> {
+struct PropertyRef<T>
+where
+    T: Default + Clone + Copy,
+{
     data: Weak<RefCell<Vec<T>>>,
 }
 
-impl<T: TPropData, H: Handle> GenericProperty<H> for PropertyRef<T> {
+impl<H, T> GenericProperty<H> for PropertyRef<T>
+where
+    T: Default + Clone + Copy,
+    H: Handle,
+{
     fn reserve(&mut self, n: usize) -> Result<(), Error> {
         if let Some(prop) = self.data.upgrade() {
             prop.try_borrow_mut()

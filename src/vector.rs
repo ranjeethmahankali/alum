@@ -3,7 +3,7 @@ use crate::{
     error::Error,
     iterator,
     mesh::PolyMeshT,
-    property::{FProperty, TPropData, VProperty},
+    property::{FProperty, VProperty},
 };
 use std::ops::{Add, AddAssign, Div, Mul, Neg, Sub};
 
@@ -33,7 +33,7 @@ impl FromFloat for f64 {
     }
 }
 
-pub trait TVec<const DIM: usize>: TPropData {
+pub trait TVec<const DIM: usize>: Default + Clone + Copy + 'static {
     type Scalar;
 
     /// Create a new vector with the given coordinates.

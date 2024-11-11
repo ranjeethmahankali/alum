@@ -2,7 +2,7 @@ use crate::{
     element::{Handle, EH, FH, HH, VH},
     error::Error,
     iterator,
-    property::{EProperty, FProperty, HProperty, TPropData, VProperty},
+    property::{EProperty, FProperty, HProperty, VProperty},
     status::Status,
     topol::{TopolCache, Topology},
     vector::TVec,
@@ -70,22 +70,34 @@ where
     }
 
     /// Create a new vertex property of type T.
-    pub fn create_vertex_prop<T: TPropData>(&mut self) -> VProperty<T> {
+    pub fn create_vertex_prop<T>(&mut self) -> VProperty<T>
+    where
+        T: Default + Clone + Copy + 'static,
+    {
         self.topol.new_vprop()
     }
 
     /// Create a new halfedge property of type T.
-    pub fn create_halfedge_prop<T: TPropData>(&mut self) -> HProperty<T> {
+    pub fn create_halfedge_prop<T>(&mut self) -> HProperty<T>
+    where
+        T: Default + Clone + Copy + 'static,
+    {
         self.topol.new_hprop()
     }
 
     /// Create a new edge property of type T.
-    pub fn create_edge_prop<T: TPropData>(&mut self) -> EProperty<T> {
+    pub fn create_edge_prop<T>(&mut self) -> EProperty<T>
+    where
+        T: Default + Clone + Copy + 'static,
+    {
         self.topol.new_eprop()
     }
 
     /// Create a new face property of type T.
-    pub fn create_face_prop<T: TPropData>(&mut self) -> FProperty<T> {
+    pub fn create_face_prop<T>(&mut self) -> FProperty<T>
+    where
+        T: Default + Clone + Copy + 'static,
+    {
         self.topol.new_fprop()
     }
 

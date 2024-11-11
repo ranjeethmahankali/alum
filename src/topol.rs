@@ -2,7 +2,7 @@ use crate::{
     element::{Edge, Face, Halfedge, Handle, Vertex, EH, FH, HH, VH},
     error::Error,
     iterator,
-    property::{EProperty, FProperty, HProperty, PropertyContainer, TPropData, VProperty},
+    property::{EProperty, FProperty, HProperty, PropertyContainer, VProperty},
     status::Status,
 };
 use std::cell::RefMut;
@@ -170,23 +170,38 @@ impl Topology {
         self.fstatus.get_mut(f)
     }
 
-    pub fn new_vprop<T: TPropData>(&mut self) -> VProperty<T> {
+    pub fn new_vprop<T>(&mut self) -> VProperty<T>
+    where
+        T: Default + Clone + Copy + 'static,
+    {
         VProperty::<T>::new(&mut self.vprops)
     }
 
-    pub fn new_hprop<T: TPropData>(&mut self) -> HProperty<T> {
+    pub fn new_hprop<T>(&mut self) -> HProperty<T>
+    where
+        T: Default + Clone + Copy + 'static,
+    {
         HProperty::<T>::new(&mut self.hprops)
     }
 
-    pub fn new_eprop<T: TPropData>(&mut self) -> EProperty<T> {
+    pub fn new_eprop<T>(&mut self) -> EProperty<T>
+    where
+        T: Default + Clone + Copy + 'static,
+    {
         EProperty::<T>::new(&mut self.eprops)
     }
 
-    pub fn new_fprop<T: TPropData>(&mut self) -> FProperty<T> {
+    pub fn new_fprop<T>(&mut self) -> FProperty<T>
+    where
+        T: Default + Clone + Copy + 'static,
+    {
         FProperty::<T>::new(&mut self.fprops)
     }
 
-    pub fn new_vprop_with_capacity<T: TPropData>(&mut self, n: usize) -> VProperty<T> {
+    pub fn new_vprop_with_capacity<T>(&mut self, n: usize) -> VProperty<T>
+    where
+        T: Default + Clone + Copy + 'static,
+    {
         VProperty::<T>::with_capacity(n, &mut self.vprops)
     }
 
