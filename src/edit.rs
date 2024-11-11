@@ -744,9 +744,9 @@ mod test {
                 .expect("Cannot find halfedge"),
         );
         // Set properties.
-        let mut eprop = qbox.new_eprop::<usize>();
+        let mut eprop = qbox.new_eprop::<usize>(0);
         eprop.set(e, 123).expect("Cannot set property");
-        let mut hprop = qbox.new_hprop::<usize>();
+        let mut hprop = qbox.new_hprop::<usize>(0);
         hprop
             .set(qbox.edge_halfedge(e, true), 234)
             .expect("Cannot set property");
