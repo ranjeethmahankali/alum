@@ -1,4 +1,4 @@
-use std::ops::{Mul, Neg};
+use std::ops::{Div, Mul, Neg};
 
 use crate::{
     element::VH,
@@ -174,27 +174,76 @@ where
         Ok(mesh)
     }
 
-    pub fn icosahedron(radius: VecT::Scalar) -> Result<Self, Error> {
-        let a = radius * VecT::Scalar::from_f64(1.0f64);
-        let b = radius * VecT::Scalar::from_f64(1.0 / ((1.0f64 + 5.0f64.sqrt()) * 0.5f64));
-        let zero = VecT::Scalar::from_f64(0.0f64);
+    pub fn icosahedron(radius: VecT::Scalar) -> Result<Self, Error>
+    where
+        VecT::Scalar: Div<Output = VecT::Scalar> + PartialOrd,
+        VecT: Div<VecT::Scalar, Output = VecT>,
+    {
         let mut mesh = Self::with_capacity(12, 30, 20);
         let verts = {
             let mut verts: [VH; 12] = [0.into(); 12];
             mesh.add_vertices(
                 &[
-                    VecT::new([zero, b, -a]),
-                    VecT::new([b, a, zero]),
-                    VecT::new([-b, a, zero]),
-                    VecT::new([zero, b, a]),
-                    VecT::new([zero, -b, a]),
-                    VecT::new([-a, zero, b]),
-                    VecT::new([zero, -b, -a]),
-                    VecT::new([a, zero, -b]),
-                    VecT::new([a, zero, b]),
-                    VecT::new([-a, zero, -b]),
-                    VecT::new([b, -a, zero]),
-                    VecT::new([-b, -a, zero]),
+                    VecT::new([
+                        radius * VecT::Scalar::from_f64(0.0),
+                        radius * VecT::Scalar::from_f64(0.5257311121191336),
+                        radius * VecT::Scalar::from_f64(-0.8506508083520399),
+                    ]),
+                    VecT::new([
+                        radius * VecT::Scalar::from_f64(0.5257311121191336),
+                        radius * VecT::Scalar::from_f64(0.8506508083520399),
+                        radius * VecT::Scalar::from_f64(0.0),
+                    ]),
+                    VecT::new([
+                        radius * VecT::Scalar::from_f64(-0.5257311121191336),
+                        radius * VecT::Scalar::from_f64(0.8506508083520399),
+                        radius * VecT::Scalar::from_f64(0.0),
+                    ]),
+                    VecT::new([
+                        radius * VecT::Scalar::from_f64(0.0),
+                        radius * VecT::Scalar::from_f64(0.5257311121191336),
+                        radius * VecT::Scalar::from_f64(0.8506508083520399),
+                    ]),
+                    VecT::new([
+                        radius * VecT::Scalar::from_f64(0.0),
+                        radius * VecT::Scalar::from_f64(-0.5257311121191336),
+                        radius * VecT::Scalar::from_f64(0.8506508083520399),
+                    ]),
+                    VecT::new([
+                        radius * VecT::Scalar::from_f64(-0.8506508083520399),
+                        radius * VecT::Scalar::from_f64(0.0),
+                        radius * VecT::Scalar::from_f64(0.5257311121191336),
+                    ]),
+                    VecT::new([
+                        radius * VecT::Scalar::from_f64(0.0),
+                        radius * VecT::Scalar::from_f64(-0.5257311121191336),
+                        radius * VecT::Scalar::from_f64(-0.8506508083520399),
+                    ]),
+                    VecT::new([
+                        radius * VecT::Scalar::from_f64(0.8506508083520399),
+                        radius * VecT::Scalar::from_f64(0.0),
+                        radius * VecT::Scalar::from_f64(-0.5257311121191336),
+                    ]),
+                    VecT::new([
+                        radius * VecT::Scalar::from_f64(0.8506508083520399),
+                        radius * VecT::Scalar::from_f64(0.0),
+                        radius * VecT::Scalar::from_f64(0.5257311121191336),
+                    ]),
+                    VecT::new([
+                        radius * VecT::Scalar::from_f64(-0.8506508083520399),
+                        radius * VecT::Scalar::from_f64(0.0),
+                        radius * VecT::Scalar::from_f64(-0.5257311121191336),
+                    ]),
+                    VecT::new([
+                        radius * VecT::Scalar::from_f64(0.5257311121191336),
+                        radius * VecT::Scalar::from_f64(-0.8506508083520399),
+                        radius * VecT::Scalar::from_f64(0.0),
+                    ]),
+                    VecT::new([
+                        radius * VecT::Scalar::from_f64(-0.5257311121191336),
+                        radius * VecT::Scalar::from_f64(-0.8506508083520399),
+                        radius * VecT::Scalar::from_f64(0.0),
+                    ]),
                 ],
                 &mut verts,
             )?;
@@ -300,12 +349,21 @@ mod test {
         assert_eq!(60, ico.num_halfedges());
         assert_eq!(30, ico.num_edges());
         assert_eq!(20, ico.num_faces());
-        assert_eq!(
+        assert_f32_eq!(
             {
                 let phi = (1.0 + 5.0f32.sqrt()) / 2.0;
                 20.0 * 3.0f32.sqrt() / (phi * phi + 1.0)
             },
-            ico.try_calc_area().expect("Cannot compute area")
+            ico.try_calc_area().expect("Cannot compute area"),
+            1e-6
+        );
+        assert_f32_eq!(
+            {
+                let phi = (1.0 + 5.0f32.sqrt()) / 2.0;
+                20.0 * phi * phi / (3.0 * (phi * phi + 1.0) * (phi * phi + 1.0).sqrt())
+            },
+            ico.try_calc_volume().expect("Cannot compute volume"),
+            1e-6
         );
     }
 }
