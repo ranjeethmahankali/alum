@@ -16,8 +16,8 @@ use crate::{
 pub struct PolyMeshT<const DIM: usize, A>
 where
     A: Adaptor<DIM>,
-    A::Vector: Default + Copy + Clone + 'static,
-    A::Scalar: Default + Copy + Clone + 'static,
+    A::Vector: 'static,
+    A::Scalar: 'static,
 {
     pub(crate) topol: Topology,
     pub(crate) cache: TopolCache,
