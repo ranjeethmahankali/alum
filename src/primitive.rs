@@ -1,7 +1,7 @@
-use std::ops::{Div, Mul, Neg};
+use std::ops::{Add, Div, Mul, Neg};
 
 use crate::{
-    element::VH,
+    element::{Handle, VH},
     error::Error,
     mesh::PolyMeshT,
     property::TPropData,
@@ -77,6 +77,33 @@ where
             VecT::new([VecT::Scalar::from_f64(0.); 3]),
             VecT::new([VecT::Scalar::from_f64(1.); 3]),
         )
+    }
+}
+
+impl<VecT> PolyMeshT<VecT, 3>
+where
+    VecT: TVec<3> + Add<Output = VecT> + Div<VecT::Scalar, Output = VecT>,
+    VecT::Scalar: FromFloat + Add<Output = VecT::Scalar>,
+{
+    pub fn dual_mesh(&self) -> Result<Self, Error> {
+        let mut outmesh =
+            Self::with_capacity(self.num_faces(), self.num_edges(), self.num_vertices());
+        let points = self.points();
+        let points = points.try_borrow()?;
+        let fstatus = self.topol.fstatus.try_borrow()?;
+        for f in self.faces() {
+            if fstatus[f.index() as usize].deleted() {
+                return Err(Error::GarbageCollectionRequired);
+            }
+            outmesh.add_vertex(self.calc_face_centroid(f, &points))?;
+        }
+        let mut fverts: Vec<VH> = Vec::new();
+        for v in self.vertices().filter(|v| !self.is_boundary_vertex(*v)) {
+            fverts.clear();
+            fverts.extend(self.vf_ccw_iter(v).map(|f| -> VH { f.index().into() }));
+            outmesh.add_face(&fverts)?;
+        }
+        Ok(outmesh)
     }
 }
 
@@ -174,11 +201,7 @@ where
         Ok(mesh)
     }
 
-    pub fn icosahedron(radius: VecT::Scalar) -> Result<Self, Error>
-    where
-        VecT::Scalar: Div<Output = VecT::Scalar> + PartialOrd,
-        VecT: Div<VecT::Scalar, Output = VecT>,
-    {
+    pub fn icosahedron(radius: VecT::Scalar) -> Result<Self, Error> {
         let mut mesh = Self::with_capacity(12, 30, 20);
         let verts = {
             let mut verts: [VH; 12] = [0.into(); 12];
@@ -269,6 +292,131 @@ where
         mesh.add_tri_face(verts[7], verts[10], verts[6])?;
         mesh.add_tri_face(verts[5], verts[11], verts[4])?;
         mesh.add_tri_face(verts[10], verts[8], verts[4])?;
+        Ok(mesh)
+    }
+
+    pub fn dodecahedron(radius: VecT::Scalar) -> Result<Self, Error> {
+        let mut mesh = Self::with_capacity(20, 30, 12);
+        let _verts = {
+            let mut verts: [VH; 20] = [0.into(); 20];
+            mesh.add_vertices(
+                &[
+                    VecT::new([
+                        radius * VecT::Scalar::from_f64(0.),
+                        radius * VecT::Scalar::from_f64(0.9341723589627157),
+                        radius * VecT::Scalar::from_f64(-0.35682208977308993),
+                    ]),
+                    VecT::new([
+                        radius * VecT::Scalar::from_f64(0.),
+                        radius * VecT::Scalar::from_f64(0.9341723589627157),
+                        radius * VecT::Scalar::from_f64(0.35682208977308993),
+                    ]),
+                    VecT::new([
+                        radius * VecT::Scalar::from_f64(-0.35682208977308993),
+                        radius * VecT::Scalar::from_f64(0.),
+                        radius * VecT::Scalar::from_f64(0.9341723589627157),
+                    ]),
+                    VecT::new([
+                        radius * VecT::Scalar::from_f64(0.35682208977308993),
+                        radius * VecT::Scalar::from_f64(0.),
+                        radius * VecT::Scalar::from_f64(0.9341723589627157),
+                    ]),
+                    VecT::new([
+                        radius * VecT::Scalar::from_f64(0.35682208977308993),
+                        radius * VecT::Scalar::from_f64(0.),
+                        radius * VecT::Scalar::from_f64(-0.9341723589627157),
+                    ]),
+                    VecT::new([
+                        radius * VecT::Scalar::from_f64(-0.35682208977308993),
+                        radius * VecT::Scalar::from_f64(0.),
+                        radius * VecT::Scalar::from_f64(-0.9341723589627157),
+                    ]),
+                    VecT::new([
+                        radius * VecT::Scalar::from_f64(0.),
+                        radius * VecT::Scalar::from_f64(-0.9341723589627157),
+                        radius * VecT::Scalar::from_f64(0.35682208977308993),
+                    ]),
+                    VecT::new([
+                        radius * VecT::Scalar::from_f64(0.),
+                        radius * VecT::Scalar::from_f64(-0.9341723589627157),
+                        radius * VecT::Scalar::from_f64(-0.35682208977308993),
+                    ]),
+                    VecT::new([
+                        radius * VecT::Scalar::from_f64(-0.9341723589627157),
+                        radius * VecT::Scalar::from_f64(0.35682208977308993),
+                        radius * VecT::Scalar::from_f64(0.),
+                    ]),
+                    VecT::new([
+                        radius * VecT::Scalar::from_f64(-0.9341723589627157),
+                        radius * VecT::Scalar::from_f64(-0.35682208977308993),
+                        radius * VecT::Scalar::from_f64(0.),
+                    ]),
+                    VecT::new([
+                        radius * VecT::Scalar::from_f64(0.9341723589627157),
+                        radius * VecT::Scalar::from_f64(0.35682208977308993),
+                        radius * VecT::Scalar::from_f64(0.),
+                    ]),
+                    VecT::new([
+                        radius * VecT::Scalar::from_f64(0.9341723589627157),
+                        radius * VecT::Scalar::from_f64(-0.35682208977308993),
+                        radius * VecT::Scalar::from_f64(0.),
+                    ]),
+                    VecT::new([
+                        radius * VecT::Scalar::from_f64(-0.5773502691896257),
+                        radius * VecT::Scalar::from_f64(0.5773502691896257),
+                        radius * VecT::Scalar::from_f64(0.5773502691896257),
+                    ]),
+                    VecT::new([
+                        radius * VecT::Scalar::from_f64(0.5773502691896257),
+                        radius * VecT::Scalar::from_f64(0.5773502691896257),
+                        radius * VecT::Scalar::from_f64(0.5773502691896257),
+                    ]),
+                    VecT::new([
+                        radius * VecT::Scalar::from_f64(-0.5773502691896257),
+                        radius * VecT::Scalar::from_f64(0.5773502691896257),
+                        radius * VecT::Scalar::from_f64(-0.5773502691896257),
+                    ]),
+                    VecT::new([
+                        radius * VecT::Scalar::from_f64(0.5773502691896257),
+                        radius * VecT::Scalar::from_f64(0.5773502691896257),
+                        radius * VecT::Scalar::from_f64(-0.5773502691896257),
+                    ]),
+                    VecT::new([
+                        radius * VecT::Scalar::from_f64(-0.5773502691896257),
+                        radius * VecT::Scalar::from_f64(-0.5773502691896257),
+                        radius * VecT::Scalar::from_f64(-0.5773502691896257),
+                    ]),
+                    VecT::new([
+                        radius * VecT::Scalar::from_f64(0.5773502691896257),
+                        radius * VecT::Scalar::from_f64(-0.5773502691896257),
+                        radius * VecT::Scalar::from_f64(-0.5773502691896257),
+                    ]),
+                    VecT::new([
+                        radius * VecT::Scalar::from_f64(-0.5773502691896257),
+                        radius * VecT::Scalar::from_f64(-0.5773502691896257),
+                        radius * VecT::Scalar::from_f64(0.5773502691896257),
+                    ]),
+                    VecT::new([
+                        radius * VecT::Scalar::from_f64(0.5773502691896257),
+                        radius * VecT::Scalar::from_f64(-0.5773502691896257),
+                        radius * VecT::Scalar::from_f64(0.5773502691896257),
+                    ]),
+                ],
+                &mut verts,
+            )?;
+        };
+        mesh.add_face(&[15.into(), 4.into(), 5.into(), 14.into(), 0.into()])?;
+        mesh.add_face(&[15.into(), 0.into(), 1.into(), 13.into(), 10.into()])?;
+        mesh.add_face(&[14.into(), 8.into(), 12.into(), 1.into(), 0.into()])?;
+        mesh.add_face(&[13.into(), 1.into(), 12.into(), 2.into(), 3.into()])?;
+        mesh.add_face(&[19.into(), 3.into(), 2.into(), 18.into(), 6.into()])?;
+        mesh.add_face(&[18.into(), 2.into(), 12.into(), 8.into(), 9.into()])?;
+        mesh.add_face(&[17.into(), 7.into(), 16.into(), 5.into(), 4.into()])?;
+        mesh.add_face(&[17.into(), 4.into(), 15.into(), 10.into(), 11.into()])?;
+        mesh.add_face(&[19.into(), 11.into(), 10.into(), 13.into(), 3.into()])?;
+        mesh.add_face(&[16.into(), 9.into(), 8.into(), 14.into(), 5.into()])?;
+        mesh.add_face(&[19.into(), 6.into(), 7.into(), 17.into(), 11.into()])?;
+        mesh.add_face(&[18.into(), 9.into(), 16.into(), 7.into(), 6.into()])?;
         Ok(mesh)
     }
 }
@@ -364,6 +512,30 @@ mod test {
             },
             ico.try_calc_volume().expect("Cannot compute volume"),
             1e-6
+        );
+    }
+
+    #[test]
+    fn t_dodecahedron() {
+        let dod = PolyMeshF32::dodecahedron(1.0).expect("Cannot create dodecahedron");
+        assert_eq!(20, dod.num_vertices());
+        assert_eq!(60, dod.num_halfedges());
+        assert_eq!(30, dod.num_edges());
+        assert_eq!(12, dod.num_faces());
+        assert_f32_eq!(
+            {
+                let phi = (1.0 + 5.0f32.sqrt()) / 2.0;
+                20.0f32 / (phi * (3.0f32 - phi).sqrt())
+            },
+            dod.try_calc_area().expect("Cannot compute area"),
+            1e-6
+        );
+        assert_f32_eq!(
+            {
+                let phi = (1.0 + 5.0f32.sqrt()) / 2.0;
+                40.0 / (3.0 * 3.0f32.sqrt() * (6.0 - 2.0 * phi))
+            },
+            dod.try_calc_volume().expect("Cannot compute volume")
         );
     }
 }

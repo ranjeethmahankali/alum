@@ -11,7 +11,7 @@ use crate::{
 /// A polygon mesh. `VecT` is the 3d vector type used to represent this
 /// mesh. The positions of the vertices and face normals etc. are all
 /// `VecT`. Quantities like edge length, face area etc. are of type
-/// `VecT::Scalar`. Various functions of the API, such as computing normals
+/// `VecT::Scalar`. Various functions of , such as computing normals
 /// etc. are available predicated on the trait bounds `VecT` satisfies.
 pub struct PolyMeshT<VecT, const DIM: usize>
 where
@@ -184,6 +184,17 @@ where
         self.topol.is_manifold_vertex(v)
     }
 
+    /// Check if the vertex is on the boundary of the mesh.
+    pub fn is_boundary_vertex(&self, v: VH) -> bool {
+        self.topol.is_boundary_vertex(v)
+    }
+
+    /// Check if the halfedge is on the boundary. A halfedge is considered
+    /// interior if it has a face incident on it.
+    pub fn is_boundary_halfedge(&self, h: HH) -> bool {
+        self.topol.is_boundary_halfedge(h)
+    }
+
     /// Check if the edge is a boundary edge.
     /// An edge is considered interior if it has two faces incident on both of it's halfedges.
     pub fn is_boundary_edge(&self, e: EH) -> bool {
@@ -314,12 +325,6 @@ where
     /// Get the halfedge corresponding to the face.
     pub fn face_halfedge(&self, f: FH) -> HH {
         self.topol.face_halfedge(f)
-    }
-
-    /// Check if the halfedge is on the boundary. A halfedge is considered
-    /// interior if it has a face incident on it.
-    pub fn is_boundary_halfedge(&self, h: HH) -> bool {
-        self.topol.is_boundary_halfedge(h)
     }
 
     /// Get a halfedge from the edge. The Boolean flag indicates one of the two
