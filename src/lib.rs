@@ -1,3 +1,4 @@
+pub mod adaptor;
 pub mod element;
 pub mod error;
 pub mod math;
