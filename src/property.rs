@@ -224,33 +224,57 @@ where
         })
     }
 
+    /// Try to borrow the property with read-only access.
+    ///
+    /// Properties use interior mutability pattern using a [`RefCell<T>`] to
+    /// enforce runtime borrow checking rules. If borrowing fails,
+    /// [`Error::BorrowedPropertyAccess`] is returned, otherwise a reference to
+    /// the property is returned.
     pub fn try_borrow(&self) -> Result<Ref<Vec<T>>, Error> {
         self.data
             .try_borrow()
             .map_err(|_| Error::BorrowedPropertyAccess)
     }
 
+    /// Try to borrow the property with mutable access.
+    ///
+    /// Properties use interior mutability pattern using a [`RefCell<T>`] to
+    /// enforce runtime borrow checking rules. If borrowing fails,
+    /// [`Error::BorrowedPropertyAccess`] is returned, otherwise a mutable
+    /// reference to the property is returned.
     pub fn try_borrow_mut(&mut self) -> Result<RefMut<Vec<T>>, Error> {
         self.data
             .try_borrow_mut()
             .map_err(|_| Error::BorrowedPropertyAccess)
     }
 
-    pub fn get(&self, i: H) -> Result<T, Error> {
+    /// Read the property value of a mesh element.
+    ///
+    /// This function internally tries to borrow the property and returns an
+    /// error if borrowing fails.
+    pub fn get(&self, h: H) -> Result<T, Error> {
         Ok(*self
             .try_borrow()?
-            .get(i.index() as usize)
+            .get(h.index() as usize)
             .ok_or(Error::OutOfBoundsAccess)?)
     }
 
-    pub fn get_mut(&mut self, i: H) -> Result<RefMut<T>, Error> {
+    /// Get a mutable reference to the property value of a mesh element.
+    ///
+    /// This function internally tries to mutably borrow the property and
+    /// returns an error if borrowing fails.
+    pub fn get_mut(&mut self, h: H) -> Result<RefMut<T>, Error> {
         Ok(RefMut::map(self.try_borrow_mut()?, |v| {
-            &mut v[i.index() as usize]
+            &mut v[h.index() as usize]
         }))
     }
 
-    pub fn set(&mut self, i: H, val: T) -> Result<(), Error> {
-        (*self.get_mut(i)?) = val;
+    /// Set the property value of a mesh element.
+    ///
+    /// This function internally tries to mutably borrow the property and
+    /// returns an error if borrowing fails.
+    pub fn set(&mut self, h: H, val: T) -> Result<(), Error> {
+        (*self.get_mut(h)?) = val;
         Ok(())
     }
 }

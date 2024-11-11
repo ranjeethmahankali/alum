@@ -337,7 +337,7 @@ where
     }
 
     /// Similar to `calc_area`, except this function tries to borrow the
-    /// required properties, and returns and error when borrowing fails.
+    /// required properties, and returns an error when borrowing fails.
     pub fn try_calc_area(&self) -> Result<A::Scalar, Error> {
         let points = self.points();
         let points = points.try_borrow()?;
