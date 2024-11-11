@@ -36,14 +36,19 @@ impl FromFloat for f64 {
 pub trait TVec<const DIM: usize>: TPropData {
     type Scalar;
 
+    /// Create a new vector with the given coordinates.
     fn new(coords: [Self::Scalar; DIM]) -> Self;
 
+    /// Create a vector with all coordinates set to zero.
     fn zero() -> Self;
 
+    /// Get the coordinate at the given index.
     fn coord(&self, i: usize) -> Self::Scalar;
 
+    /// Get the norm of the vector, i.e. the length.
     fn norm(self) -> Self::Scalar;
 
+    /// Get a vector of unit length parallel to this vector.
     fn normalized(self) -> Self
     where
         Self::Scalar: FromFloat + Div<Output = Self::Scalar> + PartialOrd,
@@ -57,6 +62,7 @@ pub trait TVec<const DIM: usize>: TPropData {
         }
     }
 
+    /// Compute the dot product of two vectors.
     fn dot(a: Self, b: Self) -> Self::Scalar
     where
         Self::Scalar: Mul<Output = Self::Scalar> + AddAssign + FromFloat,
@@ -68,10 +74,12 @@ pub trait TVec<const DIM: usize>: TPropData {
         out
     }
 
+    /// Compute the angle between two vectors.
     fn angle(a: Self, b: Self) -> Self::Scalar;
 }
 
 pub trait CrossProduct3 {
+    /// Cross product of three dimensional vectors.
     fn cross(a: Self, b: Self) -> Self;
 }
 
@@ -113,6 +121,36 @@ impl CrossProduct3 for glam::Vec3 {
     }
 }
 
+impl TVec<3> for glam::DVec3 {
+    type Scalar = f64;
+
+    fn new(coords: [Self::Scalar; 3]) -> Self {
+        glam::dvec3(coords[0], coords[1], coords[2])
+    }
+
+    fn zero() -> Self {
+        glam::DVec3::splat(0.)
+    }
+
+    fn coord(&self, i: usize) -> Self::Scalar {
+        self[i]
+    }
+
+    fn norm(self) -> Self::Scalar {
+        self.length()
+    }
+
+    fn angle(a: Self, b: Self) -> Self::Scalar {
+        Self::angle_between(a, b)
+    }
+}
+
+impl CrossProduct3 for glam::DVec3 {
+    fn cross(a: Self, b: Self) -> Self {
+        a.cross(b)
+    }
+}
+
 impl<VecT> PolyMeshT<VecT, 3>
 where
     VecT::Scalar: FromFloat
@@ -122,12 +160,20 @@ where
         + PartialOrd,
     VecT: TVec<3> + Add<Output = VecT> + Sub<Output = VecT> + Div<VecT::Scalar, Output = VecT>,
 {
+    /// This is similar to `calc_face_normal`, except this function attempts to
+    /// borrow the necessary properties and return an error if borrowing fails.
     pub fn try_calc_face_normal(&self, f: FH) -> Result<VecT, Error> {
         let points = self.points();
         let points = points.try_borrow()?;
         Ok(self.calc_face_normal(f, &points))
     }
 
+    /// Compute the face normal using Newell's method. The `points` must
+    /// represent the positions of the vertices.
+    ///
+    /// Calling this function in a hot loop with borrowed points property, can
+    /// be faster than `try_calc_face_normal` because it avoids repeated
+    /// borrows.
     pub fn calc_face_normal(&self, f: FH, points: &[VecT]) -> VecT {
         // Use newell's method to compute the normal.
         let (nverts, x, y, z) = {
@@ -160,10 +206,8 @@ where
         VecT::new([x, y, z]).normalized()
     }
 
-    /**
-     * Compute the face normals. If the face normals property is not available,
-     * it is initialized before computing the face normals.
-     */
+    /// Compute the face normals. If the face normals property is not available,
+    /// it is initialized before computing the face normals.
     pub fn update_face_normals(&mut self) -> Result<FProperty<VecT>, Error> {
         let mut fprop = self.request_face_normals();
         {
@@ -188,6 +232,13 @@ where
         + Div<VecT::Scalar, Output = VecT>
         + CrossProduct3,
 {
+    /// Compute the vertex normals accurately.
+    ///
+    /// The vertex normal is computed as the average of the normals of the
+    /// sectors around the vertex. The `points` argument must be the positions
+    /// of the vertices. Calling this function with borrowed `points` in a hot
+    /// loop can be faster than `try_calc_vertex_normal_accurate` by avoiding
+    /// repeated borrows.
     pub fn calc_vertex_normal_accurate(&self, v: VH, points: &[VecT]) -> VecT {
         let topol = self.topology();
         match topol.vertex_halfedge(v) {
@@ -213,17 +264,18 @@ where
         .normalized()
     }
 
+    /// This is similar to `calc_vertex_normal_accurate`, except this function
+    /// will attempt to borrow the required properties and return an error if
+    /// borrowing fails.
     pub fn try_calc_vertex_normal_accurate(&self, v: VH) -> Result<VecT, Error> {
         let points = self.points();
         let points = points.try_borrow()?;
         Ok(self.calc_vertex_normal_accurate(v, &points))
     }
 
-    /**
-     * Compute accurate vertex normals. This can be slower than the fast
-     * approximation. If the vertex normals property is not available, it is
-     * initialized before computing the vertex normals.
-     */
+    /// Compute accurate vertex normals. This can be slower than the fast
+    /// approximation. If the vertex normals property is not available, it is
+    /// initialized before computing the vertex normals.
     pub fn update_vertex_normals_accurate(&mut self) -> Result<VProperty<VecT>, Error> {
         let mut vprop = self.request_vertex_normals();
         {
@@ -244,12 +296,17 @@ where
     VecT::Scalar: FromFloat + Add<Output = VecT::Scalar>,
     VecT: TVec<DIM> + Add<Output = VecT> + Div<VecT::Scalar, Output = VecT>,
 {
+    /// Similar to `calc_face_centroid`, except this function attempts to borrow
+    /// the necessary properties and returns an error if the borrowing fails.
     pub fn try_calc_face_centroid(&self, f: FH) -> Result<VecT, Error> {
         let points = self.points();
         let points = points.try_borrow()?;
         Ok(self.calc_face_centroid(f, &points))
     }
 
+    /// Compute the centroid of a face as the average position of the incident vertices.
+    ///
+    /// `points` must be the positions of the vertices.
     pub fn calc_face_centroid(&self, f: FH, points: &[VecT]) -> VecT {
         let (denom, total) = iterator::fv_ccw_iter(self.topology(), f).fold(
             (VecT::Scalar::from_f64(0.0), VecT::zero()),
@@ -269,6 +326,9 @@ where
     VecT: TVec<DIM> + Add<Output = VecT> + Div<VecT::Scalar, Output = VecT>,
     VecT::Scalar: FromFloat + Div<Output = VecT::Scalar> + PartialOrd,
 {
+    /// Compute the vertex normal as the average of normals of incident
+    /// faces. The normals of the incident faces are read from provided
+    /// `fnormals`.
     pub fn calc_vertex_normal_fast(&self, v: VH, fnormals: &[VecT]) -> VecT {
         iterator::vf_ccw_iter(self.topology(), v)
             .fold(VecT::zero(), |total, f| {
@@ -277,6 +337,9 @@ where
             .normalized()
     }
 
+    /// Similar to `calc_vertex_normal_fast` except this function will attempt
+    /// to borrow the face normals. If the borrowing fails, or if the face
+    /// normals are not available, an error is returned.
     pub fn try_calc_vertex_normal_fast(&self, v: VH) -> Result<VecT, Error> {
         match self.face_normals() {
             Some(fnormals) => {
@@ -287,11 +350,9 @@ where
         }
     }
 
-    /**
-     * Compute a fast approximation of the vertex normals. If the vertex
-     * normals property is not available, it is initialized before computing the
-     * vertex normals.
-     */
+    /// Compute a fast approximation of the vertex normals. If the vertex
+    /// normals property is not available, it is initialized before computing
+    /// the vertex normals.
     pub fn update_vertex_normals_fast(&mut self) -> Result<VProperty<VecT>, Error> {
         let mut vprop = self.request_vertex_normals();
         {
@@ -311,12 +372,17 @@ impl<VecT, const DIM: usize> PolyMeshT<VecT, DIM>
 where
     VecT: TVec<DIM> + Sub<Output = VecT>,
 {
+    /// Similar to `calc_halfedge_vector`, except this function will attempt to
+    /// borrow the necessary properties and return an error if the borrowing
+    /// fails.
     pub fn try_calc_halfedge_vector(&self, h: HH) -> Result<VecT, Error> {
         let points = self.points();
         let points = points.try_borrow()?;
         Ok(self.calc_halfedge_vector(h, &points))
     }
 
+    /// Compute the vector spanning from the start of the halfedge to the head
+    /// of the halfedge.
     pub fn calc_halfedge_vector(&self, h: HH, points: &[VecT]) -> VecT {
         points[self.to_vertex(h).index() as usize] - points[self.from_vertex(h).index() as usize]
     }
@@ -330,6 +396,13 @@ where
         + Sub<Output = VecT::Scalar>
         + Add<Output = VecT::Scalar>,
 {
+    /// Compute the normal of a sector, using the given `points` as the
+    /// positions of vertices.
+    ///
+    /// A sector is the triangular region defined by the given halfedge and it's
+    /// previous halfedge. Calling this function in a hot loop with borrowed
+    /// `points` can be faster than `try_calc_sector_normal` by avoiding
+    /// repeated borrows.
     pub fn calc_sector_normal(&self, h: HH, points: &[VecT]) -> VecT {
         VecT::cross(
             self.calc_halfedge_vector(self.topology().prev_halfedge(h), points),
@@ -337,22 +410,37 @@ where
         )
     }
 
+    /// Similar to `calc_sector_normal`, except this function attempts to borrow
+    /// the necessary properties and returns an error if borrowing fails.
     pub fn try_calc_sector_normal(&self, h: HH) -> Result<VecT, Error> {
         let points = self.points();
         let points = points.try_borrow()?;
         Ok(self.calc_sector_normal(h, &points))
     }
 
+    /// Compute the area of a sector. `points` must be the positions of the vertices.
+    ///
+    /// A sector is the triangular region defined by the given halfedge and it's
+    /// previous halfedge. Calling this function in a hotloop with borrowed
+    /// points can be faster than `try_calc_sector_area` by avoiding repeated
+    /// borrows.
     pub fn calc_sector_area(&self, h: HH, points: &[VecT]) -> VecT::Scalar {
         self.calc_sector_normal(h, points).norm() * VecT::Scalar::from_f64(0.5)
     }
 
+    /// Similar to `calc_sector_area`, except this function attempts to borrow
+    /// the necessary properties, and returns an error if the borrowing fails.
     pub fn try_calc_sector_area(&self, h: HH) -> Result<VecT::Scalar, Error> {
         let points = self.points();
         let points = points.try_borrow()?;
         Ok(self.calc_sector_area(h, &points))
     }
 
+    /// Compute the area of a face. `point` must be the positions of vertices.
+    ///
+    /// For non-planar polygonal faces, the computed area will be
+    /// approximate. This is because the area is computed as the sum of
+    /// triangles, present in the default triangulation of the face.
     pub fn calc_face_area(&self, f: FH, points: &[VecT]) -> VecT::Scalar {
         self.topology().triangulated_face_vertices(f).fold(
             VecT::Scalar::from_f64(0.),
@@ -369,18 +457,25 @@ where
         )
     }
 
+    /// Similar to `calc_face_area`, except this function will attempt to borrow
+    /// the necessary properties, and return an error if the borrowing fails.
     pub fn try_calc_face_area(&self, f: FH) -> Result<VecT::Scalar, Error> {
         let points = self.points();
         let points = points.try_borrow()?;
         Ok(self.calc_face_area(f, &points))
     }
 
+    /// Compute the total area of this mesh. `points` must be the positions of vertices.
+    ///
+    /// Calling this function with borrowed `points` property avoids an internal borrow.
     pub fn calc_area(&self, points: &[VecT]) -> VecT::Scalar {
         self.faces().fold(VecT::Scalar::from_f64(0.), |total, f| {
             total + self.calc_face_area(f, points)
         })
     }
 
+    /// Similar to `calc_area`, except this function tries to borrow the
+    /// required properties, and returns and error when borrowing fails.
     pub fn try_calc_area(&self) -> Result<VecT::Scalar, Error> {
         let points = self.points();
         let points = points.try_borrow()?;
@@ -397,6 +492,11 @@ where
         + Div<Output = VecT::Scalar>
         + AddAssign,
 {
+    /// Compute the volume of the mesh. `points` must be the positions of the
+    /// vertices.
+    ///
+    /// Calling this function with borrowed `points` property avoids an internal
+    /// borrow of properties.
     pub fn calc_volume(&self, points: &[VecT]) -> VecT::Scalar {
         if self
             .halfedges()
@@ -416,6 +516,8 @@ where
             })
     }
 
+    /// Similar to `calc_volume`, except this function attempts to borrow the
+    /// required properties, and returns an error if the borrowing fails.
     pub fn try_calc_volume(&self) -> Result<VecT::Scalar, Error> {
         let points = self.points();
         let points = points.try_borrow()?;
@@ -434,14 +536,23 @@ where
         + PartialOrd
         + AddAssign,
 {
-    fn aligned_angle(norm0: VecT, norm1: VecT, hvec: VecT) -> VecT::Scalar {
-        if VecT::dot(VecT::cross(norm0, norm1), hvec) >= VecT::Scalar::from_f64(0.) {
+    fn aligned_angle(norm0: VecT, norm1: VecT, align: VecT) -> VecT::Scalar {
+        if VecT::dot(VecT::cross(norm0, norm1), align) >= VecT::Scalar::from_f64(0.) {
             VecT::angle(norm0, norm1)
         } else {
             -VecT::angle(norm0, norm1)
         }
     }
 
+    /// Compute the internal dihedral angle at an edge. `points` must be the
+    /// positions of the vertices of this mesh.
+    ///
+    /// Calling this function with borrowed `points` property avoids internal
+    /// borrows, avoids errors, and can be faster when called in a fast loop
+    /// compared to `try_calc_dihedral_angle`.
+    ///
+    /// The the sector normals of the halfedges are used to compute the dihedral
+    /// angle. This can be more accurate than `calc_dihedral_angle_fast`.
     pub fn calc_dihedral_angle(&self, e: EH, points: &[VecT]) -> VecT::Scalar {
         if self.is_boundary_edge(e) {
             return VecT::Scalar::from_f64(0.);
@@ -455,12 +566,21 @@ where
         )
     }
 
+    /// Similar to `calc_dihedral_angle`, except this function tries to borrow
+    /// the required properties, and returns an error if the borrowing fails.
     pub fn try_calc_dihedral_angle(&self, e: EH) -> Result<VecT::Scalar, Error> {
         let points = self.points();
         let points = points.try_borrow()?;
         Ok(self.calc_dihedral_angle(e, &points))
     }
 
+    /// Similar to `calc_dihedral_angle`, except the dihedral angle by comparing
+    /// the normals of the incident faces.
+    ///
+    /// `points` are the positions of the mesh. Using borrowed `face_normals`
+    /// and `points` properties avoids internal borrows, and can be faster when
+    /// computing dihedral angles in a hot loop compared to
+    /// `try_calc_dihedral_angle`.
     pub fn calc_dihedral_angle_fast(
         &self,
         e: EH,
@@ -481,6 +601,9 @@ where
         }
     }
 
+    /// Similar to `calc_dihedral_angle_fast`, except this function attempts to
+    /// borrow the required properties, and returns an error if the borrowing
+    /// fails.
     pub fn try_calc_dihedral_angle_fast(&self, e: EH) -> Result<VecT::Scalar, Error> {
         let fnormals = self.face_normals().ok_or(Error::FaceNormalsNotAvailable)?;
         let fnormals = fnormals.try_borrow()?;
@@ -499,6 +622,13 @@ where
         + AddAssign
         + PartialOrd,
 {
+    /// Compute the sector angle.
+    ///
+    /// A sector associated with a halfedge is the triangular region defined by
+    /// the halfedge and it's previous halfedge. `points` are the positions of
+    /// mesh vertices. Calling this function with borrowed `points` and
+    /// `face_normals` properties avoids internal borrows and can be faster than
+    /// `try_calc_sector_angle` when computing sector angles in a hot loop.
     pub fn calc_sector_angle(&self, h: HH, points: &[VecT], face_normals: &[VecT]) -> VecT::Scalar {
         let n0 = self.calc_halfedge_vector(h, points);
         let h2 = self.opposite_halfedge(self.prev_halfedge(h));
@@ -515,6 +645,8 @@ where
         angle
     }
 
+    /// Similar to `calc_sector_angle`, except this function tries to borrow the
+    /// required properties and returns an error if the borrowing fails.
     pub fn try_calc_sector_angle(&self, h: HH) -> Result<VecT::Scalar, Error> {
         let fnormals = self.face_normals().ok_or(Error::FaceNormalsNotAvailable)?;
         let fnormals = fnormals.try_borrow()?;

@@ -22,4 +22,7 @@ pub enum Error {
     IncorrectIndexCount(usize),
     // Other,
     MismatchedArrayLengths(usize, usize),
+    /// The mesh has deleted elements, which create problems for further
+    /// operations. Garbage collection needs to be performed before proceeding.
+    GarbageCollectionRequired,
 }

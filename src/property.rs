@@ -165,6 +165,7 @@ impl TPropData for f64 {}
 impl TPropData for bool {}
 impl TPropData for char {}
 impl TPropData for glam::Vec3 {}
+impl TPropData for glam::DVec3 {}
 
 trait GenericProperty<H>
 where

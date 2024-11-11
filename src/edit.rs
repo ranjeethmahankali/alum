@@ -10,6 +10,12 @@ use crate::{
 };
 
 impl Topology {
+    /// Check if it is safe to collapse an edge.
+    ///
+    /// This function uses the edge-status and vertex-status(mutable) properties
+    /// to keep track of the neighborhood. Use this with borrowed properties as
+    /// arguments if you're calling this function in a hot loop, to avoid
+    /// repeated borrows.
     pub fn check_edge_collapse(
         &self,
         h: HH,
@@ -126,6 +132,9 @@ impl Topology {
         true
     }
 
+    /// This is the same as `check_edge_collapse`, except it will attempt to
+    /// borrow the necessary properties and may return an error if it ccannot
+    /// borrow the required properties.
     pub fn try_check_edge_collapse(&self, h: HH) -> Result<bool, Error> {
         let estatus = self.estatus.try_borrow()?;
         // Clone the property to side step compile time borrow checker. The
@@ -179,6 +188,14 @@ impl Topology {
         hstatus[o.index() as usize].set_deleted(true);
     }
 
+    /// Collapse an edge.
+    ///
+    /// The vertex at the start of the halfedge will be deleted, and all the
+    /// topology associated with that vertex will be rewired to the vertex that
+    /// the halfedge is pointing towards. This function requires borrowed
+    /// status properties of vertices, halfedges, edges and faces. This is
+    /// useful when collapsing edges in a hot loop, to avoid repeated borrows of
+    /// properties.
     pub fn collapse_edge(
         &mut self,
         h: HH,
@@ -238,6 +255,8 @@ impl Topology {
         }
     }
 
+    /// This is the same as `collapse_edge` except it will attempt to borrow all
+    /// the required properties, and returns an error if borrowing fails.
     pub fn try_collapse_edge(&mut self, h: HH, cache: &mut TopolCache) -> Result<(), Error> {
         let mut vstatus = self.vstatus.clone();
         let mut vstatus = vstatus.try_borrow_mut()?;
@@ -258,6 +277,7 @@ impl Topology {
         Ok(())
     }
 
+    /// Get an iterator over triplets of vertices, that represent the triangulation of a face.
     pub fn triangulated_face_vertices(&self, f: FH) -> impl Iterator<Item = [VH; 3]> + use<'_> {
         let hstart = self.face_halfedge(f);
         let vstart = self.from_vertex(hstart);
@@ -351,12 +371,76 @@ impl<VecT, const DIM: usize> PolyMeshT<VecT, DIM>
 where
     VecT: TVec<DIM>,
 {
-    pub fn triangulate_face(&mut self, f: FH) -> Result<(), Error> {
-        self.topology_mut().triangulate_face(f)
+    /// Check if it is safe to collapse an edge.
+    ///
+    /// This function only checks for topological errors, and doesn't account
+    /// for shape and other geometric properties. This function uses the
+    /// edge-status and vertex-status(mutable) properties to keep track of the
+    /// neighborhood. Use this with borrowed properties as arguments if you're
+    /// calling this function in a hot loop, to avoid repeated borrows.
+    pub fn check_edge_collapse(&self, h: HH, estatus: &[Status], vstatus: &mut [Status]) -> bool {
+        self.topology().check_edge_collapse(h, estatus, vstatus)
     }
 
+    /// This is the same as `check_edge_collapse`, except it will attempt to
+    /// borrow the necessary properties and may return an error if it ccannot
+    /// borrow the required properties.
+    pub fn try_check_edge_collapse(&self, h: HH) -> Result<bool, Error> {
+        self.topology().try_check_edge_collapse(h)
+    }
+
+    /// Collapse the given edge.
+    ///
+    /// The vertex at the start of the halfedge will be deleted, and all the
+    /// topology associated with that vertex will be rewired to the vertex that
+    /// the halfedge is pointing towards. This function requires borrowed
+    /// status properties of vertices, halfedges, edges and faces. This is
+    /// useful when collapsing edges in a hot loop, to avoid repeated borrows of
+    /// properties.
+    pub fn collapse_edge(
+        &mut self,
+        h: HH,
+        vstatus: &mut [Status],
+        hstatus: &mut [Status],
+        estatus: &mut [Status],
+        fstatus: &mut [Status],
+    ) {
+        self.topol
+            .collapse_edge(h, vstatus, hstatus, estatus, fstatus, &mut self.cache)
+    }
+
+    /// This is the same as `collapse_edge`. Except this function will try to
+    /// borrow all the necessary properties, and return an error if the
+    /// borrowing fails.
+    pub fn try_collapse_edge(&mut self, h: HH) -> Result<(), Error> {
+        self.topol.try_collapse_edge(h, &mut self.cache)
+    }
+
+    /// Triangulate a face.
+    ///
+    /// This does not take the geometry / shape of the face into account. This
+    /// only accounts for the topology of the face.
+    pub fn triangulate_face(&mut self, f: FH) -> Result<(), Error> {
+        self.topol.triangulate_face(f)
+    }
+
+    /// Triangulate all faces in this mesh.
+    ///
+    /// This does not take the geometry / shape of the face into account. This
+    /// only accounts for the topology of the face.
     pub fn triangulate(&mut self) -> Result<(), Error> {
-        self.topology_mut().triangulate()
+        self.topol.triangulate()
+    }
+
+    /// Split an edge with a new vertex at the given position.
+    ///
+    /// A new vertex is inserted at the given position and is used to split the
+    /// given edge. A new edge is created during this split. If successful, a
+    /// tuple containing the new vertex and the new edge is returned.
+    pub fn split_edge(&mut self, e: EH, pos: VecT, copy_props: bool) -> Result<(VH, EH), Error> {
+        let v = self.add_vertex(pos)?;
+        let enew = self.topol.split_edge(e, v, copy_props)?;
+        Ok((v, enew))
     }
 }
 
