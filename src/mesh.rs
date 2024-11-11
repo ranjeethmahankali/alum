@@ -108,7 +108,9 @@ where
         }
     }
 
-    /// Create a new vertex property of type T.
+    /// Create a new vertex property of type T, with the `default` value.
+    ///
+    /// The default value will be used when new elements are added to the mesh.
     pub fn create_vertex_prop<T>(&mut self, default: T) -> VProperty<T>
     where
         T: Clone + Copy + 'static,
@@ -116,7 +118,9 @@ where
         self.topol.new_vprop(default)
     }
 
-    /// Create a new halfedge property of type T.
+    /// Create a new halfedge property of type T, with the `default` value.
+    ///
+    /// The default value will be used when new elements are added to the mesh.
     pub fn create_halfedge_prop<T>(&mut self, default: T) -> HProperty<T>
     where
         T: Clone + Copy + 'static,
@@ -124,7 +128,9 @@ where
         self.topol.new_hprop(default)
     }
 
-    /// Create a new edge property of type T.
+    /// Create a new edge property of type T, with the `default` value.
+    ///
+    /// The default value will be used when new elements are added to the mesh.
     pub fn create_edge_prop<T>(&mut self, default: T) -> EProperty<T>
     where
         T: Clone + Copy + 'static,
@@ -132,7 +138,9 @@ where
         self.topol.new_eprop(default)
     }
 
-    /// Create a new face property of type T.
+    /// Create a new face property of type T, with the `default` value.
+    ///
+    /// The default value will be used when new elements are added to the mesh.
     pub fn create_face_prop<T>(&mut self, default: T) -> FProperty<T>
     where
         T: Clone + Copy + 'static,

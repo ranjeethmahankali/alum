@@ -4,8 +4,7 @@ use crate::{
     iterator,
     mesh::{Adaptor, PolyMeshT},
     status::Status,
-    topol::TopolCache,
-    Topology,
+    topol::{TopolCache, Topology},
 };
 
 impl Topology {
