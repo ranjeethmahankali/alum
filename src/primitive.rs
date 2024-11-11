@@ -85,6 +85,16 @@ where
     VecT: TVec<DIM> + Add<Output = VecT> + Div<VecT::Scalar, Output = VecT>,
     VecT::Scalar: FromFloat + Add<Output = VecT::Scalar>,
 {
+    /// Create a mesh that is the dual of this mesh.
+    ///
+    /// https://en.wikipedia.org/wiki/Dual_polyhedron.
+    ///
+    /// The dual mesh will contain vertices at the centroids of the input mesh,
+    /// and an edge connecting the vertices for every pair of adjacent faces in
+    /// the input mesh. The output mesh will contain as many vertices as the
+    /// faces of the input mesh, as many edges as the interior edges of the
+    /// input mesh, and as many faces as the interior vertices of the input
+    /// mesh.
     pub fn dual_mesh(&self) -> Result<Self, Error> {
         let mut outmesh =
             Self::with_capacity(self.num_faces(), self.num_edges(), self.num_vertices());
@@ -113,6 +123,8 @@ where
     VecT: TVec<3>,
     VecT::Scalar: TPropData + FromFloat + Mul<Output = VecT::Scalar> + Neg<Output = VecT::Scalar>,
 {
+    /// Create a tetrahedron centered at the origin, with a unit
+    /// circumradius. The vertices of the mesh will lie on the unit sphere.
     pub fn tetrahedron(radius: VecT::Scalar) -> Result<Self, Error> {
         let mut mesh = Self::with_capacity(4, 6, 4);
         let a = radius * VecT::Scalar::from_f64(1.0f64 / 3.0);
@@ -143,6 +155,8 @@ where
         Ok(mesh)
     }
 
+    /// Create a hexehedron centered at the origin, with a unit
+    /// circumradius. The vertices of the mesh will lie on the unit sphere.
     pub fn hexahedron(radius: VecT::Scalar) -> Result<Self, Error> {
         let a = radius * VecT::Scalar::from_f64(1.0f64 / 3.0f64.sqrt());
         let mut mesh = Self::with_capacity(8, 12, 6);
@@ -172,6 +186,8 @@ where
         Ok(mesh)
     }
 
+    /// Create an octahedron centered at the origin, with a unit
+    /// circumradius. The vertices of the mesh will lie on the unit sphere.
     pub fn octahedron(radius: VecT::Scalar) -> Result<Self, Error> {
         let mut mesh = Self::with_capacity(6, 12, 8);
         let _verts = {
@@ -201,6 +217,8 @@ where
         Ok(mesh)
     }
 
+    /// Create an icosahedron centered at the origin, with a unit
+    /// circumradius. The vertices of the mesh will lie on the unit sphere.
     pub fn icosahedron(radius: VecT::Scalar) -> Result<Self, Error> {
         let mut mesh = Self::with_capacity(12, 30, 20);
         let _verts = {
@@ -295,6 +313,8 @@ where
         Ok(mesh)
     }
 
+    /// Create a dodecahedron centered at the origin, with a unit
+    /// circumradius. The vertices of the mesh will lie on the unit sphere.
     pub fn dodecahedron(radius: VecT::Scalar) -> Result<Self, Error> {
         let mut mesh = Self::with_capacity(20, 30, 12);
         let _verts = {
