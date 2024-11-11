@@ -2,7 +2,6 @@ pub mod error;
 pub mod math;
 pub mod mesh;
 pub mod obj;
-pub mod primitive;
 pub mod property;
 pub mod status;
 pub mod topol;
@@ -11,6 +10,7 @@ mod edit;
 mod element;
 mod iterator;
 mod macros;
+mod primitive;
 
 #[cfg(feature = "use_glam")]
 mod use_glam;
