@@ -1,6 +1,6 @@
 [package]
 name = "alum"
-version = "0.1.2"
+version = "0.2.0"
 edition = "2021"
 authors = ["Ranjeeth Mahankali <ranjeethmahankali@gmail.com>"]
 description = "Halfedge based polygon mesh library."
@@ -11,8 +11,12 @@ keywords = ["mesh", "polygon", "halfedge", "geometry", "topology"]
 categories = ["mathematics", "graphics", "rendering"]
 
 [dependencies]
-glam = "0.29.2"
+glam = { version = "0.29.2", optional = true }
 tobj = { version = "4.0.2", features = ["use_f64"] }
+
+[features]
+default = ["use_glam"]
+use_glam = ["dep:glam"]
 
 [dev-dependencies]
 arrayvec = "0.7.6"

@@ -1,12 +1,10 @@
 use crate::{
-    adaptor::Adaptor,
     element::{Handle, EH, FH, HH, VH},
     error::Error,
     iterator,
-    mesh::PolyMeshT,
+    mesh::{Adaptor, PolyMeshT},
     status::Status,
-    topol::TopolCache,
-    Topology,
+    topol::{TopolCache, Topology},
 };
 
 impl Topology {

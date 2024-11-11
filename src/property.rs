@@ -163,6 +163,18 @@ where
     fn is_valid(&self) -> bool;
 }
 
+/// This represents a property defined on the elements of the mesh. `T` is the
+/// type of data associated with each element of the mesh, whose handle type is
+/// `H`.
+///
+/// Why use properties instead of simple [`Vec<T>`] to associate values with
+/// elements of a mesh? Say you use a simple [`Vec<T>`] to keep track of
+/// properties. If you modify the mesh, by either adding new elements (vertices,
+/// faces, etc.), or by deleting elements and garbage collecting. The [`Vec<T>`]
+/// will go out of sync with the mesh. Instead using a [`Property<H, T>`]
+/// guarantees the properties are always synchronized with the mesh, and that
+/// every element of the mesh of type `H`, even the newly added ones will have a
+/// value associated with it.
 #[derive(Clone)]
 pub struct Property<H, T>
 where
@@ -212,40 +224,127 @@ where
         })
     }
 
+    /// Try to borrow the property with read-only access.
+    ///
+    /// Properties use interior mutability pattern using a [`RefCell<T>`] to
+    /// enforce runtime borrow checking rules. If borrowing fails,
+    /// [`Error::BorrowedPropertyAccess`] is returned, otherwise a reference to
+    /// the property is returned.
     pub fn try_borrow(&self) -> Result<Ref<Vec<T>>, Error> {
         self.data
             .try_borrow()
             .map_err(|_| Error::BorrowedPropertyAccess)
     }
 
+    /// Try to borrow the property with mutable access.
+    ///
+    /// Properties use interior mutability pattern using a [`RefCell<T>`] to
+    /// enforce runtime borrow checking rules. If borrowing fails,
+    /// [`Error::BorrowedPropertyAccess`] is returned, otherwise a mutable
+    /// reference to the property is returned.
     pub fn try_borrow_mut(&mut self) -> Result<RefMut<Vec<T>>, Error> {
         self.data
             .try_borrow_mut()
             .map_err(|_| Error::BorrowedPropertyAccess)
     }
 
-    pub fn get(&self, i: H) -> Result<T, Error> {
+    /// Read the property value of a mesh element.
+    ///
+    /// This function internally tries to borrow the property and returns an
+    /// error if borrowing fails.
+    pub fn get(&self, h: H) -> Result<T, Error> {
         Ok(*self
             .try_borrow()?
-            .get(i.index() as usize)
+            .get(h.index() as usize)
             .ok_or(Error::OutOfBoundsAccess)?)
     }
 
-    pub fn get_mut(&mut self, i: H) -> Result<RefMut<T>, Error> {
+    /// Get a mutable reference to the property value of a mesh element.
+    ///
+    /// This function internally tries to mutably borrow the property and
+    /// returns an error if borrowing fails.
+    pub fn get_mut(&mut self, h: H) -> Result<RefMut<T>, Error> {
         Ok(RefMut::map(self.try_borrow_mut()?, |v| {
-            &mut v[i.index() as usize]
+            &mut v[h.index() as usize]
         }))
     }
 
-    pub fn set(&mut self, i: H, val: T) -> Result<(), Error> {
-        (*self.get_mut(i)?) = val;
+    /// Set the property value of a mesh element.
+    ///
+    /// This function internally tries to mutably borrow the property and
+    /// returns an error if borrowing fails.
+    pub fn set(&mut self, h: H, val: T) -> Result<(), Error> {
+        (*self.get_mut(h)?) = val;
         Ok(())
     }
 }
 
+/// Vertex property. A value of type `T` is defined on each vertex of the
+/// mesh.
+///
+/// See the documentation of [`Property<H, T>`] for more context on how
+/// properties work.
+///
+/// ```rust
+/// use alum::alum_glam::PolyMeshF32;
+///
+/// let mut mesh = PolyMeshF32::icosahedron(1.0).expect("Cannot create an icosahedron");
+/// // Crate a vertex property of type u32, with a default value of 42.
+/// let vprop = mesh.create_vertex_prop(42u32);
+/// let v = 2.into(); // Vertex indexed 2.
+/// assert_eq!(42, vprop.get(v).expect("Cannot read vertex property"));
+/// ```
 pub type VProperty<T> = Property<VH, T>;
+
+/// Halfedge property. A value of type `T` is defined on each halfedge of the
+/// mesh.
+///
+/// See the documentation of [`Property<H, T>`] for more context on how
+/// properties work.
+///
+/// ```rust
+/// use alum::alum_glam::PolyMeshF32;
+///
+/// let mut mesh = PolyMeshF32::tetrahedron(1.0).expect("Cannot create an icosahedron");
+/// // Crate a halfedge property of type u32, with a default value of 42.
+/// let hprop = mesh.create_halfedge_prop(42u32);
+/// let h = 2.into(); // Halfedge indexed 2.
+/// assert_eq!(42, hprop.get(h).expect("Cannot read halfedge property"));
+/// ```
 pub type HProperty<T> = Property<HH, T>;
+
+/// Edge property. A value of type `T` is defined on each edge of the
+/// mesh.
+///
+/// See the documentation of [`Property<H, T>`] for more context on how
+/// properties work.
+///
+/// ```rust
+/// use alum::alum_glam::PolyMeshF32;
+///
+/// let mut mesh = PolyMeshF32::octahedron(1.0).expect("Cannot create an icosahedron");
+/// // Crate a edge property of type u32, with a default value of 42.
+/// let eprop = mesh.create_edge_prop(42u32);
+/// let e = 2.into(); // Edge indexed 2.
+/// assert_eq!(42, eprop.get(e).expect("Cannot read edge property"));
+/// ```
 pub type EProperty<T> = Property<EH, T>;
+
+/// Face property. A value of type `T` is defined on each face of the
+/// mesh.
+///
+/// See the documentation of [`Property<H, T>`] for more context on how
+/// properties work.
+///
+/// ```rust
+/// use alum::alum_glam::PolyMeshF32;
+///
+/// let mut mesh = PolyMeshF32::dodecahedron(1.0).expect("Cannot create an icosahedron");
+/// // Crate a face property of type u32, with a default value of 42.
+/// let fprop = mesh.create_face_prop(42u32);
+/// let f = 2.into(); // Face indexed 2.
+/// assert_eq!(42, fprop.get(f).expect("Cannot read face property"));
+/// ```
 pub type FProperty<T> = Property<FH, T>;
 
 struct PropertyRef<T>

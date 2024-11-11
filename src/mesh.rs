@@ -1,5 +1,4 @@
 use crate::{
-    adaptor::Adaptor,
     element::{Handle, EH, FH, HH, VH},
     error::Error,
     iterator,
@@ -7,6 +6,105 @@ use crate::{
     status::Status,
     topol::{TopolCache, Topology},
 };
+
+/// Trait for an adaptor that tells this crate how to work with user specified
+/// geometric types.
+///
+/// Implementing an adaptor allows the use of this crate with any geometric
+/// type. An implementation of this trait must specify an associated type
+/// `Vector` to represent the positions of vertices, and an associated type
+/// `Scalar` to represent the coordinates of `Vector` etc. In addition to these
+/// associated types, an implementation is expected to provide basic functions
+/// to work with `Vector` instances.
+pub trait Adaptor<const DIM: usize>
+where
+    Self::Vector: Clone + Copy,
+    Self::Scalar: Clone + Copy,
+{
+    type Vector;
+    type Scalar;
+
+    /// Construct a vector from an array containing the coordinates.
+    fn vector(coords: [Self::Scalar; DIM]) -> Self::Vector;
+
+    /// Construct a zero vector.
+    fn zero_vector() -> Self::Vector;
+
+    /// Get the coordiate at the given index from a vector.
+    fn vector_coord(v: &Self::Vector, i: usize) -> Self::Scalar;
+}
+
+/// An adaptor can optionally implement this trait to tell this crate how to
+/// compute the length of its vector type.
+///
+/// Implementing this trait is required by functions of the polygon mesh such as
+/// [`PolyMeshT<DIM, A>::calc_edge_length`], and [`PolyMeshT<DIM,
+/// A>::calc_face_area`] etc.
+pub trait VectorLengthAdaptor<const DIM: usize>: Adaptor<DIM> {
+    /// Compute the length (i.e. magnitude) of a vector.
+    fn vector_length(v: Self::Vector) -> Self::Scalar;
+}
+
+/// An adaptor can optionally implement this trait to tell this crate how to
+/// normalize a vector to have a unit length.
+///
+/// Implementing this trait is required by functions of the polygon mesh such as
+/// [`PolyMeshT<DIM, A>::calc_face_normal`], [`PolyMeshT<DIM,
+/// A>::calc_vertex_normal_accurate`], and [`PolyMeshT<DIM,
+/// A>::calc_vertex_normal_fast`] etc.
+pub trait VectorNormalizeAdaptor<const DIM: usize>: Adaptor<DIM> {
+    /// Normalize a vector and return a unit length vector.
+    fn normalized_vec(v: Self::Vector) -> Self::Vector;
+}
+
+/// An adaptor can optionally implement this trait to tell this crate how to
+/// compute the dot product of two vectors.
+///
+/// Implementing this trait is required by functions of the polygon mesh such as
+/// [`PolyMeshT<DIM, A>::calc_volume`], [`PolyMeshT<DIM,
+/// A>::calc_sector_angle`], and [`PolyMeshT<DIM, A>::calc_dihedral_angle`] etc.
+pub trait DotProductAdaptor<const DIM: usize>: Adaptor<DIM> {
+    /// Compute the dot product between two vectors.
+    fn dot_product(a: Self::Vector, b: Self::Vector) -> Self::Scalar;
+}
+
+/// An adaptor can optionally implement this trait to tell this crate how to
+/// compute angle between its vectors.
+///
+/// Implementing this trait is required by functions of the polygon mesh such as
+/// [`PolyMeshT<DIM, A>::calc_sector_angle`], and [`PolyMeshT<DIM,
+/// A>::calc_dihedral_angle`] etc.
+pub trait VectorAngleAdaptor: Adaptor<3> {
+    /// Compute the angle between two vectors.
+    fn vector_angle(a: Self::Vector, b: Self::Vector) -> Self::Scalar;
+}
+
+/// An adaptor can optionally implement this trait to tell this crate how to
+/// compute the cross product of its vectors.
+///
+/// This is only meant to be used with 3-d vectors, hence the generic `DIM`
+/// parameter is constrainted to 3. Implementing this trait is required by
+/// functions of the polygon mesh such as [`PolyMeshT<DIM,
+/// A>::calc_face_normal`], and [`PolyMeshT<DIM,
+/// A>::calc_vertex_normal_accurate`] etc.
+pub trait CrossProductAdaptor: Adaptor<3> {
+    /// Compute the cross product of two vectors.
+    fn cross_product(a: Self::Vector, b: Self::Vector) -> Self::Vector;
+}
+
+/// An adaptor can optionally implement this trait to tell this crate how to
+/// instantiate its scalar type from [`f32`] and [`f64`].
+///
+/// Implementing this trait is required by functions of the polygon mesh such as
+/// [`PolyMeshT<DIM, A>::calc_volume`], [`PolyMeshT<DIM, A>::load_obj`], and
+/// several others.
+pub trait FloatScalarAdaptor<const DIM: usize>: Adaptor<DIM> {
+    /// Create a scalar from [`f32`].
+    fn scalarf32(val: f32) -> Self::Scalar;
+
+    /// Create a scalar from [`f64`].
+    fn scalarf64(val: f64) -> Self::Scalar;
+}
 
 /// A polygon mesh. `VecT` is the 3d vector type used to represent this
 /// mesh. The positions of the vertices and face normals etc. are all
@@ -68,7 +166,9 @@ where
         }
     }
 
-    /// Create a new vertex property of type T.
+    /// Create a new vertex property of type T, with the `default` value.
+    ///
+    /// The default value will be used when new elements are added to the mesh.
     pub fn create_vertex_prop<T>(&mut self, default: T) -> VProperty<T>
     where
         T: Clone + Copy + 'static,
@@ -76,7 +176,9 @@ where
         self.topol.new_vprop(default)
     }
 
-    /// Create a new halfedge property of type T.
+    /// Create a new halfedge property of type T, with the `default` value.
+    ///
+    /// The default value will be used when new elements are added to the mesh.
     pub fn create_halfedge_prop<T>(&mut self, default: T) -> HProperty<T>
     where
         T: Clone + Copy + 'static,
@@ -84,7 +186,9 @@ where
         self.topol.new_hprop(default)
     }
 
-    /// Create a new edge property of type T.
+    /// Create a new edge property of type T, with the `default` value.
+    ///
+    /// The default value will be used when new elements are added to the mesh.
     pub fn create_edge_prop<T>(&mut self, default: T) -> EProperty<T>
     where
         T: Clone + Copy + 'static,
@@ -92,7 +196,9 @@ where
         self.topol.new_eprop(default)
     }
 
-    /// Create a new face property of type T.
+    /// Create a new face property of type T, with the `default` value.
+    ///
+    /// The default value will be used when new elements are added to the mesh.
     pub fn create_face_prop<T>(&mut self, default: T) -> FProperty<T>
     where
         T: Clone + Copy + 'static,
