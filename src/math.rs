@@ -51,18 +51,18 @@ where
                     };
                     (
                         nverts + 1,
-                        x + A::vec_coord(&a, 1) * A::vec_coord(&b, 2),
-                        y + A::vec_coord(&a, 2) * A::vec_coord(&b, 0),
-                        z + A::vec_coord(&a, 0) * A::vec_coord(&b, 1),
+                        x + A::vector_coord(&a, 1) * A::vector_coord(&b, 2),
+                        y + A::vector_coord(&a, 2) * A::vector_coord(&b, 0),
+                        z + A::vector_coord(&a, 0) * A::vector_coord(&b, 1),
                     )
                 },
             )
         };
         if nverts < 3 {
             // Guard against degenerate cases.
-            return A::zero_vec();
+            return A::zero_vector();
         }
-        A::normalized_vec(A::vec([x, y, z]))
+        A::normalized_vec(A::vector([x, y, z]))
     }
 
     /// Compute the face normals. If the face normals property is not available,
@@ -104,14 +104,14 @@ where
                     let h2 = topol.ccw_rotated_halfedge(h);
                     if h2 == h {
                         // Isolated vertex.
-                        return A::zero_vec();
+                        return A::zero_vector();
                     }
                     // Iterate over adjacent pairs of outgoing halfedges.
                     iterator::ccw_rotate_iter(topol, h).zip(iterator::ccw_rotate_iter(topol, h2))
                 }
-                None => return A::zero_vec(),
+                None => return A::zero_vector(),
             }
-            .fold(A::zero_vec(), |total, (h1, h2)| {
+            .fold(A::zero_vector(), |total, (h1, h2)| {
                 // Intentionally not normalizing to account for sector area.
                 total
                     + A::cross_product(
@@ -168,7 +168,7 @@ where
     /// `points` must be the positions of the vertices.
     pub fn calc_face_centroid(&self, f: FH, points: &[A::Vector]) -> A::Vector {
         let (denom, total) = iterator::fv_ccw_iter(self.topology(), f).fold(
-            (A::scalarf64(0.0), A::zero_vec()),
+            (A::scalarf64(0.0), A::zero_vector()),
             |(denom, total): (A::Scalar, A::Vector), v: VH| {
                 (
                     denom + A::scalarf64(1.0),
@@ -191,7 +191,7 @@ where
     /// `fnormals`.
     pub fn calc_vertex_normal_fast(&self, v: VH, fnormals: &[A::Vector]) -> A::Vector {
         A::normalized_vec(
-            iterator::vf_ccw_iter(self.topology(), v).fold(A::zero_vec(), |total, f| {
+            iterator::vf_ccw_iter(self.topology(), v).fold(A::zero_vector(), |total, f| {
                 total + fnormals[f.index() as usize]
             }),
         )
@@ -291,7 +291,7 @@ where
     /// points can be faster than `try_calc_sector_area` by avoiding repeated
     /// borrows.
     pub fn calc_sector_area(&self, h: HH, points: &[A::Vector]) -> A::Scalar {
-        A::vec_length(self.calc_sector_normal(h, points)) * A::scalarf64(0.5)
+        A::vector_length(self.calc_sector_normal(h, points)) * A::scalarf64(0.5)
     }
 
     /// Similar to `calc_sector_area`, except this function attempts to borrow
@@ -313,7 +313,7 @@ where
             .fold(A::scalarf64(0.0), |total, vs| {
                 let p0 = points[vs[0].index() as usize];
                 total
-                    + A::vec_length(A::cross_product(
+                    + A::vector_length(A::cross_product(
                         points[vs[1].index() as usize] - p0,
                         points[vs[2].index() as usize] - p0,
                     )) * A::scalarf64(0.5)
@@ -399,9 +399,9 @@ where
 {
     fn aligned_angle(norm0: A::Vector, norm1: A::Vector, align: A::Vector) -> A::Scalar {
         if A::dot_product(A::cross_product(norm0, norm1), align) >= A::scalarf64(0.0) {
-            A::angle(norm0, norm1)
+            A::vector_angle(norm0, norm1)
         } else {
-            -A::angle(norm0, norm1)
+            -A::vector_angle(norm0, norm1)
         }
     }
 
@@ -496,7 +496,7 @@ where
         let n0 = self.calc_halfedge_vector(h, points);
         let h2 = self.opposite_halfedge(self.prev_halfedge(h));
         let n1 = self.calc_halfedge_vector(h2, points);
-        let angle = A::angle(n0, n1);
+        let angle = A::vector_angle(n0, n1);
         if let Some(f) = self.halfedge_face(self.opposite_halfedge(h)) {
             if self.is_boundary_halfedge(h)
                 && A::dot_product(A::cross_product(n0, n1), face_normals[f.index() as usize])

@@ -6,15 +6,15 @@ where
     type Vector;
     type Scalar;
 
-    fn vec(coords: [Self::Scalar; DIM]) -> Self::Vector;
+    fn vector(coords: [Self::Scalar; DIM]) -> Self::Vector;
 
-    fn zero_vec() -> Self::Vector;
+    fn zero_vector() -> Self::Vector;
 
-    fn vec_coord(v: &Self::Vector, i: usize) -> Self::Scalar;
+    fn vector_coord(v: &Self::Vector, i: usize) -> Self::Scalar;
 }
 
 pub trait VectorLengthAdaptor<const DIM: usize>: Adaptor<DIM> {
-    fn vec_length(v: Self::Vector) -> Self::Scalar;
+    fn vector_length(v: Self::Vector) -> Self::Scalar;
 }
 
 pub trait VectorNormalizeAdaptor<const DIM: usize>: Adaptor<DIM> {
@@ -26,7 +26,7 @@ pub trait DotProductAdaptor<const DIM: usize>: Adaptor<DIM> {
 }
 
 pub trait VectorAngleAdaptor: Adaptor<3> {
-    fn angle(a: Self::Vector, b: Self::Vector) -> Self::Scalar;
+    fn vector_angle(a: Self::Vector, b: Self::Vector) -> Self::Scalar;
 }
 
 pub trait CrossProductAdaptor: Adaptor<3> {
@@ -45,21 +45,21 @@ impl Adaptor<3> for DefaultAdaptorF32 {
     type Vector = glam::Vec3;
     type Scalar = f32;
 
-    fn vec(coords: [Self::Scalar; 3]) -> Self::Vector {
+    fn vector(coords: [Self::Scalar; 3]) -> Self::Vector {
         glam::vec3(coords[0], coords[1], coords[2])
     }
 
-    fn zero_vec() -> Self::Vector {
+    fn zero_vector() -> Self::Vector {
         glam::Vec3::splat(0.)
     }
 
-    fn vec_coord(v: &Self::Vector, i: usize) -> Self::Scalar {
+    fn vector_coord(v: &Self::Vector, i: usize) -> Self::Scalar {
         v[i]
     }
 }
 
 impl VectorLengthAdaptor<3> for DefaultAdaptorF32 {
-    fn vec_length(v: Self::Vector) -> Self::Scalar {
+    fn vector_length(v: Self::Vector) -> Self::Scalar {
         glam::Vec3::length(v)
     }
 }
@@ -77,7 +77,7 @@ impl DotProductAdaptor<3> for DefaultAdaptorF32 {
 }
 
 impl VectorAngleAdaptor for DefaultAdaptorF32 {
-    fn angle(a: Self::Vector, b: Self::Vector) -> Self::Scalar {
+    fn vector_angle(a: Self::Vector, b: Self::Vector) -> Self::Scalar {
         a.angle_between(b)
     }
 }
@@ -104,21 +104,21 @@ impl Adaptor<3> for DefaultAdaptorF64 {
     type Vector = glam::DVec3;
     type Scalar = f64;
 
-    fn vec(coords: [Self::Scalar; 3]) -> Self::Vector {
+    fn vector(coords: [Self::Scalar; 3]) -> Self::Vector {
         glam::dvec3(coords[0], coords[1], coords[2])
     }
 
-    fn zero_vec() -> Self::Vector {
+    fn zero_vector() -> Self::Vector {
         glam::DVec3::splat(0.)
     }
 
-    fn vec_coord(v: &Self::Vector, i: usize) -> Self::Scalar {
+    fn vector_coord(v: &Self::Vector, i: usize) -> Self::Scalar {
         v[i]
     }
 }
 
 impl VectorLengthAdaptor<3> for DefaultAdaptorF64 {
-    fn vec_length(v: Self::Vector) -> Self::Scalar {
+    fn vector_length(v: Self::Vector) -> Self::Scalar {
         glam::DVec3::length(v)
     }
 }
@@ -136,7 +136,7 @@ impl DotProductAdaptor<3> for DefaultAdaptorF64 {
 }
 
 impl VectorAngleAdaptor for DefaultAdaptorF64 {
-    fn angle(a: Self::Vector, b: Self::Vector) -> Self::Scalar {
+    fn vector_angle(a: Self::Vector, b: Self::Vector) -> Self::Scalar {
         a.angle_between(b)
     }
 }

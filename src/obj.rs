@@ -45,7 +45,7 @@ where
             positions.clear();
             positions.extend(
                 mesh.positions.chunks(3).map(|triplet| {
-                    A::vec([triplet[0].into(), triplet[1].into(), triplet[2].into()])
+                    A::vector([triplet[0].into(), triplet[1].into(), triplet[2].into()])
                 }),
             );
             vertices.resize(positions.len(), 0u32.into());

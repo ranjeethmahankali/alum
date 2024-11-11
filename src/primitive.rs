@@ -46,12 +46,12 @@ where
         ];
         let mut qbox = Self::with_capacity(8, 12, 6);
         let _verts = {
-            let mut pos: [A::Vector; 8] = [A::zero_vec(); 8];
+            let mut pos: [A::Vector; 8] = [A::zero_vector(); 8];
             for (i, &(xf, yf, zf)) in BOX_POS.iter().enumerate() {
-                pos[i] = A::vec([
-                    A::vec_coord(if xf { &max } else { &min }, 0),
-                    A::vec_coord(if yf { &max } else { &min }, 1),
-                    A::vec_coord(if zf { &max } else { &min }, 2),
+                pos[i] = A::vector([
+                    A::vector_coord(if xf { &max } else { &min }, 0),
+                    A::vector_coord(if yf { &max } else { &min }, 1),
+                    A::vector_coord(if zf { &max } else { &min }, 2),
                 ]);
             }
             let mut verts: [VH; 8] = [0.into(); 8];
@@ -73,8 +73,8 @@ where
         A: FloatScalarAdaptor<3>,
     {
         Self::quad_box(
-            A::vec([A::scalarf64(0.0); 3]),
-            A::vec([A::scalarf64(1.0); 3]),
+            A::vector([A::scalarf64(0.0); 3]),
+            A::vector([A::scalarf64(1.0); 3]),
         )
     }
 }
@@ -135,10 +135,10 @@ where
             let mut verts: [VH; 4] = [0.into(); 4];
             mesh.add_vertices(
                 &[
-                    A::vec([A::scalarf64(0.0), A::scalarf64(0.0), A::scalarf64(1.0)]),
-                    A::vec([-c, d, -a]),
-                    A::vec([-c, -d, -a]),
-                    A::vec([b, A::scalarf64(0.0), -a]),
+                    A::vector([A::scalarf64(0.0), A::scalarf64(0.0), A::scalarf64(1.0)]),
+                    A::vector([-c, d, -a]),
+                    A::vector([-c, -d, -a]),
+                    A::vector([b, A::scalarf64(0.0), -a]),
                 ],
                 &mut verts,
             )?;
@@ -160,14 +160,14 @@ where
             let mut verts: [VH; 8] = [0.into(); 8];
             mesh.add_vertices(
                 &[
-                    A::vec([-a, -a, -a]),
-                    A::vec([a, -a, -a]),
-                    A::vec([a, a, -a]),
-                    A::vec([-a, a, -a]),
-                    A::vec([-a, -a, a]),
-                    A::vec([a, -a, a]),
-                    A::vec([a, a, a]),
-                    A::vec([-a, a, a]),
+                    A::vector([-a, -a, -a]),
+                    A::vector([a, -a, -a]),
+                    A::vector([a, a, -a]),
+                    A::vector([-a, a, -a]),
+                    A::vector([-a, -a, a]),
+                    A::vector([a, -a, a]),
+                    A::vector([a, a, a]),
+                    A::vector([-a, a, a]),
                 ],
                 &mut verts,
             )?;
@@ -191,12 +191,12 @@ where
             let zero = A::scalarf64(0.0);
             mesh.add_vertices(
                 &[
-                    A::vec([radius, zero, zero]),
-                    A::vec([zero, radius, zero]),
-                    A::vec([-radius, zero, zero]),
-                    A::vec([zero, -radius, zero]),
-                    A::vec([zero, zero, radius]),
-                    A::vec([zero, zero, -radius]),
+                    A::vector([radius, zero, zero]),
+                    A::vector([zero, radius, zero]),
+                    A::vector([-radius, zero, zero]),
+                    A::vector([zero, -radius, zero]),
+                    A::vector([zero, zero, radius]),
+                    A::vector([zero, zero, -radius]),
                 ],
                 &mut verts,
             )?;
@@ -221,62 +221,62 @@ where
             let mut verts: [VH; 12] = [0.into(); 12];
             mesh.add_vertices(
                 &[
-                    A::vec([
+                    A::vector([
                         radius * A::scalarf64(0.0),
                         radius * A::scalarf64(0.5257311121191336),
                         radius * A::scalarf64(-0.8506508083520399),
                     ]),
-                    A::vec([
+                    A::vector([
                         radius * A::scalarf64(0.5257311121191336),
                         radius * A::scalarf64(0.8506508083520399),
                         radius * A::scalarf64(0.0),
                     ]),
-                    A::vec([
+                    A::vector([
                         radius * A::scalarf64(-0.5257311121191336),
                         radius * A::scalarf64(0.8506508083520399),
                         radius * A::scalarf64(0.0),
                     ]),
-                    A::vec([
+                    A::vector([
                         radius * A::scalarf64(0.0),
                         radius * A::scalarf64(0.5257311121191336),
                         radius * A::scalarf64(0.8506508083520399),
                     ]),
-                    A::vec([
+                    A::vector([
                         radius * A::scalarf64(0.0),
                         radius * A::scalarf64(-0.5257311121191336),
                         radius * A::scalarf64(0.8506508083520399),
                     ]),
-                    A::vec([
+                    A::vector([
                         radius * A::scalarf64(-0.8506508083520399),
                         radius * A::scalarf64(0.0),
                         radius * A::scalarf64(0.5257311121191336),
                     ]),
-                    A::vec([
+                    A::vector([
                         radius * A::scalarf64(0.0),
                         radius * A::scalarf64(-0.5257311121191336),
                         radius * A::scalarf64(-0.8506508083520399),
                     ]),
-                    A::vec([
+                    A::vector([
                         radius * A::scalarf64(0.8506508083520399),
                         radius * A::scalarf64(0.0),
                         radius * A::scalarf64(-0.5257311121191336),
                     ]),
-                    A::vec([
+                    A::vector([
                         radius * A::scalarf64(0.8506508083520399),
                         radius * A::scalarf64(0.0),
                         radius * A::scalarf64(0.5257311121191336),
                     ]),
-                    A::vec([
+                    A::vector([
                         radius * A::scalarf64(-0.8506508083520399),
                         radius * A::scalarf64(0.0),
                         radius * A::scalarf64(-0.5257311121191336),
                     ]),
-                    A::vec([
+                    A::vector([
                         radius * A::scalarf64(0.5257311121191336),
                         radius * A::scalarf64(-0.8506508083520399),
                         radius * A::scalarf64(0.0),
                     ]),
-                    A::vec([
+                    A::vector([
                         radius * A::scalarf64(-0.5257311121191336),
                         radius * A::scalarf64(-0.8506508083520399),
                         radius * A::scalarf64(0.0),
@@ -317,102 +317,102 @@ where
             let mut verts: [VH; 20] = [0.into(); 20];
             mesh.add_vertices(
                 &[
-                    A::vec([
+                    A::vector([
                         radius * A::scalarf64(0.0),
                         radius * A::scalarf64(0.9341723589627157),
                         radius * A::scalarf64(-0.35682208977308993),
                     ]),
-                    A::vec([
+                    A::vector([
                         radius * A::scalarf64(0.0),
                         radius * A::scalarf64(0.9341723589627157),
                         radius * A::scalarf64(0.35682208977308993),
                     ]),
-                    A::vec([
+                    A::vector([
                         radius * A::scalarf64(-0.35682208977308993),
                         radius * A::scalarf64(0.0),
                         radius * A::scalarf64(0.9341723589627157),
                     ]),
-                    A::vec([
+                    A::vector([
                         radius * A::scalarf64(0.35682208977308993),
                         radius * A::scalarf64(0.0),
                         radius * A::scalarf64(0.9341723589627157),
                     ]),
-                    A::vec([
+                    A::vector([
                         radius * A::scalarf64(0.35682208977308993),
                         radius * A::scalarf64(0.0),
                         radius * A::scalarf64(-0.9341723589627157),
                     ]),
-                    A::vec([
+                    A::vector([
                         radius * A::scalarf64(-0.35682208977308993),
                         radius * A::scalarf64(0.0),
                         radius * A::scalarf64(-0.9341723589627157),
                     ]),
-                    A::vec([
+                    A::vector([
                         radius * A::scalarf64(0.0),
                         radius * A::scalarf64(-0.9341723589627157),
                         radius * A::scalarf64(0.35682208977308993),
                     ]),
-                    A::vec([
+                    A::vector([
                         radius * A::scalarf64(0.0),
                         radius * A::scalarf64(-0.9341723589627157),
                         radius * A::scalarf64(-0.35682208977308993),
                     ]),
-                    A::vec([
+                    A::vector([
                         radius * A::scalarf64(-0.9341723589627157),
                         radius * A::scalarf64(0.35682208977308993),
                         radius * A::scalarf64(0.0),
                     ]),
-                    A::vec([
+                    A::vector([
                         radius * A::scalarf64(-0.9341723589627157),
                         radius * A::scalarf64(-0.35682208977308993),
                         radius * A::scalarf64(0.0),
                     ]),
-                    A::vec([
+                    A::vector([
                         radius * A::scalarf64(0.9341723589627157),
                         radius * A::scalarf64(0.35682208977308993),
                         radius * A::scalarf64(0.0),
                     ]),
-                    A::vec([
+                    A::vector([
                         radius * A::scalarf64(0.9341723589627157),
                         radius * A::scalarf64(-0.35682208977308993),
                         radius * A::scalarf64(0.0),
                     ]),
-                    A::vec([
+                    A::vector([
                         radius * A::scalarf64(-0.5773502691896257),
                         radius * A::scalarf64(0.5773502691896257),
                         radius * A::scalarf64(0.5773502691896257),
                     ]),
-                    A::vec([
+                    A::vector([
                         radius * A::scalarf64(0.5773502691896257),
                         radius * A::scalarf64(0.5773502691896257),
                         radius * A::scalarf64(0.5773502691896257),
                     ]),
-                    A::vec([
+                    A::vector([
                         radius * A::scalarf64(-0.5773502691896257),
                         radius * A::scalarf64(0.5773502691896257),
                         radius * A::scalarf64(-0.5773502691896257),
                     ]),
-                    A::vec([
+                    A::vector([
                         radius * A::scalarf64(0.5773502691896257),
                         radius * A::scalarf64(0.5773502691896257),
                         radius * A::scalarf64(-0.5773502691896257),
                     ]),
-                    A::vec([
+                    A::vector([
                         radius * A::scalarf64(-0.5773502691896257),
                         radius * A::scalarf64(-0.5773502691896257),
                         radius * A::scalarf64(-0.5773502691896257),
                     ]),
-                    A::vec([
+                    A::vector([
                         radius * A::scalarf64(0.5773502691896257),
                         radius * A::scalarf64(-0.5773502691896257),
                         radius * A::scalarf64(-0.5773502691896257),
                     ]),
-                    A::vec([
+                    A::vector([
                         radius * A::scalarf64(-0.5773502691896257),
                         radius * A::scalarf64(-0.5773502691896257),
                         radius * A::scalarf64(0.5773502691896257),
                     ]),
-                    A::vec([
+                    A::vector([
                         radius * A::scalarf64(0.5773502691896257),
                         radius * A::scalarf64(-0.5773502691896257),
                         radius * A::scalarf64(0.5773502691896257),
