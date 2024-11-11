@@ -80,9 +80,9 @@ where
     }
 }
 
-impl<VecT> PolyMeshT<VecT, 3>
+impl<VecT, const DIM: usize> PolyMeshT<VecT, DIM>
 where
-    VecT: TVec<3> + Add<Output = VecT> + Div<VecT::Scalar, Output = VecT>,
+    VecT: TVec<DIM> + Add<Output = VecT> + Div<VecT::Scalar, Output = VecT>,
     VecT::Scalar: FromFloat + Add<Output = VecT::Scalar>,
 {
     pub fn dual_mesh(&self) -> Result<Self, Error> {
