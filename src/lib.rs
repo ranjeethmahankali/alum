@@ -1,16 +1,15 @@
-pub mod error;
-pub mod math;
-pub mod mesh;
-pub mod obj;
-pub mod property;
-pub mod status;
-pub mod topol;
-
 mod edit;
 mod element;
+mod error;
 mod iterator;
 mod macros;
+mod math;
+mod mesh;
+mod obj;
 mod primitive;
+mod property;
+mod status;
+mod topol;
 
 #[cfg(feature = "use_glam")]
 mod use_glam;
