@@ -16,10 +16,10 @@ mod macros;
 mod use_glam;
 
 #[cfg(feature = "use_glam")]
-pub type PolyMeshF32 = mesh::PolyMeshT<3, use_glam::DefaultAdaptorF32>;
+pub type PolyMeshF32 = mesh::PolyMeshT<3, use_glam::BuiltInAdaptorF32>;
 
 #[cfg(feature = "use_glam")]
-pub type PolyMeshF64 = mesh::PolyMeshT<3, use_glam::DefaultAdaptorF64>;
+pub type PolyMeshF64 = mesh::PolyMeshT<3, use_glam::BuiltInAdaptorF64>;
 
 pub use element::{Handle, EH, FH, HH, VH};
 pub use mesh::PolyMeshT;

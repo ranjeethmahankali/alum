@@ -3,9 +3,9 @@ use crate::mesh::{
     VectorLengthAdaptor, VectorNormalizeAdaptor,
 };
 
-pub struct DefaultAdaptorF32 {}
+pub struct BuiltInAdaptorF32 {}
 
-impl Adaptor<3> for DefaultAdaptorF32 {
+impl Adaptor<3> for BuiltInAdaptorF32 {
     type Vector = glam::Vec3;
     type Scalar = f32;
 
@@ -22,37 +22,37 @@ impl Adaptor<3> for DefaultAdaptorF32 {
     }
 }
 
-impl VectorLengthAdaptor<3> for DefaultAdaptorF32 {
+impl VectorLengthAdaptor<3> for BuiltInAdaptorF32 {
     fn vector_length(v: Self::Vector) -> Self::Scalar {
         glam::Vec3::length(v)
     }
 }
 
-impl VectorNormalizeAdaptor<3> for DefaultAdaptorF32 {
+impl VectorNormalizeAdaptor<3> for BuiltInAdaptorF32 {
     fn normalized_vec(v: Self::Vector) -> Self::Vector {
         v.normalize()
     }
 }
 
-impl DotProductAdaptor<3> for DefaultAdaptorF32 {
+impl DotProductAdaptor<3> for BuiltInAdaptorF32 {
     fn dot_product(a: Self::Vector, b: Self::Vector) -> Self::Scalar {
         a.dot(b)
     }
 }
 
-impl VectorAngleAdaptor for DefaultAdaptorF32 {
+impl VectorAngleAdaptor for BuiltInAdaptorF32 {
     fn vector_angle(a: Self::Vector, b: Self::Vector) -> Self::Scalar {
         a.angle_between(b)
     }
 }
 
-impl CrossProductAdaptor for DefaultAdaptorF32 {
+impl CrossProductAdaptor for BuiltInAdaptorF32 {
     fn cross_product(a: Self::Vector, b: Self::Vector) -> Self::Vector {
         a.cross(b)
     }
 }
 
-impl FloatScalarAdaptor<3> for DefaultAdaptorF32 {
+impl FloatScalarAdaptor<3> for BuiltInAdaptorF32 {
     fn scalarf32(val: f32) -> Self::Scalar {
         val
     }
@@ -62,9 +62,9 @@ impl FloatScalarAdaptor<3> for DefaultAdaptorF32 {
     }
 }
 
-pub struct DefaultAdaptorF64 {}
+pub struct BuiltInAdaptorF64 {}
 
-impl Adaptor<3> for DefaultAdaptorF64 {
+impl Adaptor<3> for BuiltInAdaptorF64 {
     type Vector = glam::DVec3;
     type Scalar = f64;
 
@@ -81,37 +81,37 @@ impl Adaptor<3> for DefaultAdaptorF64 {
     }
 }
 
-impl VectorLengthAdaptor<3> for DefaultAdaptorF64 {
+impl VectorLengthAdaptor<3> for BuiltInAdaptorF64 {
     fn vector_length(v: Self::Vector) -> Self::Scalar {
         glam::DVec3::length(v)
     }
 }
 
-impl VectorNormalizeAdaptor<3> for DefaultAdaptorF64 {
+impl VectorNormalizeAdaptor<3> for BuiltInAdaptorF64 {
     fn normalized_vec(v: Self::Vector) -> Self::Vector {
         v.normalize()
     }
 }
 
-impl DotProductAdaptor<3> for DefaultAdaptorF64 {
+impl DotProductAdaptor<3> for BuiltInAdaptorF64 {
     fn dot_product(a: Self::Vector, b: Self::Vector) -> Self::Scalar {
         a.dot(b)
     }
 }
 
-impl VectorAngleAdaptor for DefaultAdaptorF64 {
+impl VectorAngleAdaptor for BuiltInAdaptorF64 {
     fn vector_angle(a: Self::Vector, b: Self::Vector) -> Self::Scalar {
         a.angle_between(b)
     }
 }
 
-impl CrossProductAdaptor for DefaultAdaptorF64 {
+impl CrossProductAdaptor for BuiltInAdaptorF64 {
     fn cross_product(a: Self::Vector, b: Self::Vector) -> Self::Vector {
         a.cross(b)
     }
 }
 
-impl FloatScalarAdaptor<3> for DefaultAdaptorF64 {
+impl FloatScalarAdaptor<3> for BuiltInAdaptorF64 {
     fn scalarf32(val: f32) -> Self::Scalar {
         val as f64
     }
