@@ -12,13 +12,7 @@ mod status;
 mod topol;
 
 #[cfg(feature = "use_glam")]
-mod use_glam;
-
-#[cfg(feature = "use_glam")]
-pub type PolyMeshF32 = mesh::PolyMeshT<3, use_glam::BuiltInAdaptorF32>;
-
-#[cfg(feature = "use_glam")]
-pub type PolyMeshF64 = mesh::PolyMeshT<3, use_glam::BuiltInAdaptorF64>;
+pub mod alum_glam;
 
 pub use element::{Handle, EH, FH, HH, VH};
 pub use error::Error;

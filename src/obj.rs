@@ -81,7 +81,7 @@ where
 #[cfg(test)]
 #[cfg(feature = "use_glam")]
 mod test {
-    use crate::PolyMeshF32;
+    use crate::alum_glam::PolyMeshF32;
     use std::path::PathBuf;
 
     fn bunny_mesh() -> PolyMeshF32 {

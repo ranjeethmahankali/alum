@@ -441,7 +441,7 @@ where
 mod test {
     use core::f32;
 
-    use crate::{macros::assert_f32_eq, PolyMeshF32};
+    use crate::{alum_glam::PolyMeshF32, macros::assert_f32_eq};
 
     #[test]
     fn t_quad_box() {

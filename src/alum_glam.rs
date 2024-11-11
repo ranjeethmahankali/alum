@@ -1,5 +1,5 @@
 use crate::mesh::{
-    Adaptor, CrossProductAdaptor, DotProductAdaptor, FloatScalarAdaptor, VectorAngleAdaptor,
+    self, Adaptor, CrossProductAdaptor, DotProductAdaptor, FloatScalarAdaptor, VectorAngleAdaptor,
     VectorLengthAdaptor, VectorNormalizeAdaptor,
 };
 
@@ -120,3 +120,6 @@ impl FloatScalarAdaptor<3> for BuiltInAdaptorF64 {
         val
     }
 }
+
+pub type PolyMeshF32 = mesh::PolyMeshT<3, BuiltInAdaptorF32>;
+pub type PolyMeshF64 = mesh::PolyMeshT<3, BuiltInAdaptorF64>;

@@ -523,7 +523,7 @@ where
 mod test {
     use core::f32;
 
-    use crate::{error::Error, macros::assert_f32_eq, PolyMeshF32};
+    use crate::{alum_glam::PolyMeshF32, error::Error, macros::assert_f32_eq};
 
     #[test]
     fn t_box_face_normals() {
