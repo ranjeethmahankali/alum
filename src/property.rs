@@ -140,33 +140,6 @@ where
     }
 }
 
-// 'static lifetime enforces the data stored inside properties is fully owned
-// and doesn't contain any weird references.
-pub trait TPropData: Default + Clone + Copy + 'static {}
-
-// Unsigned integers.
-impl TPropData for u8 {}
-impl TPropData for u16 {}
-impl TPropData for u32 {}
-impl TPropData for u64 {}
-impl TPropData for u128 {}
-impl TPropData for usize {}
-// Signed integers.
-impl TPropData for i8 {}
-impl TPropData for i16 {}
-impl TPropData for i32 {}
-impl TPropData for i64 {}
-impl TPropData for i128 {}
-impl TPropData for isize {}
-// Floating point types.
-impl TPropData for f32 {}
-impl TPropData for f64 {}
-// Other types.
-impl TPropData for bool {}
-impl TPropData for char {}
-impl TPropData for glam::Vec3 {}
-impl TPropData for glam::DVec3 {}
-
 trait GenericProperty<H>
 where
     H: Handle,
@@ -191,26 +164,41 @@ where
 }
 
 #[derive(Clone)]
-pub struct Property<H: Handle, T: TPropData> {
+pub struct Property<H, T>
+where
+    H: Handle,
+    T: Clone + Copy,
+{
     data: Rc<RefCell<Vec<T>>>,
+    default: T,
     _phantom: PhantomData<H>,
 }
 
-impl<H: Handle, T: TPropData> Property<H, T> {
-    pub(crate) fn new(container: &mut PropertyContainer<H>) -> Self {
+impl<H, T> Property<H, T>
+where
+    H: Handle,
+    T: Clone + Copy + 'static,
+{
+    pub(crate) fn new(container: &mut PropertyContainer<H>, default: T) -> Self {
         let prop = Property {
-            data: Rc::new(RefCell::new(vec![T::default(); container.len()])),
+            data: Rc::new(RefCell::new(vec![default; container.len()])),
+            default,
             _phantom: PhantomData,
         };
         container.push_property(prop.generic_ref());
         prop
     }
 
-    pub(crate) fn with_capacity(n: usize, container: &mut PropertyContainer<H>) -> Self {
+    pub(crate) fn with_capacity(
+        n: usize,
+        container: &mut PropertyContainer<H>,
+        default: T,
+    ) -> Self {
         let mut buf = Vec::with_capacity(n);
-        buf.resize(container.len(), T::default());
+        buf.resize(container.len(), default);
         let prop = Property {
             data: Rc::new(RefCell::new(buf)),
+            default,
             _phantom: PhantomData,
         };
         container.push_property(prop.generic_ref());
@@ -220,6 +208,7 @@ impl<H: Handle, T: TPropData> Property<H, T> {
     fn generic_ref(&self) -> Box<dyn GenericProperty<H>> {
         Box::new(PropertyRef {
             data: Rc::downgrade(&self.data),
+            default: self.default,
         })
     }
 
@@ -254,25 +243,24 @@ impl<H: Handle, T: TPropData> Property<H, T> {
     }
 }
 
-impl<H: Handle, T: TPropData> Default for Property<H, T> {
-    fn default() -> Self {
-        Self {
-            data: Default::default(),
-            _phantom: PhantomData,
-        }
-    }
-}
-
 pub type VProperty<T> = Property<VH, T>;
 pub type HProperty<T> = Property<HH, T>;
 pub type EProperty<T> = Property<EH, T>;
 pub type FProperty<T> = Property<FH, T>;
 
-struct PropertyRef<T: TPropData> {
+struct PropertyRef<T>
+where
+    T: Clone + Copy,
+{
     data: Weak<RefCell<Vec<T>>>,
+    default: T,
 }
 
-impl<T: TPropData, H: Handle> GenericProperty<H> for PropertyRef<T> {
+impl<H, T> GenericProperty<H> for PropertyRef<T>
+where
+    T: Clone + Copy,
+    H: Handle,
+{
     fn reserve(&mut self, n: usize) -> Result<(), Error> {
         if let Some(prop) = self.data.upgrade() {
             prop.try_borrow_mut()
@@ -286,7 +274,7 @@ impl<T: TPropData, H: Handle> GenericProperty<H> for PropertyRef<T> {
         if let Some(prop) = self.data.upgrade() {
             prop.try_borrow_mut()
                 .map_err(|_| Error::BorrowedPropertyAccess)?
-                .resize(n, T::default());
+                .resize(n, self.default);
         }
         Ok(())
     }
@@ -304,7 +292,7 @@ impl<T: TPropData, H: Handle> GenericProperty<H> for PropertyRef<T> {
         if let Some(prop) = self.data.upgrade() {
             prop.try_borrow_mut()
                 .map_err(|_| Error::BorrowedPropertyAccess)?
-                .push(T::default());
+                .push(self.default);
         }
         Ok(())
     }
@@ -315,7 +303,7 @@ impl<T: TPropData, H: Handle> GenericProperty<H> for PropertyRef<T> {
                 .try_borrow_mut()
                 .map_err(|_| Error::BorrowedPropertyAccess)?;
             let prop: &mut Vec<T> = &mut prop;
-            prop.resize(prop.len() + num, T::default());
+            prop.resize(prop.len() + num, self.default);
         }
         Ok(())
     }
@@ -374,10 +362,10 @@ mod test {
         let mut container = PropertyContainer::new();
         assert_eq!(container.props.len(), 0);
         {
-            let _prop0 = VProperty::<u32>::new(&mut container);
+            let _prop0 = VProperty::<u32>::new(&mut container, 0);
             assert_eq!(container.props.len(), 1);
             {
-                let _prop1 = VProperty::<u16>::new(&mut container);
+                let _prop1 = VProperty::<u16>::new(&mut container, 0);
                 assert_eq!(container.props.len(), 2);
             }
             assert_eq!(container.props.len(), 2);
@@ -403,7 +391,7 @@ mod test {
         );
         container.garbage_collection();
         assert_eq!(container.props.len(), 0);
-        let mut _prop = Some(VProperty::<u8>::new(&mut container));
+        let mut _prop = Some(VProperty::<u8>::new(&mut container, 0));
         assert_eq!(container.props.len(), 1);
         _prop = None;
         assert_eq!(container.props.len(), 1);

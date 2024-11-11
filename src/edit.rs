@@ -1,11 +1,11 @@
 use crate::{
+    adaptor::Adaptor,
     element::{Handle, EH, FH, HH, VH},
     error::Error,
     iterator,
     mesh::PolyMeshT,
     status::Status,
     topol::TopolCache,
-    vector::TVec,
     Topology,
 };
 
@@ -367,9 +367,9 @@ impl Topology {
     }
 }
 
-impl<VecT, const DIM: usize> PolyMeshT<VecT, DIM>
+impl<const DIM: usize, A> PolyMeshT<DIM, A>
 where
-    VecT: TVec<DIM>,
+    A: Adaptor<DIM>,
 {
     /// Check if it is safe to collapse an edge.
     ///
@@ -437,7 +437,12 @@ where
     /// A new vertex is inserted at the given position and is used to split the
     /// given edge. A new edge is created during this split. If successful, a
     /// tuple containing the new vertex and the new edge is returned.
-    pub fn split_edge(&mut self, e: EH, pos: VecT, copy_props: bool) -> Result<(VH, EH), Error> {
+    pub fn split_edge(
+        &mut self,
+        e: EH,
+        pos: A::Vector,
+        copy_props: bool,
+    ) -> Result<(VH, EH), Error> {
         let v = self.add_vertex(pos)?;
         let enew = self.topol.split_edge(e, v, copy_props)?;
         Ok((v, enew))
@@ -739,9 +744,9 @@ mod test {
                 .expect("Cannot find halfedge"),
         );
         // Set properties.
-        let mut eprop = qbox.new_eprop::<usize>();
+        let mut eprop = qbox.new_eprop::<usize>(0);
         eprop.set(e, 123).expect("Cannot set property");
-        let mut hprop = qbox.new_hprop::<usize>();
+        let mut hprop = qbox.new_hprop::<usize>(0);
         hprop
             .set(qbox.edge_halfedge(e, true), 234)
             .expect("Cannot set property");

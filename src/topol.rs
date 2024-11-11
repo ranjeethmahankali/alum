@@ -2,7 +2,7 @@ use crate::{
     element::{Edge, Face, Halfedge, Handle, Vertex, EH, FH, HH, VH},
     error::Error,
     iterator,
-    property::{EProperty, FProperty, HProperty, PropertyContainer, TPropData, VProperty},
+    property::{EProperty, FProperty, HProperty, PropertyContainer, VProperty},
     status::Status,
 };
 use std::cell::RefMut;
@@ -68,10 +68,10 @@ impl Topology {
             PropertyContainer::default(),
         );
         let (vstatus, hstatus, estatus, fstatus) = (
-            VProperty::new(&mut vprops),
-            HProperty::new(&mut hprops),
-            EProperty::new(&mut eprops),
-            FProperty::new(&mut fprops),
+            VProperty::new(&mut vprops, Default::default()),
+            HProperty::new(&mut hprops, Default::default()),
+            EProperty::new(&mut eprops, Default::default()),
+            FProperty::new(&mut fprops, Default::default()),
         );
         Topology {
             vertices: Vec::new(),
@@ -96,10 +96,10 @@ impl Topology {
             PropertyContainer::default(),
         );
         let (vstatus, hstatus, estatus, fstatus) = (
-            VProperty::with_capacity(nverts, &mut vprops),
-            HProperty::with_capacity(nedges * 2, &mut hprops),
-            EProperty::with_capacity(nedges, &mut eprops),
-            FProperty::with_capacity(nfaces, &mut fprops),
+            VProperty::with_capacity(nverts, &mut vprops, Default::default()),
+            HProperty::with_capacity(nedges * 2, &mut hprops, Default::default()),
+            EProperty::with_capacity(nedges, &mut eprops, Default::default()),
+            FProperty::with_capacity(nfaces, &mut fprops, Default::default()),
         );
         Topology {
             vertices: Vec::with_capacity(nverts),
@@ -170,24 +170,39 @@ impl Topology {
         self.fstatus.get_mut(f)
     }
 
-    pub fn new_vprop<T: TPropData>(&mut self) -> VProperty<T> {
-        VProperty::<T>::new(&mut self.vprops)
+    pub fn new_vprop<T>(&mut self, default: T) -> VProperty<T>
+    where
+        T: Clone + Copy + 'static,
+    {
+        VProperty::<T>::new(&mut self.vprops, default)
     }
 
-    pub fn new_hprop<T: TPropData>(&mut self) -> HProperty<T> {
-        HProperty::<T>::new(&mut self.hprops)
+    pub fn new_hprop<T>(&mut self, default: T) -> HProperty<T>
+    where
+        T: Clone + Copy + 'static,
+    {
+        HProperty::<T>::new(&mut self.hprops, default)
     }
 
-    pub fn new_eprop<T: TPropData>(&mut self) -> EProperty<T> {
-        EProperty::<T>::new(&mut self.eprops)
+    pub fn new_eprop<T>(&mut self, default: T) -> EProperty<T>
+    where
+        T: Clone + Copy + 'static,
+    {
+        EProperty::<T>::new(&mut self.eprops, default)
     }
 
-    pub fn new_fprop<T: TPropData>(&mut self) -> FProperty<T> {
-        FProperty::<T>::new(&mut self.fprops)
+    pub fn new_fprop<T>(&mut self, default: T) -> FProperty<T>
+    where
+        T: Clone + Copy + 'static,
+    {
+        FProperty::<T>::new(&mut self.fprops, default)
     }
 
-    pub fn new_vprop_with_capacity<T: TPropData>(&mut self, n: usize) -> VProperty<T> {
-        VProperty::<T>::with_capacity(n, &mut self.vprops)
+    pub fn new_vprop_with_capacity<T>(&mut self, n: usize, default: T) -> VProperty<T>
+    where
+        T: Clone + Copy + 'static,
+    {
+        VProperty::<T>::with_capacity(n, &mut self.vprops, default)
     }
 
     pub fn is_valid_vertex(&self, v: VH) -> bool {

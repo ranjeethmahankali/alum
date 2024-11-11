@@ -1,16 +1,15 @@
 use std::ops::{Add, Div, Mul, Neg};
 
 use crate::{
+    adaptor::{Adaptor, FloatScalarAdaptor},
     element::{Handle, VH},
     error::Error,
     mesh::PolyMeshT,
-    property::TPropData,
-    vector::{FromFloat, TVec},
 };
 
-impl<VecT> PolyMeshT<VecT, 3>
+impl<A> PolyMeshT<3, A>
 where
-    VecT: TVec<3>,
+    A: Adaptor<3>,
 {
     /// Makes a box with the following topology, spanning from the min point to
     /// the max point.
@@ -26,7 +25,7 @@ where
     ///    |/          |/
     ///    0-----------1
     ///  ```
-    pub fn quad_box(min: VecT, max: VecT) -> Result<Self, Error> {
+    pub fn quad_box(min: A::Vector, max: A::Vector) -> Result<Self, Error> {
         const BOX_POS: [(bool, bool, bool); 8] = [
             (false, false, false),
             (true, false, false),
@@ -47,12 +46,12 @@ where
         ];
         let mut qbox = Self::with_capacity(8, 12, 6);
         let _verts = {
-            let mut pos: [VecT; 8] = [VecT::zero(); 8];
+            let mut pos: [A::Vector; 8] = [A::zero_vector(); 8];
             for (i, &(xf, yf, zf)) in BOX_POS.iter().enumerate() {
-                pos[i] = VecT::new([
-                    if xf { max.coord(0) } else { min.coord(0) },
-                    if yf { max.coord(1) } else { min.coord(1) },
-                    if zf { max.coord(2) } else { min.coord(2) },
+                pos[i] = A::vector([
+                    A::vector_coord(if xf { &max } else { &min }, 0),
+                    A::vector_coord(if yf { &max } else { &min }, 1),
+                    A::vector_coord(if zf { &max } else { &min }, 2),
                 ]);
             }
             let mut verts: [VH; 8] = [0.into(); 8];
@@ -71,19 +70,20 @@ where
     /// spanning from the origin to (1, 1, 1).
     pub fn unit_box() -> Result<Self, Error>
     where
-        VecT::Scalar: FromFloat + TPropData,
+        A: FloatScalarAdaptor<3>,
     {
         Self::quad_box(
-            VecT::new([VecT::Scalar::from_f64(0.); 3]),
-            VecT::new([VecT::Scalar::from_f64(1.); 3]),
+            A::vector([A::scalarf64(0.0); 3]),
+            A::vector([A::scalarf64(1.0); 3]),
         )
     }
 }
 
-impl<VecT, const DIM: usize> PolyMeshT<VecT, DIM>
+impl<const DIM: usize, A> PolyMeshT<DIM, A>
 where
-    VecT: TVec<DIM> + Add<Output = VecT> + Div<VecT::Scalar, Output = VecT>,
-    VecT::Scalar: FromFloat + Add<Output = VecT::Scalar>,
+    A: Adaptor<DIM> + FloatScalarAdaptor<DIM>,
+    A::Scalar: Add<Output = A::Scalar>,
+    A::Vector: Add<Output = A::Vector> + Div<A::Scalar, Output = A::Vector>,
 {
     /// Create a mesh that is the dual of this mesh.
     ///
@@ -118,31 +118,27 @@ where
 }
 
 /// Platonic solids.
-impl<VecT> PolyMeshT<VecT, 3>
+impl<A> PolyMeshT<3, A>
 where
-    VecT: TVec<3>,
-    VecT::Scalar: TPropData + FromFloat + Mul<Output = VecT::Scalar> + Neg<Output = VecT::Scalar>,
+    A: Adaptor<3> + FloatScalarAdaptor<3>,
+    A::Scalar: Mul<Output = A::Scalar> + Neg<Output = A::Scalar>,
 {
     /// Create a tetrahedron centered at the origin, with a unit
     /// circumradius. The vertices of the mesh will lie on the unit sphere.
-    pub fn tetrahedron(radius: VecT::Scalar) -> Result<Self, Error> {
+    pub fn tetrahedron(radius: A::Scalar) -> Result<Self, Error> {
         let mut mesh = Self::with_capacity(4, 6, 4);
-        let a = radius * VecT::Scalar::from_f64(1.0f64 / 3.0);
-        let b = radius * VecT::Scalar::from_f64((8.0 / 9.0f64).sqrt());
-        let c = radius * VecT::Scalar::from_f64((2.0 / 9.0f64).sqrt());
-        let d = radius * VecT::Scalar::from_f64((2.0 / 3.0f64).sqrt());
+        let a = radius * A::scalarf64(1.0f64 / 3.0);
+        let b = radius * A::scalarf64((8.0 / 9.0f64).sqrt());
+        let c = radius * A::scalarf64((2.0 / 9.0f64).sqrt());
+        let d = radius * A::scalarf64((2.0 / 3.0f64).sqrt());
         let _verts = {
             let mut verts: [VH; 4] = [0.into(); 4];
             mesh.add_vertices(
                 &[
-                    VecT::new([
-                        VecT::Scalar::from_f64(0.0),
-                        VecT::Scalar::from_f64(0.0),
-                        VecT::Scalar::from_f64(1.0),
-                    ]),
-                    VecT::new([-c, d, -a]),
-                    VecT::new([-c, -d, -a]),
-                    VecT::new([b, VecT::Scalar::from_f64(0.0), -a]),
+                    A::vector([A::scalarf64(0.0), A::scalarf64(0.0), A::scalarf64(1.0)]),
+                    A::vector([-c, d, -a]),
+                    A::vector([-c, -d, -a]),
+                    A::vector([b, A::scalarf64(0.0), -a]),
                 ],
                 &mut verts,
             )?;
@@ -157,21 +153,21 @@ where
 
     /// Create a hexehedron centered at the origin, with a unit
     /// circumradius. The vertices of the mesh will lie on the unit sphere.
-    pub fn hexahedron(radius: VecT::Scalar) -> Result<Self, Error> {
-        let a = radius * VecT::Scalar::from_f64(1.0f64 / 3.0f64.sqrt());
+    pub fn hexahedron(radius: A::Scalar) -> Result<Self, Error> {
+        let a = radius * A::scalarf64(1.0f64 / 3.0f64.sqrt());
         let mut mesh = Self::with_capacity(8, 12, 6);
         let _verts = {
             let mut verts: [VH; 8] = [0.into(); 8];
             mesh.add_vertices(
                 &[
-                    VecT::new([-a, -a, -a]),
-                    VecT::new([a, -a, -a]),
-                    VecT::new([a, a, -a]),
-                    VecT::new([-a, a, -a]),
-                    VecT::new([-a, -a, a]),
-                    VecT::new([a, -a, a]),
-                    VecT::new([a, a, a]),
-                    VecT::new([-a, a, a]),
+                    A::vector([-a, -a, -a]),
+                    A::vector([a, -a, -a]),
+                    A::vector([a, a, -a]),
+                    A::vector([-a, a, -a]),
+                    A::vector([-a, -a, a]),
+                    A::vector([a, -a, a]),
+                    A::vector([a, a, a]),
+                    A::vector([-a, a, a]),
                 ],
                 &mut verts,
             )?;
@@ -188,19 +184,19 @@ where
 
     /// Create an octahedron centered at the origin, with a unit
     /// circumradius. The vertices of the mesh will lie on the unit sphere.
-    pub fn octahedron(radius: VecT::Scalar) -> Result<Self, Error> {
+    pub fn octahedron(radius: A::Scalar) -> Result<Self, Error> {
         let mut mesh = Self::with_capacity(6, 12, 8);
         let _verts = {
             let mut verts: [VH; 6] = [0.into(); 6];
-            let zero = VecT::Scalar::from_f64(0.);
+            let zero = A::scalarf64(0.0);
             mesh.add_vertices(
                 &[
-                    VecT::new([radius, zero, zero]),
-                    VecT::new([zero, radius, zero]),
-                    VecT::new([-radius, zero, zero]),
-                    VecT::new([zero, -radius, zero]),
-                    VecT::new([zero, zero, radius]),
-                    VecT::new([zero, zero, -radius]),
+                    A::vector([radius, zero, zero]),
+                    A::vector([zero, radius, zero]),
+                    A::vector([-radius, zero, zero]),
+                    A::vector([zero, -radius, zero]),
+                    A::vector([zero, zero, radius]),
+                    A::vector([zero, zero, -radius]),
                 ],
                 &mut verts,
             )?;
@@ -219,71 +215,71 @@ where
 
     /// Create an icosahedron centered at the origin, with a unit
     /// circumradius. The vertices of the mesh will lie on the unit sphere.
-    pub fn icosahedron(radius: VecT::Scalar) -> Result<Self, Error> {
+    pub fn icosahedron(radius: A::Scalar) -> Result<Self, Error> {
         let mut mesh = Self::with_capacity(12, 30, 20);
         let _verts = {
             let mut verts: [VH; 12] = [0.into(); 12];
             mesh.add_vertices(
                 &[
-                    VecT::new([
-                        radius * VecT::Scalar::from_f64(0.0),
-                        radius * VecT::Scalar::from_f64(0.5257311121191336),
-                        radius * VecT::Scalar::from_f64(-0.8506508083520399),
+                    A::vector([
+                        radius * A::scalarf64(0.0),
+                        radius * A::scalarf64(0.5257311121191336),
+                        radius * A::scalarf64(-0.8506508083520399),
                     ]),
-                    VecT::new([
-                        radius * VecT::Scalar::from_f64(0.5257311121191336),
-                        radius * VecT::Scalar::from_f64(0.8506508083520399),
-                        radius * VecT::Scalar::from_f64(0.0),
+                    A::vector([
+                        radius * A::scalarf64(0.5257311121191336),
+                        radius * A::scalarf64(0.8506508083520399),
+                        radius * A::scalarf64(0.0),
                     ]),
-                    VecT::new([
-                        radius * VecT::Scalar::from_f64(-0.5257311121191336),
-                        radius * VecT::Scalar::from_f64(0.8506508083520399),
-                        radius * VecT::Scalar::from_f64(0.0),
+                    A::vector([
+                        radius * A::scalarf64(-0.5257311121191336),
+                        radius * A::scalarf64(0.8506508083520399),
+                        radius * A::scalarf64(0.0),
                     ]),
-                    VecT::new([
-                        radius * VecT::Scalar::from_f64(0.0),
-                        radius * VecT::Scalar::from_f64(0.5257311121191336),
-                        radius * VecT::Scalar::from_f64(0.8506508083520399),
+                    A::vector([
+                        radius * A::scalarf64(0.0),
+                        radius * A::scalarf64(0.5257311121191336),
+                        radius * A::scalarf64(0.8506508083520399),
                     ]),
-                    VecT::new([
-                        radius * VecT::Scalar::from_f64(0.0),
-                        radius * VecT::Scalar::from_f64(-0.5257311121191336),
-                        radius * VecT::Scalar::from_f64(0.8506508083520399),
+                    A::vector([
+                        radius * A::scalarf64(0.0),
+                        radius * A::scalarf64(-0.5257311121191336),
+                        radius * A::scalarf64(0.8506508083520399),
                     ]),
-                    VecT::new([
-                        radius * VecT::Scalar::from_f64(-0.8506508083520399),
-                        radius * VecT::Scalar::from_f64(0.0),
-                        radius * VecT::Scalar::from_f64(0.5257311121191336),
+                    A::vector([
+                        radius * A::scalarf64(-0.8506508083520399),
+                        radius * A::scalarf64(0.0),
+                        radius * A::scalarf64(0.5257311121191336),
                     ]),
-                    VecT::new([
-                        radius * VecT::Scalar::from_f64(0.0),
-                        radius * VecT::Scalar::from_f64(-0.5257311121191336),
-                        radius * VecT::Scalar::from_f64(-0.8506508083520399),
+                    A::vector([
+                        radius * A::scalarf64(0.0),
+                        radius * A::scalarf64(-0.5257311121191336),
+                        radius * A::scalarf64(-0.8506508083520399),
                     ]),
-                    VecT::new([
-                        radius * VecT::Scalar::from_f64(0.8506508083520399),
-                        radius * VecT::Scalar::from_f64(0.0),
-                        radius * VecT::Scalar::from_f64(-0.5257311121191336),
+                    A::vector([
+                        radius * A::scalarf64(0.8506508083520399),
+                        radius * A::scalarf64(0.0),
+                        radius * A::scalarf64(-0.5257311121191336),
                     ]),
-                    VecT::new([
-                        radius * VecT::Scalar::from_f64(0.8506508083520399),
-                        radius * VecT::Scalar::from_f64(0.0),
-                        radius * VecT::Scalar::from_f64(0.5257311121191336),
+                    A::vector([
+                        radius * A::scalarf64(0.8506508083520399),
+                        radius * A::scalarf64(0.0),
+                        radius * A::scalarf64(0.5257311121191336),
                     ]),
-                    VecT::new([
-                        radius * VecT::Scalar::from_f64(-0.8506508083520399),
-                        radius * VecT::Scalar::from_f64(0.0),
-                        radius * VecT::Scalar::from_f64(-0.5257311121191336),
+                    A::vector([
+                        radius * A::scalarf64(-0.8506508083520399),
+                        radius * A::scalarf64(0.0),
+                        radius * A::scalarf64(-0.5257311121191336),
                     ]),
-                    VecT::new([
-                        radius * VecT::Scalar::from_f64(0.5257311121191336),
-                        radius * VecT::Scalar::from_f64(-0.8506508083520399),
-                        radius * VecT::Scalar::from_f64(0.0),
+                    A::vector([
+                        radius * A::scalarf64(0.5257311121191336),
+                        radius * A::scalarf64(-0.8506508083520399),
+                        radius * A::scalarf64(0.0),
                     ]),
-                    VecT::new([
-                        radius * VecT::Scalar::from_f64(-0.5257311121191336),
-                        radius * VecT::Scalar::from_f64(-0.8506508083520399),
-                        radius * VecT::Scalar::from_f64(0.0),
+                    A::vector([
+                        radius * A::scalarf64(-0.5257311121191336),
+                        radius * A::scalarf64(-0.8506508083520399),
+                        radius * A::scalarf64(0.0),
                     ]),
                 ],
                 &mut verts,
@@ -315,111 +311,111 @@ where
 
     /// Create a dodecahedron centered at the origin, with a unit
     /// circumradius. The vertices of the mesh will lie on the unit sphere.
-    pub fn dodecahedron(radius: VecT::Scalar) -> Result<Self, Error> {
+    pub fn dodecahedron(radius: A::Scalar) -> Result<Self, Error> {
         let mut mesh = Self::with_capacity(20, 30, 12);
         let _verts = {
             let mut verts: [VH; 20] = [0.into(); 20];
             mesh.add_vertices(
                 &[
-                    VecT::new([
-                        radius * VecT::Scalar::from_f64(0.),
-                        radius * VecT::Scalar::from_f64(0.9341723589627157),
-                        radius * VecT::Scalar::from_f64(-0.35682208977308993),
+                    A::vector([
+                        radius * A::scalarf64(0.0),
+                        radius * A::scalarf64(0.9341723589627157),
+                        radius * A::scalarf64(-0.35682208977308993),
                     ]),
-                    VecT::new([
-                        radius * VecT::Scalar::from_f64(0.),
-                        radius * VecT::Scalar::from_f64(0.9341723589627157),
-                        radius * VecT::Scalar::from_f64(0.35682208977308993),
+                    A::vector([
+                        radius * A::scalarf64(0.0),
+                        radius * A::scalarf64(0.9341723589627157),
+                        radius * A::scalarf64(0.35682208977308993),
                     ]),
-                    VecT::new([
-                        radius * VecT::Scalar::from_f64(-0.35682208977308993),
-                        radius * VecT::Scalar::from_f64(0.),
-                        radius * VecT::Scalar::from_f64(0.9341723589627157),
+                    A::vector([
+                        radius * A::scalarf64(-0.35682208977308993),
+                        radius * A::scalarf64(0.0),
+                        radius * A::scalarf64(0.9341723589627157),
                     ]),
-                    VecT::new([
-                        radius * VecT::Scalar::from_f64(0.35682208977308993),
-                        radius * VecT::Scalar::from_f64(0.),
-                        radius * VecT::Scalar::from_f64(0.9341723589627157),
+                    A::vector([
+                        radius * A::scalarf64(0.35682208977308993),
+                        radius * A::scalarf64(0.0),
+                        radius * A::scalarf64(0.9341723589627157),
                     ]),
-                    VecT::new([
-                        radius * VecT::Scalar::from_f64(0.35682208977308993),
-                        radius * VecT::Scalar::from_f64(0.),
-                        radius * VecT::Scalar::from_f64(-0.9341723589627157),
+                    A::vector([
+                        radius * A::scalarf64(0.35682208977308993),
+                        radius * A::scalarf64(0.0),
+                        radius * A::scalarf64(-0.9341723589627157),
                     ]),
-                    VecT::new([
-                        radius * VecT::Scalar::from_f64(-0.35682208977308993),
-                        radius * VecT::Scalar::from_f64(0.),
-                        radius * VecT::Scalar::from_f64(-0.9341723589627157),
+                    A::vector([
+                        radius * A::scalarf64(-0.35682208977308993),
+                        radius * A::scalarf64(0.0),
+                        radius * A::scalarf64(-0.9341723589627157),
                     ]),
-                    VecT::new([
-                        radius * VecT::Scalar::from_f64(0.),
-                        radius * VecT::Scalar::from_f64(-0.9341723589627157),
-                        radius * VecT::Scalar::from_f64(0.35682208977308993),
+                    A::vector([
+                        radius * A::scalarf64(0.0),
+                        radius * A::scalarf64(-0.9341723589627157),
+                        radius * A::scalarf64(0.35682208977308993),
                     ]),
-                    VecT::new([
-                        radius * VecT::Scalar::from_f64(0.),
-                        radius * VecT::Scalar::from_f64(-0.9341723589627157),
-                        radius * VecT::Scalar::from_f64(-0.35682208977308993),
+                    A::vector([
+                        radius * A::scalarf64(0.0),
+                        radius * A::scalarf64(-0.9341723589627157),
+                        radius * A::scalarf64(-0.35682208977308993),
                     ]),
-                    VecT::new([
-                        radius * VecT::Scalar::from_f64(-0.9341723589627157),
-                        radius * VecT::Scalar::from_f64(0.35682208977308993),
-                        radius * VecT::Scalar::from_f64(0.),
+                    A::vector([
+                        radius * A::scalarf64(-0.9341723589627157),
+                        radius * A::scalarf64(0.35682208977308993),
+                        radius * A::scalarf64(0.0),
                     ]),
-                    VecT::new([
-                        radius * VecT::Scalar::from_f64(-0.9341723589627157),
-                        radius * VecT::Scalar::from_f64(-0.35682208977308993),
-                        radius * VecT::Scalar::from_f64(0.),
+                    A::vector([
+                        radius * A::scalarf64(-0.9341723589627157),
+                        radius * A::scalarf64(-0.35682208977308993),
+                        radius * A::scalarf64(0.0),
                     ]),
-                    VecT::new([
-                        radius * VecT::Scalar::from_f64(0.9341723589627157),
-                        radius * VecT::Scalar::from_f64(0.35682208977308993),
-                        radius * VecT::Scalar::from_f64(0.),
+                    A::vector([
+                        radius * A::scalarf64(0.9341723589627157),
+                        radius * A::scalarf64(0.35682208977308993),
+                        radius * A::scalarf64(0.0),
                     ]),
-                    VecT::new([
-                        radius * VecT::Scalar::from_f64(0.9341723589627157),
-                        radius * VecT::Scalar::from_f64(-0.35682208977308993),
-                        radius * VecT::Scalar::from_f64(0.),
+                    A::vector([
+                        radius * A::scalarf64(0.9341723589627157),
+                        radius * A::scalarf64(-0.35682208977308993),
+                        radius * A::scalarf64(0.0),
                     ]),
-                    VecT::new([
-                        radius * VecT::Scalar::from_f64(-0.5773502691896257),
-                        radius * VecT::Scalar::from_f64(0.5773502691896257),
-                        radius * VecT::Scalar::from_f64(0.5773502691896257),
+                    A::vector([
+                        radius * A::scalarf64(-0.5773502691896257),
+                        radius * A::scalarf64(0.5773502691896257),
+                        radius * A::scalarf64(0.5773502691896257),
                     ]),
-                    VecT::new([
-                        radius * VecT::Scalar::from_f64(0.5773502691896257),
-                        radius * VecT::Scalar::from_f64(0.5773502691896257),
-                        radius * VecT::Scalar::from_f64(0.5773502691896257),
+                    A::vector([
+                        radius * A::scalarf64(0.5773502691896257),
+                        radius * A::scalarf64(0.5773502691896257),
+                        radius * A::scalarf64(0.5773502691896257),
                     ]),
-                    VecT::new([
-                        radius * VecT::Scalar::from_f64(-0.5773502691896257),
-                        radius * VecT::Scalar::from_f64(0.5773502691896257),
-                        radius * VecT::Scalar::from_f64(-0.5773502691896257),
+                    A::vector([
+                        radius * A::scalarf64(-0.5773502691896257),
+                        radius * A::scalarf64(0.5773502691896257),
+                        radius * A::scalarf64(-0.5773502691896257),
                     ]),
-                    VecT::new([
-                        radius * VecT::Scalar::from_f64(0.5773502691896257),
-                        radius * VecT::Scalar::from_f64(0.5773502691896257),
-                        radius * VecT::Scalar::from_f64(-0.5773502691896257),
+                    A::vector([
+                        radius * A::scalarf64(0.5773502691896257),
+                        radius * A::scalarf64(0.5773502691896257),
+                        radius * A::scalarf64(-0.5773502691896257),
                     ]),
-                    VecT::new([
-                        radius * VecT::Scalar::from_f64(-0.5773502691896257),
-                        radius * VecT::Scalar::from_f64(-0.5773502691896257),
-                        radius * VecT::Scalar::from_f64(-0.5773502691896257),
+                    A::vector([
+                        radius * A::scalarf64(-0.5773502691896257),
+                        radius * A::scalarf64(-0.5773502691896257),
+                        radius * A::scalarf64(-0.5773502691896257),
                     ]),
-                    VecT::new([
-                        radius * VecT::Scalar::from_f64(0.5773502691896257),
-                        radius * VecT::Scalar::from_f64(-0.5773502691896257),
-                        radius * VecT::Scalar::from_f64(-0.5773502691896257),
+                    A::vector([
+                        radius * A::scalarf64(0.5773502691896257),
+                        radius * A::scalarf64(-0.5773502691896257),
+                        radius * A::scalarf64(-0.5773502691896257),
                     ]),
-                    VecT::new([
-                        radius * VecT::Scalar::from_f64(-0.5773502691896257),
-                        radius * VecT::Scalar::from_f64(-0.5773502691896257),
-                        radius * VecT::Scalar::from_f64(0.5773502691896257),
+                    A::vector([
+                        radius * A::scalarf64(-0.5773502691896257),
+                        radius * A::scalarf64(-0.5773502691896257),
+                        radius * A::scalarf64(0.5773502691896257),
                     ]),
-                    VecT::new([
-                        radius * VecT::Scalar::from_f64(0.5773502691896257),
-                        radius * VecT::Scalar::from_f64(-0.5773502691896257),
-                        radius * VecT::Scalar::from_f64(0.5773502691896257),
+                    A::vector([
+                        radius * A::scalarf64(0.5773502691896257),
+                        radius * A::scalarf64(-0.5773502691896257),
+                        radius * A::scalarf64(0.5773502691896257),
                     ]),
                 ],
                 &mut verts,
@@ -445,7 +441,7 @@ where
 mod test {
     use core::f32;
 
-    use crate::{macros::assert_f32_eq, mesh::PolyMeshF32};
+    use crate::{macros::assert_f32_eq, PolyMeshF32};
 
     #[test]
     fn t_quad_box() {
