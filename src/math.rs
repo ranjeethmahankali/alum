@@ -660,7 +660,8 @@ where
 mod test {
     use core::f32;
 
-    use crate::{error::Error, macros::assert_f32_eq, mesh::PolyMeshF32, vector::TVec};
+    use super::TVec;
+    use crate::{error::Error, macros::assert_f32_eq, mesh::PolyMeshF32};
 
     #[test]
     fn t_box_face_normals() {

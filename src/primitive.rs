@@ -3,8 +3,8 @@ use std::ops::{Add, Div, Mul, Neg};
 use crate::{
     element::{Handle, VH},
     error::Error,
+    math::{FromFloat, TVec},
     mesh::PolyMeshT,
-    vector::{FromFloat, TVec},
 };
 
 impl<VecT> PolyMeshT<VecT, 3>

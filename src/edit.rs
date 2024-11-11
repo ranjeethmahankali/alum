@@ -2,10 +2,10 @@ use crate::{
     element::{Handle, EH, FH, HH, VH},
     error::Error,
     iterator,
+    math::TVec,
     mesh::PolyMeshT,
     status::Status,
     topol::TopolCache,
-    vector::TVec,
     Topology,
 };
 

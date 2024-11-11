@@ -2,10 +2,10 @@ use crate::{
     element::{Handle, EH, FH, HH, VH},
     error::Error,
     iterator,
+    math::TVec,
     property::{EProperty, FProperty, HProperty, VProperty},
     status::Status,
     topol::{TopolCache, Topology},
-    vector::TVec,
 };
 
 /// A polygon mesh. `VecT` is the 3d vector type used to represent this

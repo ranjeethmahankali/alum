@@ -2,8 +2,8 @@ use std::path::Path;
 
 use crate::{
     error::Error,
+    math::{FromFloat, TVec},
     mesh::PolyMeshT,
-    vector::{FromFloat, TVec},
 };
 
 impl<VecT> PolyMeshT<VecT, 3>
