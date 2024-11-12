@@ -646,6 +646,10 @@ where
     ///              glam::vec3(1.0, 1.0, 0.0), glam::vec3(0.0, 1.0, 0.0),];
     /// let verts = mesh.add_vertices(&verts).expect("Cannot add vertices");
     /// assert_eq!(verts, 0..4);
+    /// let verts = [glam::vec3(0.0, 0.0, 1.0), glam::vec3(1.0, 0.0, 1.0),
+    ///              glam::vec3(1.0, 1.0, 1.0), glam::vec3(0.0, 1.0, 1.0),];
+    /// let verts = mesh.add_vertices(&verts).expect("Cannot add vertices");
+    /// assert_eq!(verts, 4..8);
     /// ```
     pub fn add_vertices(&mut self, pos: &[A::Vector]) -> Result<Range<u32>, Error> {
         // The idea is to avoid modifying the mesh, when something goes wrong,
