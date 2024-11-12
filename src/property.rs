@@ -454,6 +454,8 @@ where
 
 #[cfg(test)]
 mod test {
+    use crate::topol::{test::quad_box, TopolCache};
+
     use super::{PropertyContainer, VProperty};
 
     #[test]
@@ -497,5 +499,51 @@ mod test {
         assert!(!container.props[0].is_valid());
         container.garbage_collection();
         assert_eq!(container.props.len(), 0);
+    }
+
+    #[test]
+    fn t_deleted_elements() {
+        let mut qbox = quad_box();
+        let (fis, vis) = {
+            let mut vis = qbox.new_vprop(0u32);
+            let mut fis = qbox.new_fprop(0u32);
+            {
+                let mut vis = vis.try_borrow_mut().expect("Cannot borrow property");
+                for (i, v) in vis.iter_mut().enumerate() {
+                    *v = i as u32;
+                }
+                let mut fis = fis.try_borrow_mut().expect("Cannot borrow property");
+                for (i, v) in fis.iter_mut().enumerate() {
+                    *v = i as u32;
+                }
+            }
+            (fis, vis)
+        };
+        let mut cache = TopolCache::default();
+        for fi in [1, 2, 5] {
+            qbox.delete_face(
+                fi.into(),
+                true,
+                &mut cache.halfedges,
+                &mut cache.edges,
+                &mut cache.vertices,
+            )
+            .expect("Cannot delete a face");
+        }
+        qbox.garbage_collection(&mut cache)
+            .expect("Cannot garbage collect");
+        let mut fis: Vec<u32> = fis
+            .try_borrow()
+            .expect("Cannot borrow face indices")
+            .clone();
+        fis.sort();
+        let mut vis: Vec<u32> = vis
+            .try_borrow()
+            .expect("Cannot borrow vertex indices")
+            .clone();
+        vis.sort();
+        // The properties should be preserved.
+        assert_eq!(vis, &[0, 1, 2, 3, 4, 6, 7]);
+        assert_eq!(fis, &[0, 3, 4]);
     }
 }
