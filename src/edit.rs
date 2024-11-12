@@ -130,7 +130,7 @@ impl Topology {
         true
     }
 
-    /// This is the same as `check_edge_collapse`, except it will attempt to
+    /// This is the same as [`Self::check_edge_collapse`], except it will attempt to
     /// borrow the necessary properties and may return an error if it ccannot
     /// borrow the required properties.
     pub fn try_check_edge_collapse(&self, h: HH) -> Result<bool, Error> {
@@ -375,9 +375,9 @@ where
         self.topology().check_edge_collapse(h, estatus, vstatus)
     }
 
-    /// This is the same as `check_edge_collapse`, except it will attempt to
-    /// borrow the necessary properties and may return an error if it ccannot
-    /// borrow the required properties.
+    /// This is the same as [`Self::check_edge_collapse`], except it will
+    /// attempt to borrow the necessary properties and may return an error if it
+    /// ccannot borrow the required properties.
     pub fn try_check_edge_collapse(&self, h: HH) -> Result<bool, Error> {
         self.topology().try_check_edge_collapse(h)
     }
