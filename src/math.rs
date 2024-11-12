@@ -31,7 +31,7 @@ where
     /// represent the positions of the vertices.
     ///
     /// Calling this function in a hot loop with borrowed points property, can
-    /// be faster than `try_calc_face_normal` because it avoids repeated
+    /// be faster than [`Self::try_calc_face_normal`] because it avoids repeated
     /// borrows.
     pub fn calc_face_normal(&self, f: FH, points: &[A::Vector]) -> A::Vector {
         // Use newell's method to compute the normal.
@@ -94,8 +94,8 @@ where
     /// The vertex normal is computed as the average of the normals of the
     /// sectors around the vertex. The `points` argument must be the positions
     /// of the vertices. Calling this function with borrowed `points` in a hot
-    /// loop can be faster than `try_calc_vertex_normal_accurate` by avoiding
-    /// repeated borrows.
+    /// loop can be faster than [`Self::try_calc_vertex_normal_accurate`] by
+    /// avoiding repeated borrows.
     pub fn calc_vertex_normal_accurate(&self, v: VH, points: &[A::Vector]) -> A::Vector {
         let topol = self.topology();
         A::normalized_vec(
@@ -261,7 +261,7 @@ where
     ///
     /// A sector is the triangular region defined by the given halfedge and it's
     /// previous halfedge. Calling this function in a hot loop with borrowed
-    /// `points` can be faster than `try_calc_sector_normal` by avoiding
+    /// `points` can be faster than [`Self::try_calc_sector_normal`] by avoiding
     /// repeated borrows.
     pub fn calc_sector_normal(&self, h: HH, points: &[A::Vector]) -> A::Vector {
         A::cross_product(
@@ -290,8 +290,8 @@ where
     ///
     /// A sector is the triangular region defined by the given halfedge and it's
     /// previous halfedge. Calling this function in a hotloop with borrowed
-    /// points can be faster than `try_calc_sector_area` by avoiding repeated
-    /// borrows.
+    /// points can be faster than [`Self::try_calc_sector_area`] by avoiding
+    /// repeated borrows.
     pub fn calc_sector_area(&self, h: HH, points: &[A::Vector]) -> A::Scalar {
         A::vector_length(self.calc_sector_normal(h, points)) * A::scalarf64(0.5)
     }
@@ -450,7 +450,7 @@ where
     ///
     /// Calling this function with borrowed `points` property avoids internal
     /// borrows, avoids errors, and can be faster when called in a fast loop
-    /// compared to `try_calc_dihedral_angle`.
+    /// compared to [`Self::try_calc_dihedral_angle`].
     ///
     /// The the sector normals of the halfedges are used to compute the dihedral
     /// angle. This can be more accurate than
@@ -483,7 +483,7 @@ where
     /// `points` are the positions of the mesh. Using borrowed `face_normals`
     /// and `points` properties avoids internal borrows, and can be faster when
     /// computing dihedral angles in a hot loop compared to
-    /// `try_calc_dihedral_angle`.
+    /// [`Self::try_calc_dihedral_angle`].
     pub fn calc_dihedral_angle_fast(
         &self,
         e: EH,
@@ -528,7 +528,8 @@ where
     /// the halfedge and it's previous halfedge. `points` are the positions of
     /// mesh vertices. Calling this function with borrowed `points` and
     /// `face_normals` properties avoids internal borrows and can be faster than
-    /// `try_calc_sector_angle` when computing sector angles in a hot loop.
+    /// [`Self::try_calc_sector_angle`] when computing sector angles in a hot
+    /// loop.
     pub fn calc_sector_angle(
         &self,
         h: HH,

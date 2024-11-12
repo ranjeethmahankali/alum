@@ -253,8 +253,9 @@ impl Topology {
         }
     }
 
-    /// This is the same as `collapse_edge` except it will attempt to borrow all
-    /// the required properties, and returns an error if borrowing fails.
+    /// This is the same as [`Self::collapse_edge`] except it will attempt to
+    /// borrow all the required properties, and returns an error if borrowing
+    /// fails.
     pub fn try_collapse_edge(&mut self, h: HH, cache: &mut TopolCache) -> Result<(), Error> {
         let mut vstatus = self.vstatus.clone();
         let mut vstatus = vstatus.try_borrow_mut()?;
@@ -402,8 +403,8 @@ where
             .collapse_edge(h, vstatus, hstatus, estatus, fstatus, &mut self.cache)
     }
 
-    /// This is the same as `collapse_edge`. Except this function will try to
-    /// borrow all the necessary properties, and return an error if the
+    /// This is the same as [`Self::collapse_edge`]. Except this function will
+    /// try to borrow all the necessary properties, and return an error if the
     /// borrowing fails.
     pub fn try_collapse_edge(&mut self, h: HH) -> Result<(), Error> {
         self.topol.try_collapse_edge(h, &mut self.cache)
