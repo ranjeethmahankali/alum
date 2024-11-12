@@ -108,11 +108,13 @@ pub trait FloatScalarAdaptor<const DIM: usize>: Adaptor<DIM> {
     fn scalarf64(val: f64) -> Self::Scalar;
 }
 
-/// A polygon mesh. `VecT` is the 3d vector type used to represent this
-/// mesh. The positions of the vertices and face normals etc. are all
-/// `VecT`. Quantities like edge length, face area etc. are of type
-/// `VecT::Scalar`. Various functions of , such as computing normals
-/// etc. are available predicated on the trait bounds `VecT` satisfies.
+/// A polygon mesh.
+///
+/// `VecT` is the 3d vector type used to represent this mesh. The positions of
+/// the vertices and face normals etc. are all `VecT`. Quantities like edge
+/// length, face area etc. are of type `VecT::Scalar`. Various functions of ,
+/// such as computing normals etc. are available predicated on the trait bounds
+/// `VecT` satisfies.
 pub struct PolyMeshT<const DIM: usize, A>
 where
     A: Adaptor<DIM>,
@@ -154,8 +156,10 @@ where
     }
 
     /// Create an empty mesh with memory reserved for the given number of
-    /// elements.  The memory is also reserved for all the built-in
-    /// properties. Normals are not computed.
+    /// elements.
+    ///
+    /// The memory is also reserved for all the built-in properties. Normals are
+    /// not computed.
     pub fn with_capacity(nverts: usize, nedges: usize, nfaces: usize) -> Self {
         let mut topol = Topology::with_capacity(nverts, nedges, nfaces);
         let points = topol.new_vprop_with_capacity(nverts, A::zero_vector());
@@ -208,8 +212,9 @@ where
         self.topol.new_fprop(default)
     }
 
-    /// Reserve memory for the given number of elements. The memory is also
-    /// reserved for all properties.
+    /// Reserve memory for the given number of elements.
+    ///
+    /// The memory is also reserved for all properties.
     pub fn reserve(&mut self, nverts: usize, nedges: usize, nfaces: usize) -> Result<(), Error> {
         self.topol.reserve(nverts, nedges, nfaces)
     }
@@ -264,31 +269,37 @@ where
         self.topol.faces()
     }
 
-    /// Check if this vertex is valid for this mesh. It's index has to be less
-    /// than the number of vertices.
+    /// Check if this vertex is valid for this mesh.
+    ///
+    /// It's index has to be less than the number of vertices.
     pub fn is_valid_vertex(&self, v: VH) -> bool {
         self.topol.is_valid_vertex(v)
     }
 
-    /// Check if this halfedge is valid for this mesh. It's index has to be less
-    /// than the number of halfedges.
+    /// Check if this halfedge is valid for this mesh.
+    ///
+    /// It's index has to be less than the number of halfedges.
     pub fn is_valid_halfedge(&self, h: HH) -> bool {
         self.topol.is_valid_halfedge(h)
     }
 
-    /// Check if this edge is valid for this mesh. It's index has to be less
-    /// than the number of edges.
+    /// Check if this edge is valid for this mesh.
+    ///
+    /// It's index has to be less than the number of edges.
     pub fn is_valid_edge(&self, e: EH) -> bool {
         self.topol.is_valid_edge(e)
     }
 
-    /// Check if the face is valid for this mesh. It's index has to be less than
-    /// the number of faces.
+    /// Check if the face is valid for this mesh.
+    ///
+    /// It's index has to be less than the number of faces.
     pub fn is_valid_face(&self, f: FH) -> bool {
         self.topol.is_valid_face(f)
     }
 
-    /// Check if the vertex is manifold. A vertex is manifold if it has at most 1 outgoing halfedge.
+    /// Check if the vertex is manifold.
+    ///
+    /// A vertex is manifold if it has at most 1 outgoing halfedge.
     /// ```text
     ///    .......|     .......|.......     ....\     /...
     ///    .......|     .......|.......     .....\   /....
@@ -308,13 +319,15 @@ where
         self.topol.is_boundary_vertex(v)
     }
 
-    /// Check if the halfedge is on the boundary. A halfedge is considered
-    /// interior if it has a face incident on it.
+    /// Check if the halfedge is on the boundary.
+    ///
+    /// A halfedge is considered interior if it has a face incident on it.
     pub fn is_boundary_halfedge(&self, h: HH) -> bool {
         self.topol.is_boundary_halfedge(h)
     }
 
     /// Check if the edge is a boundary edge.
+    ///
     /// An edge is considered interior if it has two faces incident on both of it's halfedges.
     pub fn is_boundary_edge(&self, e: EH) -> bool {
         self.topol.is_boundary_edge(e)
@@ -370,16 +383,26 @@ where
         self.vnormals.is_some()
     }
 
-    /// Get the vertex normals. It is `None` if the vertex normals are not
-    /// available.
+    /// Get the vertex normals, if available.
     pub fn vertex_normals(&self) -> Option<VProperty<A::Vector>> {
         self.vnormals.clone()
     }
 
-    /// If the vertex normals property is available, it is returned as is. If it
-    /// is not available, a new property for vertex normals is created and
-    /// returned. The vertex normals are not computed. The values in the
-    /// property are default initialized.
+    /// Get the vertex normals property.
+    ///
+    /// If the vertex normals are not available, a new property for vertex
+    /// normals is created and returned. The vertex normals are not
+    /// computed. The values are default initialized to zero vectors.
+    /// ```rust
+    /// use alum::alum_glam::PolyMeshF32;
+    ///
+    /// let mut mesh = PolyMeshF32::tetrahedron(1.0).expect("Cannot create a tetrahedron");
+    /// let vnormals = mesh.request_vertex_normals();
+    /// let vnormals = vnormals.try_borrow().expect("Cannot borrow property");
+    /// for v in vnormals.iter() {
+    ///     assert_eq!(glam::vec3(0.0, 0.0, 0.0), *v);
+    /// }
+    /// ```
     pub fn request_vertex_normals(&mut self) -> VProperty<A::Vector> {
         self.vnormals
             .get_or_insert_with(|| self.topol.new_vprop(A::zero_vector()))
@@ -391,15 +414,26 @@ where
         self.fnormals.is_some()
     }
 
-    /// Get the face normals. It is `None` if the face normals are not available.
+    /// Get the face normals, if available.
     pub fn face_normals(&self) -> Option<FProperty<A::Vector>> {
         self.fnormals.clone()
     }
 
-    /// If the face normals property is available, it is returned as is. If it is
-    /// not available, a new property for face normals is created and
-    /// returned. The face normals are not computed. The values in the property
-    /// are default initialized.
+    /// Get the face normals property.
+    ///
+    /// If the face normals property is not available, a new property for face
+    /// normals is created and returned. The face normals are not computed. The
+    /// values in the property are default initialized to zero vectors.
+    /// ```rust
+    /// use alum::alum_glam::PolyMeshF32;
+    ///
+    /// let mut mesh = PolyMeshF32::tetrahedron(1.0).expect("Cannot create a tetrahedron");
+    /// let fnormals = mesh.request_face_normals();
+    /// let fnormals = fnormals.try_borrow().expect("Cannot borrow property");
+    /// for v in fnormals.iter() {
+    ///     assert_eq!(glam::vec3(0.0, 0.0, 0.0), *v);
+    /// }
+    /// ```
     pub fn request_face_normals(&mut self) -> FProperty<A::Vector> {
         self.fnormals
             .get_or_insert_with(|| self.topol.new_fprop(A::zero_vector()))
@@ -446,8 +480,9 @@ where
         self.topol.face_halfedge(f)
     }
 
-    /// Get a halfedge from the edge. The Boolean flag indicates one of the two
-    /// possible orientations.
+    /// Get a halfedge from the edge.
+    ///
+    /// The Boolean flag indicates one of the two possible orientations.
     pub fn edge_halfedge(&self, e: EH, flag: bool) -> HH {
         self.topol.edge_halfedge(e, flag)
     }
@@ -563,31 +598,37 @@ where
     }
 
     /// Iterator over the neighboring faces of the given face, going
-    /// counter-clockwise. This includes the faces connected via a shared, edge,
-    /// but not those connected via a shared vertex.
+    /// counter-clockwise.
+    ///
+    /// This includes the faces connected via a shared, edge, but not those
+    /// connected via a shared vertex.
     pub fn ff_ccw_iter(&self, f: FH) -> impl Iterator<Item = FH> + use<'_, A, DIM> {
         iterator::ff_ccw_iter(&self.topol, f)
     }
 
     /// Iterator over the neighboring faces of the given face, going
-    /// clockwise. This includes the faces connected via a shared, edge, but not
-    /// those connected via a shared vertex.
+    /// clockwise.
+    ///
+    /// This includes the faces connected via a shared, edge, but not those
+    /// connected via a shared vertex.
     pub fn ff_cw_iter(&self, f: FH) -> impl Iterator<Item = FH> + use<'_, A, DIM> {
         iterator::ff_cw_iter(&self.topol, f)
     }
 
     /// This is similar to `voh_ccw_iter` around the base of the given halfedge,
-    /// except this iterator starts at the provided halfedge. So this is
-    /// equivalent to a circular shifted `voh_ccw_iter` of the vertex at teh base
-    /// of this halfedge.
+    /// except this iterator starts at the provided halfedge.
+    ///
+    /// This is equivalent to a circular shifted `voh_ccw_iter` of the vertex at
+    /// teh base of this halfedge.
     pub fn ccw_rotate_iter(&self, h: HH) -> impl Iterator<Item = HH> + use<'_, A, DIM> {
         iterator::ccw_rotate_iter(&self.topol, h)
     }
 
     /// This is similar to `voh_cw_iter` around the base of the given halfedge,
-    /// except this iterator starts at the provided halfedge. So this is
-    /// equivalent to a circular shifted `voh_cw_iter` of the vertex at teh base
-    /// of this halfedge.
+    /// except this iterator starts at the provided halfedge.
+    ///
+    /// This is equivalent to a circular shifted `voh_cw_iter` of the vertex at
+    /// teh base of this halfedge.
     pub fn cw_rotate_iter(&self, h: HH) -> impl Iterator<Item = HH> + use<'_, A, DIM> {
         iterator::cw_rotate_iter(&self.topol, h)
     }
@@ -601,11 +642,12 @@ where
         iterator::loop_ccw_iter(&self.topol, h)
     }
 
-    /// Counter-clockwise iterator over the halfedges in a loop. The iterator
-    /// will start at the given halfedge. If the halfedge has an incident face,
-    /// this iterator is equivalent to a circular shifted `fh_cw_iter` of the
-    /// incident face. If the halfedge is on the boundary, this iterator goes
-    /// over the boundary loop clockwise.
+    /// Counter-clockwise iterator over the halfedges in a loop.
+    ///
+    /// The iterator will start at the given halfedge. If the halfedge has an
+    /// incident face, this iterator is equivalent to a circular shifted
+    /// `fh_cw_iter` of the incident face. If the halfedge is on the boundary,
+    /// this iterator goes over the boundary loop clockwise.
     pub fn loop_cw_iter(&self, h: HH) -> impl Iterator<Item = HH> + use<'_, A, DIM> {
         iterator::loop_cw_iter(&self.topol, h)
     }
@@ -613,14 +655,43 @@ where
     /// Iterator over the vertex triplets that represent a triangulation of this
     /// mesh. The triangulation of a face does not take it's shape into
     /// account. It only accounts for the topology.
+    ///
+    /// ```rust
+    /// use alum::{alum_glam::PolyMeshF32, Handle};
+    ///
+    /// let mut mesh = PolyMeshF32::new();
+    /// let verts = [glam::vec3(0.0, 0.0, 0.0), glam::vec3(1.0, 0.0, 0.0),
+    ///              glam::vec3(1.0, 1.0, 0.0), glam::vec3(0.0, 1.0, 0.0)];
+    /// mesh.add_vertices(&verts).expect("Cannot add vertices");
+    /// mesh.add_quad_face(0.into(), 1.into(), 2.into(), 3.into());
+    /// assert_eq!(mesh.triangulated_vertices()
+    ///                .flatten()
+    ///                .map(|v| v.index())
+    ///                .collect::<Vec<u32>>(), [3, 0, 1, 3, 1, 2]);
+    /// ```
     pub fn triangulated_vertices(&self) -> impl Iterator<Item = [VH; 3]> + use<'_, A, DIM> {
         self.faces()
             .flat_map(move |f| self.triangulated_face_vertices(f))
     }
 
     /// Iterator over the vertex triplets that represent a triangulation of the
-    /// given face. The triangulation does not take the shape of the face into
-    /// account. It only accounts for the topology of the face.
+    /// given face.
+    ///
+    /// The triangulation does not take the shape of the face into account. It
+    /// only accounts for the topology of the face.
+    /// ```rust
+    /// use alum::{alum_glam::PolyMeshF32, Handle};
+    ///
+    /// let mut mesh = PolyMeshF32::new();
+    /// let verts = [glam::vec3(0.0, 0.0, 0.0), glam::vec3(1.0, 0.0, 0.0),
+    ///              glam::vec3(1.0, 1.0, 0.0), glam::vec3(0.0, 1.0, 0.0)];
+    /// mesh.add_vertices(&verts).expect("Cannot add vertices");
+    /// mesh.add_quad_face(0.into(), 1.into(), 2.into(), 3.into());
+    /// assert_eq!(mesh.triangulated_face_vertices(0.into())
+    ///                .flatten()
+    ///                .map(|v| v.index())
+    ///                .collect::<Vec<u32>>(), [3, 0, 1, 3, 1, 2]);
+    /// ```
     pub fn triangulated_face_vertices(
         &self,
         f: FH,
@@ -644,7 +715,7 @@ where
     ///
     /// let mut mesh = PolyMeshF32::new();
     /// let verts = [glam::vec3(0.0, 0.0, 0.0), glam::vec3(1.0, 0.0, 0.0),
-    ///              glam::vec3(1.0, 1.0, 0.0), glam::vec3(0.0, 1.0, 0.0),];
+    ///              glam::vec3(1.0, 1.0, 0.0), glam::vec3(0.0, 1.0, 0.0)];
     /// let verts = mesh.add_vertices(&verts).expect("Cannot add vertices");
     /// assert_eq!(verts, 0..4);
     /// let verts = [glam::vec3(0.0, 0.0, 1.0), glam::vec3(1.0, 0.0, 1.0),
@@ -677,21 +748,25 @@ where
         self.add_face(&[v0, v1, v2, v3])
     }
 
-    /// Delete a vertex. This will automatically delete all incident edges and
-    /// faces. Vertices in the neighborhood may become isolated. They are deleted
-    /// if `delete_isolated_vertices` is true. The elements are marked as
-    /// deleted, but not removed from the mesh. `garbage_collection` must be
-    /// called to remove the elements marked as deleted.
+    /// Delete a vertex.
+    ///
+    /// This will automatically delete all incident edges and faces. Vertices in
+    /// the neighborhood may become isolated. They are deleted if
+    /// `delete_isolated_vertices` is true. The elements are marked as deleted,
+    /// but not removed from the mesh. `garbage_collection` must be called to
+    /// remove the elements marked as deleted.
     pub fn delete_vertex(&mut self, delete_isolated_vertices: bool, v: VH) -> Result<(), Error> {
         self.topol
             .delete_vertex(v, delete_isolated_vertices, &mut self.cache)
     }
 
-    /// Delete an edge. This will automatically delete all incident
-    /// faces. Vertices in the neighborhood may become isolated. They are deleted
-    /// if `delete_isolated_vertices` is true. The elements are marked as
-    /// deleted, but not removed from the mesh. `garbage_collection` must be
-    /// called to remove the elements marked as deleted.
+    /// Delete an edge.
+    ///
+    /// This will automatically delete all incident faces. Vertices in the
+    /// neighborhood may become isolated. They are deleted if
+    /// `delete_isolated_vertices` is true. The elements are marked as deleted,
+    /// but not removed from the mesh. `garbage_collection` must be called to
+    /// remove the elements marked as deleted.
     pub fn delete_edge(&mut self, e: EH, delete_isolated_vertices: bool) -> Result<(), Error> {
         self.topol.delete_edge(
             e,
@@ -702,10 +777,12 @@ where
         )
     }
 
-    /// Delete a face. Vertices in the neighborhood may become isolated. They are
-    /// deleted if `delete_isolated_vertices` is true. The elements are marked as
-    /// deleted, but not removed from the mesh. `garbage_collection` must be
-    /// called to remove the elements marked as deleted.
+    /// Delete a face.
+    ///
+    /// Vertices in the neighborhood may become isolated. They are deleted if
+    /// `delete_isolated_vertices` is true. The elements are marked as deleted,
+    /// but not removed from the mesh. `garbage_collection` must be called to
+    /// remove the elements marked as deleted.
     pub fn delete_face(&mut self, f: FH, delete_isolated_vertices: bool) -> Result<(), Error> {
         self.topol.delete_face(
             f,
@@ -716,9 +793,12 @@ where
         )
     }
 
-    /// Remove all elements in the mesh that are marked as deleted. The order of
-    /// the elements may change during this operation, but all the porperty
-    /// vectors are synchronized.
+    /// Remove all elements in the mesh that are marked as deleted.
+    ///
+    /// The order of the elements may change during this operation. Because of
+    /// this, all existing vertex handles may potentially become invalid, or
+    /// point to the wrong elements. Properties defined on the mesh elements are
+    /// safe because they are automatically synchronized.
     pub fn garbage_collection(&mut self) -> Result<(), Error> {
         self.topol.garbage_collection(&mut self.cache)
     }
