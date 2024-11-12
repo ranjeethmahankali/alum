@@ -341,6 +341,13 @@ where
 
     /// Similar to [`Self::calc_area`], except this function tries to borrow the
     /// required properties, and returns an error when borrowing fails.
+    ///
+    /// ```rust
+    /// use alum::alum_glam::PolyMeshF32;
+    ///
+    /// let mesh = PolyMeshF32::unit_box().expect("Cannot create mesh");
+    /// assert_eq!(6.0, mesh.try_calc_area().expect("Cannot compute area"));
+    /// ```
     pub fn try_calc_area(&self) -> Result<A::Scalar, Error> {
         let points = self.points();
         let points = points.try_borrow()?;
@@ -414,6 +421,13 @@ where
     /// Similar to [`Self::calc_volume`], except this function attempts to
     /// borrow the required properties, and returns an error if the borrowing
     /// fails.
+    ///
+    /// ```rust
+    /// use alum::alum_glam::PolyMeshF32;
+    ///
+    /// let mesh = PolyMeshF32::unit_box().expect("Cannot create mesh");
+    /// assert_eq!(1.0, mesh.try_calc_volume().expect("Cannot compute volume"));
+    /// ```
     pub fn try_calc_volume(&self) -> Result<A::Scalar, Error> {
         let points = self.points();
         let points = points.try_borrow()?;
