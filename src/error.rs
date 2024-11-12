@@ -34,4 +34,14 @@ pub enum Error {
     /// The mesh has deleted elements, which create problems for further
     /// operations. Garbage collection needs to be performed before proceeding.
     GarbageCollectionRequired,
+    /// Cycle found among the outgoing halfedges around a vertex.
+    CyclicOutgoingHalfedges(VH),
+    /// Cycle found when iterating over halfedges in a face loop.
+    CyclicFaceLoopHalfedges(FH),
+    /// The next-previous link between a halfedge pair doesn't commute.
+    IncorrectHalfedgeLink(HH, HH),
+    /// Incorrect halfedge vertex topology
+    IncorrectHalfedgeVertexTopology(HH, HH),
+    /// Halfedges in the same loop are not linked to the same face / boundary.
+    IncorrectLoopTopology(HH, HH),
 }

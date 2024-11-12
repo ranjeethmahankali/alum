@@ -922,6 +922,77 @@ impl Topology {
         self.fprops.garbage_collection();
         Ok(())
     }
+
+    pub fn check(&self) -> Result<(), Error> {
+        let mut hstatus = self.hstatus.clone();
+        let mut hstatus = hstatus.try_borrow_mut()?;
+        let hstatus: &mut [Status] = &mut hstatus;
+        // Untag all halfedges.
+        for hs in hstatus.iter_mut() {
+            hs.set_tagged2(false);
+        }
+        // Ensure no cycles in outgoing halfedges around a vertex.
+        let vstatus = self.vstatus.try_borrow()?;
+        for v in self
+            .vertices()
+            .filter(|v| !vstatus[v.index() as usize].deleted())
+        {
+            for h in iterator::voh_ccw_iter(self, v) {
+                if hstatus[h.index() as usize].tagged2() {
+                    return Err(Error::CyclicOutgoingHalfedges(v));
+                }
+                hstatus[h.index() as usize].set_tagged2(true);
+            }
+        }
+        // Untag all halfedges.
+        for hs in hstatus.iter_mut() {
+            hs.set_tagged2(false);
+        }
+        // Ensure no cycles in face loops.
+        let fstatus = self.fstatus.try_borrow()?;
+        for f in self
+            .faces()
+            .filter(|f| !fstatus[f.index() as usize].deleted())
+        {
+            for h in iterator::fh_ccw_iter(self, f) {
+                if hstatus[h.index() as usize].tagged2() {
+                    return Err(Error::CyclicFaceLoopHalfedges(f));
+                }
+                hstatus[h.index() as usize].set_tagged2(true);
+            }
+        }
+        // Check halfedge links.
+        for h in self.halfedges() {
+            if hstatus[h.index() as usize].deleted() {
+                continue;
+            }
+            let nh = self.next_halfedge(h);
+            if h != self.prev_halfedge(nh) {
+                return Err(Error::IncorrectHalfedgeLink(h, nh));
+            }
+            if self.to_vertex(h) != self.from_vertex(nh) {
+                return Err(Error::IncorrectHalfedgeVertexTopology(h, nh));
+            }
+        }
+        // Untag all halfedges.
+        for hs in hstatus.iter_mut() {
+            hs.set_tagged2(false);
+        }
+        // Make sure every halfedge in the loop is connected to the same face, or no face.
+        for h1 in self.halfedges() {
+            if hstatus[h1.index() as usize].tagged2() || hstatus[h1.index() as usize].deleted() {
+                continue;
+            }
+            let f = self.halfedge_face(h1);
+            for h2 in iterator::loop_ccw_iter(self, h1) {
+                if f != self.halfedge_face(h2) {
+                    return Err(Error::IncorrectLoopTopology(h1, h2));
+                }
+                hstatus[h2.index() as usize].set_tagged2(true);
+            }
+        }
+        Ok(())
+    }
 }
 
 impl Default for Topology {
