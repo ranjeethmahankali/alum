@@ -584,6 +584,39 @@ where
     }
 }
 
+impl<A> PolyMeshT<3, A>
+where
+    A: CrossProductAdaptor + VectorLengthAdaptor<3> + FloatScalarAdaptor<3>,
+    A::Vector: Sub<Output = A::Vector>
+        + Add<Output = A::Vector>
+        + Div<A::Scalar, Output = A::Vector>
+        + Mul<A::Scalar, Output = A::Vector>,
+    A::Scalar: Mul<Output = A::Scalar> + Sub<Output = A::Scalar> + Add<Output = A::Scalar>,
+{
+    /// Compute the area weighted centroid of the mesh.
+    ///
+    /// `points` must be the positions of vertices.
+    pub fn calc_area_centroid(&self, points: &[A::Vector]) -> A::Vector {
+        let (total, denom) = self.faces().fold(
+            (A::zero_vector(), A::scalarf64(0.0)),
+            |(total, denom), f| {
+                let p = self.calc_face_centroid(f, points);
+                let w = self.calc_face_area(f, points);
+                (total + p * w, denom + w)
+            },
+        );
+        total / denom
+    }
+
+    /// Similar to [`Self::calc_area_centroid`] except this function tries to
+    /// borrow the points property and returns an error if the borrowing fails.
+    pub fn try_calc_area_centroid(&self) -> Result<A::Vector, Error> {
+        let points = self.points();
+        let points = points.try_borrow()?;
+        Ok(self.calc_area_centroid(&points))
+    }
+}
+
 #[cfg(all(test, feature = "use_glam"))]
 mod test {
     use core::f32;
