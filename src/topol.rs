@@ -934,7 +934,7 @@ impl Topology {
                 if hstatus[hi].deleted() {
                     return Err(Error::DeletedHalfedge(h));
                 }
-                if visited[hi] {
+                if visited[hi] || self.from_vertex(h) != v {
                     return Err(Error::InvalidOutgoingHalfedges(v));
                 }
                 visited[hi] = true;

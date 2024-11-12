@@ -386,7 +386,7 @@ impl Topology {
             self.vertex_mut(v0).halfedge = Some(on);
         }
         if self.vertex_halfedge(v1) == Some(oh) {
-            self.vertex_mut(v1).halfedge = Some(on);
+            self.vertex_mut(v1).halfedge = Some(hn);
         }
         // Rewire halfedge -> vertex.
         self.halfedge_mut(h).vertex = hnv;
@@ -406,6 +406,57 @@ impl Topology {
             self.face_mut(f).halfedge = h;
         }
         if self.face_halfedge(of) == on {
+            self.face_mut(of).halfedge = oh;
+        }
+        true
+    }
+
+    pub fn swap_edge_cw(&mut self, e: EH) -> bool {
+        let h = self.edge_halfedge(e, false);
+        let oh = self.edge_halfedge(e, true);
+        let (f, of) = match (self.halfedge_face(h), self.halfedge_face(oh)) {
+            (Some(f), Some(of)) => (f, of),
+            _ => return false, // Cannot swap boundary edge.
+        };
+        let hn = self.next_halfedge(h);
+        let on = self.next_halfedge(oh);
+        let v0 = self.from_vertex(h);
+        let v1 = self.to_vertex(h);
+        // Check for degeneracy.
+        if f == of || hn == oh || self.to_vertex(hn) == v0 || on == h || self.to_vertex(on) == v1 {
+            return false;
+        }
+        let hp = self.prev_halfedge(h);
+        let op = self.prev_halfedge(oh);
+        let hpp = self.prev_halfedge(hp);
+        let opp = self.prev_halfedge(op);
+        let hpv = self.from_vertex(hp);
+        let opv = self.from_vertex(op);
+        // Rewire vertex -> halfedge.
+        if self.vertex_halfedge(v0) == Some(h) {
+            self.vertex_mut(v0).halfedge = Some(on);
+        }
+        if self.vertex_halfedge(v1) == Some(oh) {
+            self.vertex_mut(v1).halfedge = Some(hn);
+        }
+        // Rewire halfedge -> vertex.
+        self.halfedge_mut(h).vertex = opv;
+        self.halfedge_mut(oh).vertex = hpv;
+        // Rewire halfedge -> halfedge.
+        self.link_halfedges(h, op);
+        self.link_halfedges(op, hn);
+        self.link_halfedges(hpp, h);
+        self.link_halfedges(oh, hp);
+        self.link_halfedges(hp, on);
+        self.link_halfedges(opp, oh);
+        // Rewire halfedge -> face.
+        self.halfedge_mut(op).face = Some(f);
+        self.halfedge_mut(hp).face = Some(of);
+        // Rewire face -> halfedge.
+        if self.face_halfedge(f) == hp {
+            self.face_mut(f).halfedge = h;
+        }
+        if self.face_halfedge(of) == op {
             self.face_mut(of).halfedge = oh;
         }
         true
@@ -517,6 +568,32 @@ where
     /// ```
     pub fn swap_edge_ccw(&mut self, e: EH) -> bool {
         self.topol.swap_edge_ccw(e)
+    }
+
+    /// Swap an edge clockwise.
+    ///
+    /// If the edge is a boundary edge, or some other topological error is
+    /// encountered, then mesh is unmodified and a `false` is
+    /// returned. Otherwise a `true` is returned.
+    /// ```rust
+    /// use alum::{alum_glam::PolyMeshF32, Handle};
+    ///
+    /// let mut mesh = PolyMeshF32::new();
+    /// let verts = [glam::vec3(0.0, 0.0, 0.0), glam::vec3(1.0, 0.0, 0.0),
+    ///              glam::vec3(1.0, 1.0, 0.0), glam::vec3(0.0, 1.0, 0.0)];
+    /// mesh.add_vertices(&verts).expect("Cannot add vertices");
+    /// mesh.add_tri_face(0.into(), 1.into(), 2.into()).expect("Cannot add face");
+    /// mesh.add_tri_face(0.into(), 2.into(), 3.into()).expect("Cannot add face");
+    /// assert_eq!(mesh.triangulated_vertices().flatten().map(|v| v.index())
+    ///                .collect::<Vec<u32>>(), [2, 0, 1, 3, 0, 2]);
+    /// let e = mesh.halfedge_edge(mesh.find_halfedge(0.into(), 2.into())
+    ///                                .expect("Cannot find halfedge"));
+    /// mesh.swap_edge_cw(e);
+    /// assert_eq!(mesh.triangulated_vertices().flatten().map(|v| v.index())
+    ///                .collect::<Vec<u32>>(), [1, 3, 0, 3, 1, 2]);
+    /// ```
+    pub fn swap_edge_cw(&mut self, e: EH) -> bool {
+        self.topol.swap_edge_cw(e)
     }
 }
 
@@ -891,6 +968,28 @@ mod test {
             &[
                 3, 2, 1, 1, 5, 4, 2, 6, 5, 3, 7, 6, 0, 4, 7, 6, 7, 4, 0, 3, 1, 0, 1, 4, 1, 2, 5, 2,
                 3, 6, 3, 0, 7, 4, 5, 6
+            ]
+        );
+        qbox.check().expect("Topological errors found");
+    }
+
+    #[test]
+    fn t_box_swap_edge_cw() {
+        let mut qbox = quad_box();
+        qbox.triangulate().expect("Cannot triangulate the mesh");
+        let h = qbox
+            .find_halfedge(5.into(), 7.into())
+            .expect("Cannot find halfedge");
+        let e = qbox.halfedge_edge(h);
+        assert!(qbox.swap_edge_cw(e), "Cannot swap edge");
+        assert_eq!(
+            qbox.faces()
+                .flat_map(|f| iterator::fv_ccw_iter(&qbox, f))
+                .map(|v| v.index())
+                .collect::<Vec<_>>(),
+            &[
+                3, 2, 1, 1, 5, 4, 2, 6, 5, 3, 7, 6, 0, 4, 7, 4, 5, 6, 0, 3, 1, 0, 1, 4, 1, 2, 5, 2,
+                3, 6, 3, 0, 7, 4, 6, 7
             ]
         );
         qbox.check().expect("Topological errors found");
