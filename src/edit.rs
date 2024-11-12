@@ -1066,18 +1066,52 @@ mod test {
 
     #[test]
     fn t_box_remove_edge() {
+        let mut cache = TopolCache::default();
         let mut qbox = quad_box();
         qbox.triangulate().expect("Cannot triangulate the mesh");
-        let h = qbox
-            .find_halfedge(5.into(), 7.into())
-            .expect("Cannot find halfedge");
-        let e = qbox.halfedge_edge(h);
-        qbox.remove_edge(e).expect("Cannot remove edge");
-        let mut cache = TopolCache::default();
+        qbox.remove_edge(
+            qbox.halfedge_edge(
+                qbox.find_halfedge(5.into(), 7.into())
+                    .expect("Cannot find halfedge"),
+            ),
+        )
+        .expect("Cannot remove edge");
         qbox.garbage_collection(&mut cache)
             .expect("Cannot garbage collect");
         assert_eq!(11, qbox.num_faces());
         assert_eq!(17, qbox.num_edges());
         assert_eq!(8, qbox.num_vertices());
+        assert_eq!(
+            (10, 1),
+            qbox.faces().fold((0usize, 0usize), |(tris, quads), f| {
+                match qbox.face_valence(f) {
+                    3 => (tris + 1, quads),
+                    4 => (tris, quads + 1),
+                    _ => (tris, quads),
+                }
+            })
+        );
+        qbox.remove_edge(
+            qbox.halfedge_edge(
+                qbox.find_halfedge(1.into(), 4.into())
+                    .expect("Cannot find halfedge"),
+            ),
+        )
+        .expect("Cannot remove edge");
+        qbox.garbage_collection(&mut cache)
+            .expect("Cannot garbage collect");
+        assert_eq!(10, qbox.num_faces());
+        assert_eq!(16, qbox.num_edges());
+        assert_eq!(8, qbox.num_vertices());
+        assert_eq!(
+            (8, 2),
+            qbox.faces().fold((0usize, 0usize), |(tris, quads), f| {
+                match qbox.face_valence(f) {
+                    3 => (tris + 1, quads),
+                    4 => (tris, quads + 1),
+                    _ => (tris, quads),
+                }
+            })
+        );
     }
 }
