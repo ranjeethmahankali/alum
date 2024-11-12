@@ -475,14 +475,14 @@ where
     /// neighborhood. Use this with borrowed properties as arguments if you're
     /// calling this function in a hot loop, to avoid repeated borrows.
     pub fn check_edge_collapse(&self, h: HH, estatus: &[Status], vstatus: &mut [Status]) -> bool {
-        self.topology().check_edge_collapse(h, estatus, vstatus)
+        self.topol.check_edge_collapse(h, estatus, vstatus)
     }
 
     /// This is the same as [`Self::check_edge_collapse`], except it will
     /// attempt to borrow the necessary properties and may return an error if it
     /// ccannot borrow the required properties.
     pub fn try_check_edge_collapse(&self, h: HH) -> Result<bool, Error> {
-        self.topology().try_check_edge_collapse(h)
+        self.topol.try_check_edge_collapse(h)
     }
 
     /// Collapse the given edge.

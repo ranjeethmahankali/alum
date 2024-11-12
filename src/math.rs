@@ -36,7 +36,7 @@ where
     pub fn calc_face_normal(&self, f: FH, points: &[A::Vector]) -> A::Vector {
         // Use newell's method to compute the normal.
         let (nverts, x, y, z) = {
-            iterator::fh_ccw_iter(self.topology(), f).fold(
+            self.fh_ccw_iter(f).fold(
                 (
                     0usize,
                     A::scalarf64(0.0),
@@ -97,7 +97,7 @@ where
     /// loop can be faster than [`Self::try_calc_vertex_normal_accurate`] by
     /// avoiding repeated borrows.
     pub fn calc_vertex_normal_accurate(&self, v: VH, points: &[A::Vector]) -> A::Vector {
-        let topol = self.topology();
+        let topol = &self.topol;
         A::normalized_vec(
             match topol.vertex_halfedge(v) {
                 Some(h) => {
@@ -107,7 +107,7 @@ where
                         return A::zero_vector();
                     }
                     // Iterate over adjacent pairs of outgoing halfedges.
-                    iterator::ccw_rotate_iter(topol, h).zip(iterator::ccw_rotate_iter(topol, h2))
+                    iterator::ccw_rotate_iter(&topol, h).zip(iterator::ccw_rotate_iter(&topol, h2))
                 }
                 None => return A::zero_vector(),
             }
@@ -168,7 +168,7 @@ where
     ///
     /// `points` must be the positions of the vertices.
     pub fn calc_face_centroid(&self, f: FH, points: &[A::Vector]) -> A::Vector {
-        let (denom, total) = iterator::fv_ccw_iter(self.topology(), f).fold(
+        let (denom, total) = self.fv_ccw_iter(f).fold(
             (A::scalarf64(0.0), A::zero_vector()),
             |(denom, total): (A::Scalar, A::Vector), v: VH| {
                 (
@@ -191,11 +191,9 @@ where
     /// faces. The normals of the incident faces are read from provided
     /// `fnormals`.
     pub fn calc_vertex_normal_fast(&self, v: VH, fnormals: &[A::Vector]) -> A::Vector {
-        A::normalized_vec(
-            iterator::vf_ccw_iter(self.topology(), v).fold(A::zero_vector(), |total, f| {
-                total + fnormals[f.index() as usize]
-            }),
-        )
+        A::normalized_vec(self.vf_ccw_iter(v).fold(A::zero_vector(), |total, f| {
+            total + fnormals[f.index() as usize]
+        }))
     }
 
     /// Similar to [`Self::calc_vertex_normal_fast`] except this function will
@@ -265,7 +263,7 @@ where
     /// repeated borrows.
     pub fn calc_sector_normal(&self, h: HH, points: &[A::Vector]) -> A::Vector {
         A::cross_product(
-            self.calc_halfedge_vector(self.topology().prev_halfedge(h), points),
+            self.calc_halfedge_vector(self.topol.prev_halfedge(h), points),
             self.calc_halfedge_vector(h, points),
         )
     }
@@ -311,7 +309,7 @@ where
     /// approximate. This is because the area is computed as the sum of
     /// triangles, present in the default triangulation of the face.
     pub fn calc_face_area(&self, f: FH, points: &[A::Vector]) -> A::Scalar {
-        self.topology()
+        self.topol
             .triangulated_face_vertices(f)
             .fold(A::scalarf64(0.0), |total, vs| {
                 let p0 = points[vs[0].index() as usize];
@@ -398,10 +396,7 @@ where
     /// Calling this function with borrowed `points` property avoids an internal
     /// borrow of properties.
     pub fn calc_volume(&self, points: &[A::Vector]) -> A::Scalar {
-        if self
-            .halfedges()
-            .any(|h| self.topology().is_boundary_halfedge(h))
-        {
+        if self.halfedges().any(|h| self.topol.is_boundary_halfedge(h)) {
             // Not closed.
             return A::scalarf64(0.0);
         }

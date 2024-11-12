@@ -288,11 +288,6 @@ where
         self.topol.num_faces()
     }
 
-    /// Get the topology of this mesh.
-    pub fn topology(&self) -> &Topology {
-        &self.topol
-    }
-
     /// Iterator over the vertices of the mesh.
     pub fn vertices(&self) -> impl Iterator<Item = VH> {
         self.topol.vertices()
