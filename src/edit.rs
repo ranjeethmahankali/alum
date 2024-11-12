@@ -359,6 +359,57 @@ impl Topology {
         }
         Ok(enew)
     }
+
+    pub fn swap_edge_ccw(&mut self, e: EH) -> bool {
+        let h = self.edge_halfedge(e, false);
+        let oh = self.edge_halfedge(e, true);
+        let (f, of) = match (self.halfedge_face(h), self.halfedge_face(oh)) {
+            (Some(f), Some(of)) => (f, of),
+            _ => return false, // Cannot swap boundary edge.
+        };
+        let hn = self.next_halfedge(h);
+        let on = self.next_halfedge(oh);
+        let v0 = self.from_vertex(h);
+        let v1 = self.to_vertex(h);
+        // Check for degeneracy.
+        if f == of || hn == oh || self.to_vertex(hn) == v0 || on == h || self.to_vertex(on) == v1 {
+            return false;
+        }
+        let hp = self.prev_halfedge(h);
+        let op = self.prev_halfedge(oh);
+        let hnn = self.next_halfedge(hn);
+        let onn = self.next_halfedge(on);
+        let hnv = self.to_vertex(hn);
+        let onv = self.to_vertex(on);
+        // Rewire vertex -> halfedge.
+        if self.vertex_halfedge(v0) == Some(h) {
+            self.vertex_mut(v0).halfedge = Some(on);
+        }
+        if self.vertex_halfedge(v1) == Some(oh) {
+            self.vertex_mut(v1).halfedge = Some(on);
+        }
+        // Rewire halfedge -> vertex.
+        self.halfedge_mut(h).vertex = hnv;
+        self.halfedge_mut(oh).vertex = onv;
+        // Rewire halfedge -> halfedge.
+        self.link_halfedges(oh, onn);
+        self.link_halfedges(op, hn);
+        self.link_halfedges(hn, oh);
+        self.link_halfedges(h, hnn);
+        self.link_halfedges(hp, on);
+        self.link_halfedges(on, h);
+        // Rewire halfedge -> face.
+        self.halfedge_mut(hn).face = Some(of);
+        self.halfedge_mut(on).face = Some(f);
+        // Rewire face -> halfedge.
+        if self.face_halfedge(f) == hn {
+            self.face_mut(f).halfedge = h;
+        }
+        if self.face_halfedge(of) == on {
+            self.face_mut(f).halfedge = oh;
+        }
+        true
+    }
 }
 
 impl<const DIM: usize, A> PolyMeshT<DIM, A>
@@ -440,6 +491,15 @@ where
         let v = self.add_vertex(pos)?;
         let enew = self.topol.split_edge(e, v, copy_props)?;
         Ok((v, enew))
+    }
+
+    /// Swap an edge counter-clockwise.
+    ///
+    /// If the edge is a boundary edge, or some other topological error is
+    /// encountered, then mesh is unmodified and a `false` is
+    /// returned. Otherwise a `true` is returned.
+    pub fn swap_edge_ccw(&mut self, e: EH) -> bool {
+        self.topol.swap_edge_ccw(e)
     }
 }
 
