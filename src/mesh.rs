@@ -711,4 +711,11 @@ where
     pub fn garbage_collection(&mut self) -> Result<(), Error> {
         self.topol.garbage_collection(&mut self.cache)
     }
+
+    /// Check the topology of the mesh.
+    ///
+    /// This function will return an error if any errors are found in the topolgy.
+    pub fn check_topology(&self) -> Result<(), Error> {
+        self.topol.check()
+    }
 }

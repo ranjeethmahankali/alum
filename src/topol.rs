@@ -1006,6 +1006,7 @@ pub(crate) mod test {
     use arrayvec::ArrayVec;
 
     use crate::{
+        alum_glam::PolyMeshF32,
         iterator,
         topol::{Handle, VH},
     };
@@ -1516,5 +1517,29 @@ pub(crate) mod test {
         assert_eq!(9, qbox.num_edges());
         assert_eq!(18, qbox.num_halfedges());
         assert_eq!(7, qbox.num_vertices());
+    }
+
+    #[test]
+    fn t_mesh_check() {
+        PolyMeshF32::tetrahedron(1.0)
+            .expect("Cannot crate mesh")
+            .check_topology()
+            .expect("Topological check failed");
+        PolyMeshF32::hexahedron(1.0)
+            .expect("Cannot crate mesh")
+            .check_topology()
+            .expect("Topological check failed");
+        PolyMeshF32::octahedron(1.0)
+            .expect("Cannot crate mesh")
+            .check_topology()
+            .expect("Topological check failed");
+        PolyMeshF32::icosahedron(1.0)
+            .expect("Cannot crate mesh")
+            .check_topology()
+            .expect("Topological check failed");
+        PolyMeshF32::dodecahedron(1.0)
+            .expect("Cannot crate mesh")
+            .check_topology()
+            .expect("Topological check failed");
     }
 }
