@@ -87,7 +87,7 @@ where
 {
     /// Create a mesh that is the dual of this mesh.
     ///
-    /// https://en.wikipedia.org/wiki/Dual_polyhedron.
+    /// <https://en.wikipedia.org/wiki/Dual_polyhedron>.
     ///
     /// The dual mesh will contain vertices at the centroids of the input mesh,
     /// and an edge connecting the vertices for every pair of adjacent faces in
