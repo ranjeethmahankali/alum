@@ -798,8 +798,8 @@ where
     /// This will automatically delete all incident edges and faces. Vertices in
     /// the neighborhood may become isolated. They are deleted if
     /// `delete_isolated_vertices` is true. The elements are marked as deleted,
-    /// but not removed from the mesh. `garbage_collection` must be called to
-    /// remove the elements marked as deleted.
+    /// but not removed from the mesh. [`Self::garbage_collection`] must be
+    /// called to remove the elements marked as deleted.
     pub fn delete_vertex(&mut self, delete_isolated_vertices: bool, v: VH) -> Result<(), Error> {
         self.topol
             .delete_vertex(v, delete_isolated_vertices, &mut self.cache)
@@ -810,8 +810,8 @@ where
     /// This will automatically delete all incident faces. Vertices in the
     /// neighborhood may become isolated. They are deleted if
     /// `delete_isolated_vertices` is true. The elements are marked as deleted,
-    /// but not removed from the mesh. `garbage_collection` must be called to
-    /// remove the elements marked as deleted.
+    /// but not removed from the mesh. [`Self::garbage_collection`] must be
+    /// called to remove the elements marked as deleted.
     pub fn delete_edge(&mut self, e: EH, delete_isolated_vertices: bool) -> Result<(), Error> {
         self.topol.delete_edge(
             e,
@@ -826,8 +826,8 @@ where
     ///
     /// Vertices in the neighborhood may become isolated. They are deleted if
     /// `delete_isolated_vertices` is true. The elements are marked as deleted,
-    /// but not removed from the mesh. `garbage_collection` must be called to
-    /// remove the elements marked as deleted.
+    /// but not removed from the mesh. [`Self::garbage_collection`] must be
+    /// called to remove the elements marked as deleted.
     pub fn delete_face(&mut self, f: FH, delete_isolated_vertices: bool) -> Result<(), Error> {
         self.topol.delete_face(
             f,
