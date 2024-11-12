@@ -1,5 +1,7 @@
+use std::ops::Range;
+
 use crate::{
-    element::{Handle, EH, FH, HH, VH},
+    element::{EH, FH, HH, VH},
     error::Error,
     iterator,
     property::{EProperty, FProperty, HProperty, VProperty},
@@ -632,23 +634,30 @@ where
         Ok(vi)
     }
 
-    /// Add several vertices at once. The positions of the vertices must be
-    /// supplied in `pos`. The handles of the added vertices will be written into
-    /// `dst`.
-    pub fn add_vertices(&mut self, pos: &[A::Vector], dst: &mut [VH]) -> Result<(), Error> {
-        if pos.len() != dst.len() {
-            return Err(Error::MismatchedArrayLengths(pos.len(), dst.len()));
+    /// Add several vertices at once, at the supplied positions.
+    ///
+    /// If successful, the range of indices of the newly added vertices is
+    /// returned.
+    /// ```rust
+    /// use alum::alum_glam::PolyMeshF32;
+    ///
+    /// let mut mesh = PolyMeshF32::new();
+    /// let verts = [glam::vec3(0.0, 0.0, 0.0), glam::vec3(1.0, 0.0, 0.0),
+    ///              glam::vec3(1.0, 1.0, 0.0), glam::vec3(0.0, 1.0, 0.0),];
+    /// let verts = mesh.add_vertices(&verts).expect("Cannot add vertices");
+    /// assert_eq!(verts, 0..4);
+    /// ```
+    pub fn add_vertices(&mut self, pos: &[A::Vector]) -> Result<Range<u32>, Error> {
+        // The idea is to avoid modifying the mesh, when something goes wrong,
+        // so borrowing before adding the vertices lets us bail out without
+        // touching anything.
+        let vis = self.topol.add_vertices(pos.len())?;
+        let mut points = self.points.try_borrow_mut()?;
+        let points: &mut [A::Vector] = &mut points;
+        for (i, v) in vis.clone().enumerate() {
+            points[v as usize] = pos[i];
         }
-        self.topol.add_vertices(dst)?;
-        let verts: &[VH] = dst; // Make immutable.
-        {
-            let mut points = self.points.try_borrow_mut()?;
-            let points: &mut [A::Vector] = &mut points;
-            for (i, v) in verts.iter().enumerate() {
-                points[v.index() as usize] = pos[i];
-            }
-        }
-        Ok(())
+        Ok(vis)
     }
 
     /// Add a face to this mesh. The `verts` are expected to be in counter-clockwise order.

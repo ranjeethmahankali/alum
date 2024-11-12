@@ -44,19 +44,20 @@ where
             (4, 5, 6, 7),
         ];
         let mut qbox = Self::with_capacity(8, 12, 6);
-        let _verts = {
-            let mut pos: [A::Vector; 8] = [A::zero_vector(); 8];
-            for (i, &(xf, yf, zf)) in BOX_POS.iter().enumerate() {
-                pos[i] = A::vector([
-                    A::vector_coord(if xf { &max } else { &min }, 0),
-                    A::vector_coord(if yf { &max } else { &min }, 1),
-                    A::vector_coord(if zf { &max } else { &min }, 2),
-                ]);
-            }
-            let mut verts: [VH; 8] = [0.into(); 8];
-            qbox.add_vertices(&pos, &mut verts)?;
-            verts
-        };
+        let mut pos: [A::Vector; 8] = [A::zero_vector(); 8];
+        for (i, &(xf, yf, zf)) in BOX_POS.iter().enumerate() {
+            pos[i] = A::vector([
+                A::vector_coord(if xf { &max } else { &min }, 0),
+                A::vector_coord(if yf { &max } else { &min }, 1),
+                A::vector_coord(if zf { &max } else { &min }, 2),
+            ]);
+        }
+        let verts = qbox.add_vertices(&pos)?;
+        assert_eq!(
+            verts,
+            0..8,
+            "Vertices are expected to be in one contiguous range"
+        );
         // TODO: Find a more efficient way of adding a large number of faces
         // that doesn't require repeatedly borrowing the property buffers.
         for (a, b, c, d) in BOX_IDX {
@@ -130,19 +131,17 @@ where
         let b = radius * A::scalarf64((8.0 / 9.0f64).sqrt());
         let c = radius * A::scalarf64((2.0 / 9.0f64).sqrt());
         let d = radius * A::scalarf64((2.0 / 3.0f64).sqrt());
-        let _verts = {
-            let mut verts: [VH; 4] = [0.into(); 4];
-            mesh.add_vertices(
-                &[
-                    A::vector([A::scalarf64(0.0), A::scalarf64(0.0), A::scalarf64(1.0)]),
-                    A::vector([-c, d, -a]),
-                    A::vector([-c, -d, -a]),
-                    A::vector([b, A::scalarf64(0.0), -a]),
-                ],
-                &mut verts,
-            )?;
-            verts
-        };
+        let verts = mesh.add_vertices(&[
+            A::vector([A::scalarf64(0.0), A::scalarf64(0.0), A::scalarf64(1.0)]),
+            A::vector([-c, d, -a]),
+            A::vector([-c, -d, -a]),
+            A::vector([b, A::scalarf64(0.0), -a]),
+        ])?;
+        assert_eq!(
+            verts,
+            0..4,
+            "Vertices are expected to be in one contiguous range"
+        );
         mesh.add_tri_face(0.into(), 1.into(), 2.into())?;
         mesh.add_tri_face(0.into(), 2.into(), 3.into())?;
         mesh.add_tri_face(0.into(), 3.into(), 1.into())?;
@@ -155,23 +154,21 @@ where
     pub fn hexahedron(radius: A::Scalar) -> Result<Self, Error> {
         let a = radius * A::scalarf64(1.0f64 / 3.0f64.sqrt());
         let mut mesh = Self::with_capacity(8, 12, 6);
-        let _verts = {
-            let mut verts: [VH; 8] = [0.into(); 8];
-            mesh.add_vertices(
-                &[
-                    A::vector([-a, -a, -a]),
-                    A::vector([a, -a, -a]),
-                    A::vector([a, a, -a]),
-                    A::vector([-a, a, -a]),
-                    A::vector([-a, -a, a]),
-                    A::vector([a, -a, a]),
-                    A::vector([a, a, a]),
-                    A::vector([-a, a, a]),
-                ],
-                &mut verts,
-            )?;
-            verts
-        };
+        let verts = mesh.add_vertices(&[
+            A::vector([-a, -a, -a]),
+            A::vector([a, -a, -a]),
+            A::vector([a, a, -a]),
+            A::vector([-a, a, -a]),
+            A::vector([-a, -a, a]),
+            A::vector([a, -a, a]),
+            A::vector([a, a, a]),
+            A::vector([-a, a, a]),
+        ])?;
+        assert_eq!(
+            verts,
+            0..8,
+            "Vertices are expected to be in one contiguous range"
+        );
         mesh.add_quad_face(3.into(), 2.into(), 1.into(), 0.into())?;
         mesh.add_quad_face(2.into(), 6.into(), 5.into(), 1.into())?;
         mesh.add_quad_face(5.into(), 6.into(), 7.into(), 4.into())?;
@@ -185,22 +182,20 @@ where
     /// circumradius. The vertices of the mesh will lie on the unit sphere.
     pub fn octahedron(radius: A::Scalar) -> Result<Self, Error> {
         let mut mesh = Self::with_capacity(6, 12, 8);
-        let _verts = {
-            let mut verts: [VH; 6] = [0.into(); 6];
-            let zero = A::scalarf64(0.0);
-            mesh.add_vertices(
-                &[
-                    A::vector([radius, zero, zero]),
-                    A::vector([zero, radius, zero]),
-                    A::vector([-radius, zero, zero]),
-                    A::vector([zero, -radius, zero]),
-                    A::vector([zero, zero, radius]),
-                    A::vector([zero, zero, -radius]),
-                ],
-                &mut verts,
-            )?;
-            verts
-        };
+        let zero = A::scalarf64(0.0);
+        let verts = mesh.add_vertices(&[
+            A::vector([radius, zero, zero]),
+            A::vector([zero, radius, zero]),
+            A::vector([-radius, zero, zero]),
+            A::vector([zero, -radius, zero]),
+            A::vector([zero, zero, radius]),
+            A::vector([zero, zero, -radius]),
+        ])?;
+        assert_eq!(
+            verts,
+            0..6,
+            "Vertices are expected to be in one contiguous range"
+        );
         mesh.add_tri_face(0.into(), 4.into(), 3.into())?;
         mesh.add_tri_face(1.into(), 4.into(), 0.into())?;
         mesh.add_tri_face(2.into(), 4.into(), 1.into())?;
@@ -216,75 +211,73 @@ where
     /// circumradius. The vertices of the mesh will lie on the unit sphere.
     pub fn icosahedron(radius: A::Scalar) -> Result<Self, Error> {
         let mut mesh = Self::with_capacity(12, 30, 20);
-        let _verts = {
-            let mut verts: [VH; 12] = [0.into(); 12];
-            mesh.add_vertices(
-                &[
-                    A::vector([
-                        radius * A::scalarf64(0.0),
-                        radius * A::scalarf64(0.5257311121191336),
-                        radius * A::scalarf64(-0.8506508083520399),
-                    ]),
-                    A::vector([
-                        radius * A::scalarf64(0.5257311121191336),
-                        radius * A::scalarf64(0.8506508083520399),
-                        radius * A::scalarf64(0.0),
-                    ]),
-                    A::vector([
-                        radius * A::scalarf64(-0.5257311121191336),
-                        radius * A::scalarf64(0.8506508083520399),
-                        radius * A::scalarf64(0.0),
-                    ]),
-                    A::vector([
-                        radius * A::scalarf64(0.0),
-                        radius * A::scalarf64(0.5257311121191336),
-                        radius * A::scalarf64(0.8506508083520399),
-                    ]),
-                    A::vector([
-                        radius * A::scalarf64(0.0),
-                        radius * A::scalarf64(-0.5257311121191336),
-                        radius * A::scalarf64(0.8506508083520399),
-                    ]),
-                    A::vector([
-                        radius * A::scalarf64(-0.8506508083520399),
-                        radius * A::scalarf64(0.0),
-                        radius * A::scalarf64(0.5257311121191336),
-                    ]),
-                    A::vector([
-                        radius * A::scalarf64(0.0),
-                        radius * A::scalarf64(-0.5257311121191336),
-                        radius * A::scalarf64(-0.8506508083520399),
-                    ]),
-                    A::vector([
-                        radius * A::scalarf64(0.8506508083520399),
-                        radius * A::scalarf64(0.0),
-                        radius * A::scalarf64(-0.5257311121191336),
-                    ]),
-                    A::vector([
-                        radius * A::scalarf64(0.8506508083520399),
-                        radius * A::scalarf64(0.0),
-                        radius * A::scalarf64(0.5257311121191336),
-                    ]),
-                    A::vector([
-                        radius * A::scalarf64(-0.8506508083520399),
-                        radius * A::scalarf64(0.0),
-                        radius * A::scalarf64(-0.5257311121191336),
-                    ]),
-                    A::vector([
-                        radius * A::scalarf64(0.5257311121191336),
-                        radius * A::scalarf64(-0.8506508083520399),
-                        radius * A::scalarf64(0.0),
-                    ]),
-                    A::vector([
-                        radius * A::scalarf64(-0.5257311121191336),
-                        radius * A::scalarf64(-0.8506508083520399),
-                        radius * A::scalarf64(0.0),
-                    ]),
-                ],
-                &mut verts,
-            )?;
-            verts
-        };
+        let verts = mesh.add_vertices(&[
+            A::vector([
+                radius * A::scalarf64(0.0),
+                radius * A::scalarf64(0.5257311121191336),
+                radius * A::scalarf64(-0.8506508083520399),
+            ]),
+            A::vector([
+                radius * A::scalarf64(0.5257311121191336),
+                radius * A::scalarf64(0.8506508083520399),
+                radius * A::scalarf64(0.0),
+            ]),
+            A::vector([
+                radius * A::scalarf64(-0.5257311121191336),
+                radius * A::scalarf64(0.8506508083520399),
+                radius * A::scalarf64(0.0),
+            ]),
+            A::vector([
+                radius * A::scalarf64(0.0),
+                radius * A::scalarf64(0.5257311121191336),
+                radius * A::scalarf64(0.8506508083520399),
+            ]),
+            A::vector([
+                radius * A::scalarf64(0.0),
+                radius * A::scalarf64(-0.5257311121191336),
+                radius * A::scalarf64(0.8506508083520399),
+            ]),
+            A::vector([
+                radius * A::scalarf64(-0.8506508083520399),
+                radius * A::scalarf64(0.0),
+                radius * A::scalarf64(0.5257311121191336),
+            ]),
+            A::vector([
+                radius * A::scalarf64(0.0),
+                radius * A::scalarf64(-0.5257311121191336),
+                radius * A::scalarf64(-0.8506508083520399),
+            ]),
+            A::vector([
+                radius * A::scalarf64(0.8506508083520399),
+                radius * A::scalarf64(0.0),
+                radius * A::scalarf64(-0.5257311121191336),
+            ]),
+            A::vector([
+                radius * A::scalarf64(0.8506508083520399),
+                radius * A::scalarf64(0.0),
+                radius * A::scalarf64(0.5257311121191336),
+            ]),
+            A::vector([
+                radius * A::scalarf64(-0.8506508083520399),
+                radius * A::scalarf64(0.0),
+                radius * A::scalarf64(-0.5257311121191336),
+            ]),
+            A::vector([
+                radius * A::scalarf64(0.5257311121191336),
+                radius * A::scalarf64(-0.8506508083520399),
+                radius * A::scalarf64(0.0),
+            ]),
+            A::vector([
+                radius * A::scalarf64(-0.5257311121191336),
+                radius * A::scalarf64(-0.8506508083520399),
+                radius * A::scalarf64(0.0),
+            ]),
+        ])?;
+        assert_eq!(
+            verts,
+            0..12,
+            "Vertices are expected to be in one contiguous range"
+        );
         mesh.add_tri_face(2.into(), 1.into(), 0.into())?;
         mesh.add_tri_face(1.into(), 2.into(), 3.into())?;
         mesh.add_tri_face(5.into(), 4.into(), 3.into())?;
@@ -312,114 +305,113 @@ where
     /// circumradius. The vertices of the mesh will lie on the unit sphere.
     pub fn dodecahedron(radius: A::Scalar) -> Result<Self, Error> {
         let mut mesh = Self::with_capacity(20, 30, 12);
-        let _verts = {
-            let mut verts: [VH; 20] = [0.into(); 20];
-            mesh.add_vertices(
-                &[
-                    A::vector([
-                        radius * A::scalarf64(0.0),
-                        radius * A::scalarf64(0.9341723589627157),
-                        radius * A::scalarf64(-0.35682208977308993),
-                    ]),
-                    A::vector([
-                        radius * A::scalarf64(0.0),
-                        radius * A::scalarf64(0.9341723589627157),
-                        radius * A::scalarf64(0.35682208977308993),
-                    ]),
-                    A::vector([
-                        radius * A::scalarf64(-0.35682208977308993),
-                        radius * A::scalarf64(0.0),
-                        radius * A::scalarf64(0.9341723589627157),
-                    ]),
-                    A::vector([
-                        radius * A::scalarf64(0.35682208977308993),
-                        radius * A::scalarf64(0.0),
-                        radius * A::scalarf64(0.9341723589627157),
-                    ]),
-                    A::vector([
-                        radius * A::scalarf64(0.35682208977308993),
-                        radius * A::scalarf64(0.0),
-                        radius * A::scalarf64(-0.9341723589627157),
-                    ]),
-                    A::vector([
-                        radius * A::scalarf64(-0.35682208977308993),
-                        radius * A::scalarf64(0.0),
-                        radius * A::scalarf64(-0.9341723589627157),
-                    ]),
-                    A::vector([
-                        radius * A::scalarf64(0.0),
-                        radius * A::scalarf64(-0.9341723589627157),
-                        radius * A::scalarf64(0.35682208977308993),
-                    ]),
-                    A::vector([
-                        radius * A::scalarf64(0.0),
-                        radius * A::scalarf64(-0.9341723589627157),
-                        radius * A::scalarf64(-0.35682208977308993),
-                    ]),
-                    A::vector([
-                        radius * A::scalarf64(-0.9341723589627157),
-                        radius * A::scalarf64(0.35682208977308993),
-                        radius * A::scalarf64(0.0),
-                    ]),
-                    A::vector([
-                        radius * A::scalarf64(-0.9341723589627157),
-                        radius * A::scalarf64(-0.35682208977308993),
-                        radius * A::scalarf64(0.0),
-                    ]),
-                    A::vector([
-                        radius * A::scalarf64(0.9341723589627157),
-                        radius * A::scalarf64(0.35682208977308993),
-                        radius * A::scalarf64(0.0),
-                    ]),
-                    A::vector([
-                        radius * A::scalarf64(0.9341723589627157),
-                        radius * A::scalarf64(-0.35682208977308993),
-                        radius * A::scalarf64(0.0),
-                    ]),
-                    A::vector([
-                        radius * A::scalarf64(-0.5773502691896257),
-                        radius * A::scalarf64(0.5773502691896257),
-                        radius * A::scalarf64(0.5773502691896257),
-                    ]),
-                    A::vector([
-                        radius * A::scalarf64(0.5773502691896257),
-                        radius * A::scalarf64(0.5773502691896257),
-                        radius * A::scalarf64(0.5773502691896257),
-                    ]),
-                    A::vector([
-                        radius * A::scalarf64(-0.5773502691896257),
-                        radius * A::scalarf64(0.5773502691896257),
-                        radius * A::scalarf64(-0.5773502691896257),
-                    ]),
-                    A::vector([
-                        radius * A::scalarf64(0.5773502691896257),
-                        radius * A::scalarf64(0.5773502691896257),
-                        radius * A::scalarf64(-0.5773502691896257),
-                    ]),
-                    A::vector([
-                        radius * A::scalarf64(-0.5773502691896257),
-                        radius * A::scalarf64(-0.5773502691896257),
-                        radius * A::scalarf64(-0.5773502691896257),
-                    ]),
-                    A::vector([
-                        radius * A::scalarf64(0.5773502691896257),
-                        radius * A::scalarf64(-0.5773502691896257),
-                        radius * A::scalarf64(-0.5773502691896257),
-                    ]),
-                    A::vector([
-                        radius * A::scalarf64(-0.5773502691896257),
-                        radius * A::scalarf64(-0.5773502691896257),
-                        radius * A::scalarf64(0.5773502691896257),
-                    ]),
-                    A::vector([
-                        radius * A::scalarf64(0.5773502691896257),
-                        radius * A::scalarf64(-0.5773502691896257),
-                        radius * A::scalarf64(0.5773502691896257),
-                    ]),
-                ],
-                &mut verts,
-            )?;
-        };
+        let verts = mesh.add_vertices(&[
+            A::vector([
+                radius * A::scalarf64(0.0),
+                radius * A::scalarf64(0.9341723589627157),
+                radius * A::scalarf64(-0.35682208977308993),
+            ]),
+            A::vector([
+                radius * A::scalarf64(0.0),
+                radius * A::scalarf64(0.9341723589627157),
+                radius * A::scalarf64(0.35682208977308993),
+            ]),
+            A::vector([
+                radius * A::scalarf64(-0.35682208977308993),
+                radius * A::scalarf64(0.0),
+                radius * A::scalarf64(0.9341723589627157),
+            ]),
+            A::vector([
+                radius * A::scalarf64(0.35682208977308993),
+                radius * A::scalarf64(0.0),
+                radius * A::scalarf64(0.9341723589627157),
+            ]),
+            A::vector([
+                radius * A::scalarf64(0.35682208977308993),
+                radius * A::scalarf64(0.0),
+                radius * A::scalarf64(-0.9341723589627157),
+            ]),
+            A::vector([
+                radius * A::scalarf64(-0.35682208977308993),
+                radius * A::scalarf64(0.0),
+                radius * A::scalarf64(-0.9341723589627157),
+            ]),
+            A::vector([
+                radius * A::scalarf64(0.0),
+                radius * A::scalarf64(-0.9341723589627157),
+                radius * A::scalarf64(0.35682208977308993),
+            ]),
+            A::vector([
+                radius * A::scalarf64(0.0),
+                radius * A::scalarf64(-0.9341723589627157),
+                radius * A::scalarf64(-0.35682208977308993),
+            ]),
+            A::vector([
+                radius * A::scalarf64(-0.9341723589627157),
+                radius * A::scalarf64(0.35682208977308993),
+                radius * A::scalarf64(0.0),
+            ]),
+            A::vector([
+                radius * A::scalarf64(-0.9341723589627157),
+                radius * A::scalarf64(-0.35682208977308993),
+                radius * A::scalarf64(0.0),
+            ]),
+            A::vector([
+                radius * A::scalarf64(0.9341723589627157),
+                radius * A::scalarf64(0.35682208977308993),
+                radius * A::scalarf64(0.0),
+            ]),
+            A::vector([
+                radius * A::scalarf64(0.9341723589627157),
+                radius * A::scalarf64(-0.35682208977308993),
+                radius * A::scalarf64(0.0),
+            ]),
+            A::vector([
+                radius * A::scalarf64(-0.5773502691896257),
+                radius * A::scalarf64(0.5773502691896257),
+                radius * A::scalarf64(0.5773502691896257),
+            ]),
+            A::vector([
+                radius * A::scalarf64(0.5773502691896257),
+                radius * A::scalarf64(0.5773502691896257),
+                radius * A::scalarf64(0.5773502691896257),
+            ]),
+            A::vector([
+                radius * A::scalarf64(-0.5773502691896257),
+                radius * A::scalarf64(0.5773502691896257),
+                radius * A::scalarf64(-0.5773502691896257),
+            ]),
+            A::vector([
+                radius * A::scalarf64(0.5773502691896257),
+                radius * A::scalarf64(0.5773502691896257),
+                radius * A::scalarf64(-0.5773502691896257),
+            ]),
+            A::vector([
+                radius * A::scalarf64(-0.5773502691896257),
+                radius * A::scalarf64(-0.5773502691896257),
+                radius * A::scalarf64(-0.5773502691896257),
+            ]),
+            A::vector([
+                radius * A::scalarf64(0.5773502691896257),
+                radius * A::scalarf64(-0.5773502691896257),
+                radius * A::scalarf64(-0.5773502691896257),
+            ]),
+            A::vector([
+                radius * A::scalarf64(-0.5773502691896257),
+                radius * A::scalarf64(-0.5773502691896257),
+                radius * A::scalarf64(0.5773502691896257),
+            ]),
+            A::vector([
+                radius * A::scalarf64(0.5773502691896257),
+                radius * A::scalarf64(-0.5773502691896257),
+                radius * A::scalarf64(0.5773502691896257),
+            ]),
+        ])?;
+        assert_eq!(
+            verts,
+            0..20,
+            "Vertices are expected to be in one contiguous range"
+        );
         mesh.add_face(&[15.into(), 4.into(), 5.into(), 14.into(), 0.into()])?;
         mesh.add_face(&[15.into(), 0.into(), 1.into(), 13.into(), 10.into()])?;
         mesh.add_face(&[14.into(), 8.into(), 12.into(), 1.into(), 0.into()])?;

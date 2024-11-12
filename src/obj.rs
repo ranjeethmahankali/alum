@@ -3,6 +3,7 @@ use std::path::Path;
 use crate::{
     error::Error,
     mesh::{Adaptor, FloatScalarAdaptor, PolyMeshT},
+    VH,
 };
 
 impl<A> PolyMeshT<3, A>
@@ -37,8 +38,7 @@ where
         let nedges = nfaces * 3 / 2; // Estimate.
         let mut outmesh = PolyMeshT::<3, A>::with_capacity(nverts, nedges, nfaces);
         let mut positions = Vec::new();
-        let mut vertices = Vec::new();
-        let mut fvs = Vec::new();
+        let mut fvs: Vec<VH> = Vec::new();
         for model in models {
             let mesh = &model.mesh;
             if mesh.positions.len() % 3 != 0 {
@@ -52,15 +52,20 @@ where
                     A::scalarf64(triplet[2]),
                 ])
             }));
-            vertices.resize(positions.len(), 0u32.into());
-            outmesh.add_vertices(&positions, &mut vertices)?;
+            let nbefore = outmesh.num_vertices() as u32;
+            let vertices = outmesh.add_vertices(&positions)?;
+            assert_eq!(
+                vertices,
+                nbefore..(nbefore + positions.len() as u32),
+                "Vertex indices are expected to be in a contiguous range."
+            );
             // Faces.
             let mut start = 0usize;
             if mesh.face_arities.is_empty() {
                 // Load triangles.
                 for indices in mesh.indices.chunks(3) {
                     fvs.clear();
-                    fvs.extend(indices.iter().map(|i| vertices[*i as usize]));
+                    fvs.extend(indices.iter().map(|i| -> VH { i.into() }));
                     outmesh.add_face(&fvs)?;
                 }
             } else {
@@ -69,7 +74,7 @@ where
                     let indices = &mesh.indices[start..(start + size)];
                     start += size;
                     fvs.clear();
-                    fvs.extend(indices.iter().map(|i| vertices[*i as usize]));
+                    fvs.extend(indices.iter().map(|i| -> VH { i.into() }));
                     outmesh.add_face(&fvs)?;
                 }
             }
