@@ -1545,7 +1545,7 @@ pub(crate) mod test {
     }
 
     #[test]
-    fn t_mesh_check() {
+    fn t_primitive_check_topology() {
         PolyMeshF32::tetrahedron(1.0)
             .expect("Cannot crate mesh")
             .check_topology()
