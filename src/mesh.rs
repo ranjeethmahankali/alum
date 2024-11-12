@@ -175,6 +175,17 @@ where
     /// Create a new vertex property of type T, with the `default` value.
     ///
     /// The default value will be used when new elements are added to the mesh.
+    ///
+    /// ```rust
+    /// use alum::alum_glam::PolyMeshF32;
+    ///
+    /// let mut mesh = PolyMeshF32::tetrahedron(1.0).expect("Cannot crate tetrahedron");
+    /// let prop = mesh.create_vertex_prop(42usize);
+    /// // To use th property, you have to borrow it.
+    /// let prop = prop.try_borrow().expect("Cannot borrow property");
+    /// assert_eq!(mesh.num_vertices(), prop.len());
+    /// assert!(prop.iter().all(|v| *v == 42));
+    /// ```
     pub fn create_vertex_prop<T>(&mut self, default: T) -> VProperty<T>
     where
         T: Clone + Copy + 'static,
@@ -185,6 +196,17 @@ where
     /// Create a new halfedge property of type T, with the `default` value.
     ///
     /// The default value will be used when new elements are added to the mesh.
+    ///
+    /// ```rust
+    /// use alum::alum_glam::PolyMeshF32;
+    ///
+    /// let mut mesh = PolyMeshF32::tetrahedron(1.0).expect("Cannot crate tetrahedron");
+    /// let prop = mesh.create_halfedge_prop(42usize);
+    /// // To use th property, you have to borrow it.
+    /// let prop = prop.try_borrow().expect("Cannot borrow property");
+    /// assert_eq!(mesh.num_halfedges(), prop.len());
+    /// assert!(prop.iter().all(|v| *v == 42));
+    /// ```
     pub fn create_halfedge_prop<T>(&mut self, default: T) -> HProperty<T>
     where
         T: Clone + Copy + 'static,
@@ -195,6 +217,17 @@ where
     /// Create a new edge property of type T, with the `default` value.
     ///
     /// The default value will be used when new elements are added to the mesh.
+    ///
+    /// ```rust
+    /// use alum::alum_glam::PolyMeshF32;
+    ///
+    /// let mut mesh = PolyMeshF32::tetrahedron(1.0).expect("Cannot crate tetrahedron");
+    /// let prop = mesh.create_edge_prop(42usize);
+    /// // To use th property, you have to borrow it.
+    /// let prop = prop.try_borrow().expect("Cannot borrow property");
+    /// assert_eq!(mesh.num_edges(), prop.len());
+    /// assert!(prop.iter().all(|v| *v == 42));
+    /// ```
     pub fn create_edge_prop<T>(&mut self, default: T) -> EProperty<T>
     where
         T: Clone + Copy + 'static,
@@ -205,6 +238,17 @@ where
     /// Create a new face property of type T, with the `default` value.
     ///
     /// The default value will be used when new elements are added to the mesh.
+    ///
+    /// ```rust
+    /// use alum::alum_glam::PolyMeshF32;
+    ///
+    /// let mut mesh = PolyMeshF32::tetrahedron(1.0).expect("Cannot crate tetrahedron");
+    /// let prop = mesh.create_face_prop(42usize);
+    /// // To use th property, you have to borrow it.
+    /// let prop = prop.try_borrow().expect("Cannot borrow property");
+    /// assert_eq!(mesh.num_faces(), prop.len());
+    /// assert!(prop.iter().all(|v| *v == 42));
+    /// ```
     pub fn create_face_prop<T>(&mut self, default: T) -> FProperty<T>
     where
         T: Clone + Copy + 'static,
@@ -633,11 +677,12 @@ where
         iterator::cw_rotate_iter(&self.topol, h)
     }
 
-    /// Counter-clockwise iterator over the halfedges in a loop. The iterator
-    /// will start at the given halfedge. If the halfedge has an incident face,
-    /// this iterator is equivalent to a circular shifted `fh_ccw_iter` of the
-    /// incident face. If the halfedge is on the boundary, this iterator goes
-    /// over the boundary loop counter-clockwise.
+    /// Counter-clockwise iterator over the halfedges in a loop.
+    ///
+    /// The iterator will start at the given halfedge. If the halfedge has an
+    /// incident face, this iterator is equivalent to a circular shifted
+    /// `fh_ccw_iter` of the incident face. If the halfedge is on the boundary,
+    /// this iterator goes over the boundary loop counter-clockwise.
     pub fn loop_ccw_iter(&self, h: HH) -> impl Iterator<Item = HH> + use<'_, A, DIM> {
         iterator::loop_ccw_iter(&self.topol, h)
     }
