@@ -110,11 +110,11 @@ pub trait FloatScalarAdaptor<const DIM: usize>: Adaptor<DIM> {
 
 /// A polygon mesh.
 ///
-/// `VecT` is the 3d vector type used to represent this mesh. The positions of
-/// the vertices and face normals etc. are all `VecT`. Quantities like edge
-/// length, face area etc. are of type `VecT::Scalar`. Various functions of ,
-/// such as computing normals etc. are available predicated on the trait bounds
-/// `VecT` satisfies.
+/// `DIM` is the number of spatial dimensions this mesh lives in. This is the
+/// same as the number of coordinates the positions of it's vertices are
+/// expected to have. `A` must be an implementation of the [`Adaptor`] that
+/// tells the mesh type about the geometric types like vectors and scalars and
+/// how to work with them.
 pub struct PolyMeshT<const DIM: usize, A>
 where
     A: Adaptor<DIM>,
