@@ -230,10 +230,13 @@ where
     /// enforce runtime borrow checking rules. If borrowing fails,
     /// [`Error::BorrowedPropertyAccess`] is returned, otherwise a reference to
     /// the property is returned.
-    pub fn try_borrow(&self) -> Result<Ref<Vec<T>>, Error> {
-        self.data
-            .try_borrow()
-            .map_err(|_| Error::BorrowedPropertyAccess)
+    pub fn try_borrow(&self) -> Result<Ref<[T]>, Error> {
+        Ok(Ref::map(
+            self.data
+                .try_borrow()
+                .map_err(|_| Error::BorrowedPropertyAccess)?,
+            |p| -> &[T] { p },
+        ))
     }
 
     /// Try to borrow the property with mutable access.
@@ -242,10 +245,13 @@ where
     /// enforce runtime borrow checking rules. If borrowing fails,
     /// [`Error::BorrowedPropertyAccess`] is returned, otherwise a mutable
     /// reference to the property is returned.
-    pub fn try_borrow_mut(&mut self) -> Result<RefMut<Vec<T>>, Error> {
-        self.data
-            .try_borrow_mut()
-            .map_err(|_| Error::BorrowedPropertyAccess)
+    pub fn try_borrow_mut(&mut self) -> Result<RefMut<[T]>, Error> {
+        Ok(RefMut::map(
+            self.data
+                .try_borrow_mut()
+                .map_err(|_| Error::BorrowedPropertyAccess)?,
+            |p| -> &mut [T] { p },
+        ))
     }
 
     /// Read the property value of a mesh element.
@@ -264,9 +270,12 @@ where
     /// This function internally tries to mutably borrow the property and
     /// returns an error if borrowing fails.
     pub fn get_mut(&mut self, h: H) -> Result<RefMut<T>, Error> {
-        Ok(RefMut::map(self.try_borrow_mut()?, |v| {
-            &mut v[h.index() as usize]
-        }))
+        Ok(RefMut::map(
+            self.data
+                .try_borrow_mut()
+                .map_err(|_| Error::BorrowedPropertyAccess)?,
+            |v| &mut v[h.index() as usize],
+        ))
     }
 
     /// Set the property value of a mesh element.
@@ -535,12 +544,12 @@ mod test {
         let mut fis: Vec<u32> = fis
             .try_borrow()
             .expect("Cannot borrow face indices")
-            .clone();
+            .to_vec();
         fis.sort();
         let mut vis: Vec<u32> = vis
             .try_borrow()
             .expect("Cannot borrow vertex indices")
-            .clone();
+            .to_vec();
         vis.sort();
         // The properties should be preserved.
         assert_eq!(vis, &[0, 1, 2, 3, 4, 6, 7]);
