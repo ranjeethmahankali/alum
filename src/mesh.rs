@@ -653,9 +653,6 @@ where
     /// assert_eq!(verts, 4..8);
     /// ```
     pub fn add_vertices(&mut self, pos: &[A::Vector]) -> Result<Range<u32>, Error> {
-        // The idea is to avoid modifying the mesh, when something goes wrong,
-        // so borrowing before adding the vertices lets us bail out without
-        // touching anything.
         let vis = self.topol.add_vertices(pos.len())?;
         let mut points = self.points.try_borrow_mut()?;
         let points: &mut [A::Vector] = &mut points;
