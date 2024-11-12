@@ -53,4 +53,10 @@ pub enum Error {
     InvalidHalfedgeLink(HH, HH),
     /// Invalid face-halfedge link.
     InvalidFaceHalfedgeLink(FH, HH),
+    /// Edge is not a unique link between its incident faces. Removing it will
+    /// produce dangling / invalid topology.
+    EdgeIsNotAUniqueLink(EH),
+    /// Removing a boundary edge breaks the topology of the mesh. If you really
+    /// want to do this, considering deleting the edge.
+    CannotRemoveBoundaryEdge(EH),
 }

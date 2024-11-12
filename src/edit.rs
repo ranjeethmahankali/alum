@@ -461,6 +461,70 @@ impl Topology {
         }
         true
     }
+
+    /// An edge is a unique link if it is the only edge connecting the two faces
+    /// incident on it.
+    ///
+    /// The boundary is treated as one face. So the boundary edges can only be
+    /// simple links if
+    fn edge_is_unique_link(&self, e: EH) -> bool {
+        let h = self.edge_halfedge(e, false);
+        let fo = self.halfedge_face(self.opposite_halfedge(h));
+        iterator::loop_ccw_iter(self, h)
+            .skip(1)
+            .all(|h| self.halfedge_face(self.opposite_halfedge(h)) != fo)
+    }
+
+    pub fn remove_edge(&mut self, e: EH) -> Result<FH, Error> {
+        let mut estatus = self.estatus.clone();
+        let mut estatus = estatus.try_borrow_mut()?;
+        let mut fstatus = self.fstatus.clone();
+        let mut fstatus = fstatus.try_borrow_mut()?;
+        let mut hstatus = self.hstatus.clone();
+        let mut hstatus = hstatus.try_borrow_mut()?;
+        if estatus[e.index() as usize].deleted() {
+            return Err(Error::DeletedEdge(e));
+        }
+        if !self.edge_is_unique_link(e) {
+            return Err(Error::EdgeIsNotAUniqueLink(e));
+        }
+        let (h0, h1) = (self.edge_halfedge(e, false), self.edge_halfedge(e, true));
+        let (f0, f1) = match (self.halfedge_face(h0), self.halfedge_face(h1)) {
+            (Some(f0), Some(f1)) => (f0, f1),
+            _ => return Err(Error::CannotRemoveBoundaryEdge(e)),
+        };
+        let (p0, p1) = (self.prev_halfedge(h0), self.prev_halfedge(h1));
+        let (n0, n1) = (self.next_halfedge(h0), self.next_halfedge(h1));
+        let (v0, v1) = (self.to_vertex(h0), self.to_vertex(h1));
+        // Rewire vertex -> halfedge.
+        if self.vertex_halfedge(v0) == Some(h1) {
+            self.vertex_mut(v0).halfedge = Some(n0);
+        }
+        if self.vertex_halfedge(v1) == Some(h1) {
+            self.vertex_mut(v1).halfedge = Some(n1);
+        }
+        // Rewire halfedge -> halfedge.
+        self.link_halfedges(p0, n1);
+        self.link_halfedges(p1, n0);
+        // Rewire face -> halfedge. Keep f0 and delete f1.
+        if self.face_halfedge(f0) == h0 {
+            self.face_mut(f0).halfedge = p0;
+        }
+        // Rewire halfedge -> face for the loop of f1.
+        {
+            let mut h = n1;
+            while h != p1 {
+                self.halfedge_mut(h).face = Some(f0);
+                h = self.next_halfedge(h);
+            }
+            self.halfedge_mut(p1).face = Some(f0);
+        }
+        estatus[e.index() as usize].set_deleted(true);
+        hstatus[h0.index() as usize].set_deleted(true);
+        hstatus[h1.index() as usize].set_deleted(true);
+        fstatus[f1.index() as usize].set_deleted(true);
+        Ok(f0)
+    }
 }
 
 impl<const DIM: usize, A> PolyMeshT<DIM, A>
@@ -594,6 +658,11 @@ where
     /// ```
     pub fn swap_edge_cw(&mut self, e: EH) -> bool {
         self.topol.swap_edge_cw(e)
+    }
+
+    /// Remove an edge and unite the two incident faces into one face.
+    pub fn remove_edge(&mut self, e: EH) -> Result<FH, Error> {
+        self.topol.remove_edge(e)
     }
 }
 
@@ -993,5 +1062,22 @@ mod test {
             ]
         );
         qbox.check().expect("Topological errors found");
+    }
+
+    #[test]
+    fn t_box_remove_edge() {
+        let mut qbox = quad_box();
+        qbox.triangulate().expect("Cannot triangulate the mesh");
+        let h = qbox
+            .find_halfedge(5.into(), 7.into())
+            .expect("Cannot find halfedge");
+        let e = qbox.halfedge_edge(h);
+        qbox.remove_edge(e).expect("Cannot remove edge");
+        let mut cache = TopolCache::default();
+        qbox.garbage_collection(&mut cache)
+            .expect("Cannot garbage collect");
+        assert_eq!(11, qbox.num_faces());
+        assert_eq!(17, qbox.num_edges());
+        assert_eq!(8, qbox.num_vertices());
     }
 }
