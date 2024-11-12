@@ -5,7 +5,7 @@ use crate::{
     property::{EProperty, FProperty, HProperty, PropertyContainer, VProperty},
     status::Status,
 };
-use std::cell::RefMut;
+use std::{cell::RefMut, ops::Range};
 
 enum TentativeEdge {
     Old(HH),
@@ -368,16 +368,12 @@ impl Topology {
         Ok(vi.into())
     }
 
-    pub fn add_vertices(&mut self, verts: &mut [VH]) -> Result<(), Error> {
+    pub fn add_vertices(&mut self, n: usize) -> Result<Range<u32>, Error> {
         let nverts = self.vertices.len() as u32;
-        let vis = nverts..(nverts + (verts.len() as u32));
-        self.vprops.push_values(verts.len())?;
+        self.vprops.push_values(n)?;
         self.vertices
-            .resize(self.vertices.len() + verts.len(), Vertex { halfedge: None });
-        for (vi, dst) in vis.zip(verts.iter_mut()) {
-            *dst = vi.into();
-        }
-        Ok(())
+            .resize(self.vertices.len() + n, Vertex { halfedge: None });
+        Ok(nverts..(nverts + n as u32))
     }
 
     pub(crate) fn new_edge(
@@ -701,7 +697,6 @@ impl Topology {
             self.edge_status_mut(e)?.set_deleted(true);
             {
                 let mut hstatus = self.hstatus.try_borrow_mut()?;
-                let hstatus: &mut Vec<Status> = &mut hstatus;
                 hstatus[h0.index() as usize].set_deleted(true);
                 hstatus[h1.index() as usize].set_deleted(true);
             }
@@ -755,7 +750,6 @@ impl Topology {
             self.edge_status_mut(e)?.set_deleted(true);
             {
                 let mut hstatus = self.hstatus.try_borrow_mut()?;
-                let hstatus: &mut Vec<Status> = &mut hstatus;
                 hstatus[h0.index() as usize].set_deleted(true);
                 hstatus[h1.index() as usize].set_deleted(true);
             }
@@ -813,7 +807,6 @@ impl Topology {
                 // Use scope to borrow the status vector.
                 {
                     let status = self.vstatus.try_borrow()?;
-                    let status: &Vec<Status> = &status;
                     while !status[left].deleted() && left < right {
                         left += 1;
                     }
@@ -841,7 +834,6 @@ impl Topology {
                 // Use scope to borrow the status vector.
                 {
                     let status = self.estatus.try_borrow()?;
-                    let status: &Vec<Status> = &status;
                     while !status[left].deleted() && left < right {
                         left += 1;
                     }
@@ -873,7 +865,6 @@ impl Topology {
                 // Use scope to borrow the status vector.
                 {
                     let status = self.fstatus.try_borrow()?;
-                    let status: &Vec<Status> = &status;
                     while !status[left].deleted() && left < right {
                         left += 1;
                     }

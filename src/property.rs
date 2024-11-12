@@ -230,10 +230,13 @@ where
     /// enforce runtime borrow checking rules. If borrowing fails,
     /// [`Error::BorrowedPropertyAccess`] is returned, otherwise a reference to
     /// the property is returned.
-    pub fn try_borrow(&self) -> Result<Ref<Vec<T>>, Error> {
-        self.data
-            .try_borrow()
-            .map_err(|_| Error::BorrowedPropertyAccess)
+    pub fn try_borrow(&self) -> Result<Ref<[T]>, Error> {
+        Ok(Ref::map(
+            self.data
+                .try_borrow()
+                .map_err(|_| Error::BorrowedPropertyAccess)?,
+            |p| -> &[T] { p },
+        ))
     }
 
     /// Try to borrow the property with mutable access.
@@ -242,10 +245,13 @@ where
     /// enforce runtime borrow checking rules. If borrowing fails,
     /// [`Error::BorrowedPropertyAccess`] is returned, otherwise a mutable
     /// reference to the property is returned.
-    pub fn try_borrow_mut(&mut self) -> Result<RefMut<Vec<T>>, Error> {
-        self.data
-            .try_borrow_mut()
-            .map_err(|_| Error::BorrowedPropertyAccess)
+    pub fn try_borrow_mut(&mut self) -> Result<RefMut<[T]>, Error> {
+        Ok(RefMut::map(
+            self.data
+                .try_borrow_mut()
+                .map_err(|_| Error::BorrowedPropertyAccess)?,
+            |p| -> &mut [T] { p },
+        ))
     }
 
     /// Read the property value of a mesh element.
@@ -264,9 +270,12 @@ where
     /// This function internally tries to mutably borrow the property and
     /// returns an error if borrowing fails.
     pub fn get_mut(&mut self, h: H) -> Result<RefMut<T>, Error> {
-        Ok(RefMut::map(self.try_borrow_mut()?, |v| {
-            &mut v[h.index() as usize]
-        }))
+        Ok(RefMut::map(
+            self.data
+                .try_borrow_mut()
+                .map_err(|_| Error::BorrowedPropertyAccess)?,
+            |v| &mut v[h.index() as usize],
+        ))
     }
 
     /// Set the property value of a mesh element.
@@ -454,6 +463,8 @@ where
 
 #[cfg(test)]
 mod test {
+    use crate::topol::{test::quad_box, TopolCache};
+
     use super::{PropertyContainer, VProperty};
 
     #[test]
@@ -497,5 +508,51 @@ mod test {
         assert!(!container.props[0].is_valid());
         container.garbage_collection();
         assert_eq!(container.props.len(), 0);
+    }
+
+    #[test]
+    fn t_deleted_elements() {
+        let mut qbox = quad_box();
+        let (fis, vis) = {
+            let mut vis = qbox.new_vprop(0u32);
+            let mut fis = qbox.new_fprop(0u32);
+            {
+                let mut vis = vis.try_borrow_mut().expect("Cannot borrow property");
+                for (i, v) in vis.iter_mut().enumerate() {
+                    *v = i as u32;
+                }
+                let mut fis = fis.try_borrow_mut().expect("Cannot borrow property");
+                for (i, v) in fis.iter_mut().enumerate() {
+                    *v = i as u32;
+                }
+            }
+            (fis, vis)
+        };
+        let mut cache = TopolCache::default();
+        for fi in [1, 2, 5] {
+            qbox.delete_face(
+                fi.into(),
+                true,
+                &mut cache.halfedges,
+                &mut cache.edges,
+                &mut cache.vertices,
+            )
+            .expect("Cannot delete a face");
+        }
+        qbox.garbage_collection(&mut cache)
+            .expect("Cannot garbage collect");
+        let mut fis: Vec<u32> = fis
+            .try_borrow()
+            .expect("Cannot borrow face indices")
+            .to_vec();
+        fis.sort();
+        let mut vis: Vec<u32> = vis
+            .try_borrow()
+            .expect("Cannot borrow vertex indices")
+            .to_vec();
+        vis.sort();
+        // The properties should be preserved.
+        assert_eq!(vis, &[0, 1, 2, 3, 4, 6, 7]);
+        assert_eq!(fis, &[0, 3, 4]);
     }
 }

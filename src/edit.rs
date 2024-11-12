@@ -130,7 +130,7 @@ impl Topology {
         true
     }
 
-    /// This is the same as `check_edge_collapse`, except it will attempt to
+    /// This is the same as [`Self::check_edge_collapse`], except it will attempt to
     /// borrow the necessary properties and may return an error if it ccannot
     /// borrow the required properties.
     pub fn try_check_edge_collapse(&self, h: HH) -> Result<bool, Error> {
@@ -253,8 +253,9 @@ impl Topology {
         }
     }
 
-    /// This is the same as `collapse_edge` except it will attempt to borrow all
-    /// the required properties, and returns an error if borrowing fails.
+    /// This is the same as [`Self::collapse_edge`] except it will attempt to
+    /// borrow all the required properties, and returns an error if borrowing
+    /// fails.
     pub fn try_collapse_edge(&mut self, h: HH, cache: &mut TopolCache) -> Result<(), Error> {
         let mut vstatus = self.vstatus.clone();
         let mut vstatus = vstatus.try_borrow_mut()?;
@@ -282,11 +283,6 @@ impl Topology {
         iterator::loop_ccw_iter(self, self.next_halfedge(hstart))
             .take_while(move |h| self.to_vertex(*h) != vstart)
             .map(move |h| [vstart, self.from_vertex(h), self.to_vertex(h)])
-    }
-
-    pub fn triangulated_vertices(&self) -> impl Iterator<Item = [VH; 3]> + use<'_> {
-        self.faces()
-            .flat_map(move |f| self.triangulated_face_vertices(f))
     }
 
     pub fn triangulate_face(&mut self, f: FH) -> Result<(), Error> {
@@ -380,9 +376,9 @@ where
         self.topology().check_edge_collapse(h, estatus, vstatus)
     }
 
-    /// This is the same as `check_edge_collapse`, except it will attempt to
-    /// borrow the necessary properties and may return an error if it ccannot
-    /// borrow the required properties.
+    /// This is the same as [`Self::check_edge_collapse`], except it will
+    /// attempt to borrow the necessary properties and may return an error if it
+    /// ccannot borrow the required properties.
     pub fn try_check_edge_collapse(&self, h: HH) -> Result<bool, Error> {
         self.topology().try_check_edge_collapse(h)
     }
@@ -407,8 +403,8 @@ where
             .collapse_edge(h, vstatus, hstatus, estatus, fstatus, &mut self.cache)
     }
 
-    /// This is the same as `collapse_edge`. Except this function will try to
-    /// borrow all the necessary properties, and return an error if the
+    /// This is the same as [`Self::collapse_edge`]. Except this function will
+    /// try to borrow all the necessary properties, and return an error if the
     /// borrowing fails.
     pub fn try_collapse_edge(&mut self, h: HH) -> Result<(), Error> {
         self.topol.try_collapse_edge(h, &mut self.cache)
@@ -632,7 +628,8 @@ mod test {
     fn t_box_triangulated_indices() {
         let qbox = quad_box();
         assert_eq!(
-            qbox.triangulated_vertices()
+            qbox.faces()
+                .flat_map(|f| qbox.triangulated_face_vertices(f))
                 .flatten()
                 .map(|v| v.index())
                 .collect::<Vec<_>>(),
