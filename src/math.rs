@@ -18,8 +18,9 @@ where
     A::Vector:
         Add<Output = A::Vector> + Sub<Output = A::Vector> + Div<A::Scalar, Output = A::Vector>,
 {
-    /// This is similar to `calc_face_normal`, except this function attempts to
-    /// borrow the necessary properties and return an error if borrowing fails.
+    /// This is similar to [`Self::calc_face_normal`], except this function
+    /// attempts to borrow the necessary properties and return an error if
+    /// borrowing fails.
     pub fn try_calc_face_normal(&self, f: FH) -> Result<A::Vector, Error> {
         let points = self.points();
         let points = points.try_borrow()?;
@@ -121,9 +122,9 @@ where
         )
     }
 
-    /// This is similar to `calc_vertex_normal_accurate`, except this function
-    /// will attempt to borrow the required properties and return an error if
-    /// borrowing fails.
+    /// This is similar to [`Self::calc_vertex_normal_accurate`], except this
+    /// function will attempt to borrow the required properties and return an
+    /// error if borrowing fails.
     pub fn try_calc_vertex_normal_accurate(&self, v: VH) -> Result<A::Vector, Error> {
         let points = self.points();
         let points = points.try_borrow()?;
@@ -154,8 +155,9 @@ where
     A::Scalar: Add<Output = A::Scalar>,
     A::Vector: Add<Output = A::Vector> + Div<A::Scalar, Output = A::Vector>,
 {
-    /// Similar to `calc_face_centroid`, except this function attempts to borrow
-    /// the necessary properties and returns an error if the borrowing fails.
+    /// Similar to [`Self::calc_face_centroid`], except this function attempts
+    /// to borrow the necessary properties and returns an error if the borrowing
+    /// fails.
     pub fn try_calc_face_centroid(&self, f: FH) -> Result<A::Vector, Error> {
         let points = self.points();
         let points = points.try_borrow()?;
@@ -196,9 +198,9 @@ where
         )
     }
 
-    /// Similar to `calc_vertex_normal_fast` except this function will attempt
-    /// to borrow the face normals. If the borrowing fails, or if the face
-    /// normals are not available, an error is returned.
+    /// Similar to [`Self::calc_vertex_normal_fast`] except this function will
+    /// attempt to borrow the face normals. If the borrowing fails, or if the
+    /// face normals are not available, an error is returned.
     pub fn try_calc_vertex_normal_fast(&self, v: VH) -> Result<A::Vector, Error> {
         match self.face_normals() {
             Some(fnormals) => {
@@ -232,9 +234,9 @@ where
     A: Adaptor<DIM>,
     A::Vector: Sub<Output = A::Vector>,
 {
-    /// Similar to `calc_halfedge_vector`, except this function will attempt to
-    /// borrow the necessary properties and return an error if the borrowing
-    /// fails.
+    /// Similar to [`Self::calc_halfedge_vector`], except this function will
+    /// attempt to borrow the necessary properties and return an error if the
+    /// borrowing fails.
     pub fn try_calc_halfedge_vector(&self, h: HH) -> Result<A::Vector, Error> {
         let points = self.points();
         let points = points.try_borrow()?;
@@ -268,8 +270,9 @@ where
         )
     }
 
-    /// Similar to `calc_sector_normal`, except this function attempts to borrow
-    /// the necessary properties and returns an error if borrowing fails.
+    /// Similar to [`Self::calc_sector_normal`], except this function attempts
+    /// to borrow the necessary properties and returns an error if borrowing
+    /// fails.
     pub fn try_calc_sector_normal(&self, h: HH) -> Result<A::Vector, Error> {
         let points = self.points();
         let points = points.try_borrow()?;
@@ -293,8 +296,9 @@ where
         A::vector_length(self.calc_sector_normal(h, points)) * A::scalarf64(0.5)
     }
 
-    /// Similar to `calc_sector_area`, except this function attempts to borrow
-    /// the necessary properties, and returns an error if the borrowing fails.
+    /// Similar to [`Self::calc_sector_area`], except this function attempts to
+    /// borrow the necessary properties, and returns an error if the borrowing
+    /// fails.
     pub fn try_calc_sector_area(&self, h: HH) -> Result<A::Scalar, Error> {
         let points = self.points();
         let points = points.try_borrow()?;
@@ -319,8 +323,9 @@ where
             })
     }
 
-    /// Similar to `calc_face_area`, except this function will attempt to borrow
-    /// the necessary properties, and return an error if the borrowing fails.
+    /// Similar to [`Self::calc_face_area`], except this function will attempt
+    /// to borrow the necessary properties, and return an error if the borrowing
+    /// fails.
     pub fn try_calc_face_area(&self, f: FH) -> Result<A::Scalar, Error> {
         let points = self.points();
         let points = points.try_borrow()?;
@@ -336,7 +341,7 @@ where
         })
     }
 
-    /// Similar to `calc_area`, except this function tries to borrow the
+    /// Similar to [`Self::calc_area`], except this function tries to borrow the
     /// required properties, and returns an error when borrowing fails.
     pub fn try_calc_area(&self) -> Result<A::Scalar, Error> {
         let points = self.points();
@@ -355,8 +360,9 @@ where
         A::vector_length(self.calc_halfedge_vector(self.edge_halfedge(e, false), points))
     }
 
-    /// Similar to `calc_edge_length`, except this function tries to borrow the
-    /// required properties, and returns an error when borrowing fails.
+    /// Similar to [`Self::calc_edge_length`], except this function tries to
+    /// borrow the required properties, and returns an error when borrowing
+    /// fails.
     ///
     /// ```rust
     /// use alum::alum_glam::PolyMeshF32;
@@ -410,8 +416,9 @@ where
             })
     }
 
-    /// Similar to `calc_volume`, except this function attempts to borrow the
-    /// required properties, and returns an error if the borrowing fails.
+    /// Similar to [`Self::calc_volume`], except this function attempts to
+    /// borrow the required properties, and returns an error if the borrowing
+    /// fails.
     pub fn try_calc_volume(&self) -> Result<A::Scalar, Error> {
         let points = self.points();
         let points = points.try_borrow()?;
@@ -446,7 +453,8 @@ where
     /// compared to `try_calc_dihedral_angle`.
     ///
     /// The the sector normals of the halfedges are used to compute the dihedral
-    /// angle. This can be more accurate than `calc_dihedral_angle_fast`.
+    /// angle. This can be more accurate than
+    /// [`Self::calc_dihedral_angle_fast`].
     pub fn calc_dihedral_angle(&self, e: EH, points: &[A::Vector]) -> A::Scalar {
         if self.is_boundary_edge(e) {
             return A::scalarf64(0.0);
@@ -460,16 +468,17 @@ where
         )
     }
 
-    /// Similar to `calc_dihedral_angle`, except this function tries to borrow
-    /// the required properties, and returns an error if the borrowing fails.
+    /// Similar to [`Self::calc_dihedral_angle`], except this function tries to
+    /// borrow the required properties, and returns an error if the borrowing
+    /// fails.
     pub fn try_calc_dihedral_angle(&self, e: EH) -> Result<A::Scalar, Error> {
         let points = self.points();
         let points = points.try_borrow()?;
         Ok(self.calc_dihedral_angle(e, &points))
     }
 
-    /// Similar to `calc_dihedral_angle`, except the dihedral angle by comparing
-    /// the normals of the incident faces.
+    /// Compute the dihedral angle at an edge by comparing the normals of the
+    /// incident faces.
     ///
     /// `points` are the positions of the mesh. Using borrowed `face_normals`
     /// and `points` properties avoids internal borrows, and can be faster when
@@ -495,9 +504,9 @@ where
         }
     }
 
-    /// Similar to `calc_dihedral_angle_fast`, except this function attempts to
-    /// borrow the required properties, and returns an error if the borrowing
-    /// fails.
+    /// Similar to [`Self::calc_dihedral_angle_fast`], except this function
+    /// attempts to borrow the required properties, and returns an error if the
+    /// borrowing fails.
     pub fn try_calc_dihedral_angle_fast(&self, e: EH) -> Result<A::Scalar, Error> {
         let fnormals = self.face_normals().ok_or(Error::FaceNormalsNotAvailable)?;
         let fnormals = fnormals.try_borrow()?;
@@ -541,8 +550,9 @@ where
         angle
     }
 
-    /// Similar to `calc_sector_angle`, except this function tries to borrow the
-    /// required properties and returns an error if the borrowing fails.
+    /// Similar to [`Self::calc_sector_angle`], except this function tries to
+    /// borrow the required properties and returns an error if the borrowing
+    /// fails.
     pub fn try_calc_sector_angle(&self, h: HH) -> Result<A::Scalar, Error> {
         let fnormals = self.face_normals().ok_or(Error::FaceNormalsNotAvailable)?;
         let fnormals = fnormals.try_borrow()?;
