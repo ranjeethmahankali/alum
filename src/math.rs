@@ -562,6 +562,28 @@ where
     }
 }
 
+impl<const DIM: usize, A> PolyMeshT<DIM, A>
+where
+    A: Adaptor<DIM> + FloatScalarAdaptor<DIM>,
+    A::Vector: Add<Output = A::Vector> + Div<A::Scalar, Output = A::Vector>,
+{
+    /// Compute the vertex centroid, i.e. the average position of all the vertices.
+    ///
+    /// `points` must be the positions of vertices.
+    pub fn calc_vertex_centroid(&self, points: &[A::Vector]) -> A::Vector {
+        points.iter().fold(A::zero_vector(), |total, p| total + *p)
+            / A::scalarf64(points.len() as f64)
+    }
+
+    /// Similar to [`Self::calc_vertex_centroid`] except this function tries to borrow
+    /// `points` property and returns an error if the borrowing fails.
+    pub fn try_calc_vertex_centroid(&self) -> Result<A::Vector, Error> {
+        let points = self.points();
+        let points = points.try_borrow()?;
+        Ok(self.calc_vertex_centroid(&points))
+    }
+}
+
 #[cfg(all(test, feature = "use_glam"))]
 mod test {
     use core::f32;
