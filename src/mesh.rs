@@ -543,6 +543,11 @@ where
         self.topol.ccw_rotated_halfedge(h)
     }
 
+    /// Find a halfedge spanning the vertices `from` and `to`, if one exists
+    pub fn find_halfedge(&self, from: VH, to: VH) -> Option<HH> {
+        self.topol.find_halfedge(from, to)
+    }
+
     /// Iterator over the outgoing halfedges around a vertex, going counter-clockwise.
     pub fn voh_ccw_iter(&self, v: VH) -> impl Iterator<Item = HH> + use<'_, A, DIM> {
         iterator::voh_ccw_iter(&self.topol, v)
