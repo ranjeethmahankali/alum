@@ -924,71 +924,96 @@ impl Topology {
     }
 
     pub fn check(&self) -> Result<(), Error> {
-        let mut hstatus = self.hstatus.clone();
-        let mut hstatus = hstatus.try_borrow_mut()?;
-        let hstatus: &mut [Status] = &mut hstatus;
-        // Untag all halfedges.
-        for hs in hstatus.iter_mut() {
-            hs.set_tagged2(false);
-        }
-        // Ensure no cycles in outgoing halfedges around a vertex.
+        let mut visited = vec![false; self.num_halfedges()].into_boxed_slice();
         let vstatus = self.vstatus.try_borrow()?;
+        let vstatus: &[Status] = &vstatus;
+        let hstatus = self.hstatus.try_borrow()?;
+        let hstatus: &[Status] = &hstatus;
+        let fstatus = self.fstatus.try_borrow()?;
+        let fstatus: &[Status] = &fstatus;
+        let estatus = self.estatus.try_borrow()?;
+        let estatus: &[Status] = &estatus;
+        // Ensure no cycles in outgoing halfedges around a vertex.
         for v in self
             .vertices()
             .filter(|v| !vstatus[v.index() as usize].deleted())
         {
             for h in iterator::voh_ccw_iter(self, v) {
-                if hstatus[h.index() as usize].tagged2() {
-                    return Err(Error::CyclicOutgoingHalfedges(v));
+                let hi = h.index() as usize;
+                if hstatus[hi].deleted() {
+                    return Err(Error::DeletedHalfedge(h));
                 }
-                hstatus[h.index() as usize].set_tagged2(true);
+                if visited[hi] {
+                    return Err(Error::InvalidOutgoingHalfedges(v));
+                }
+                visited[hi] = true;
             }
         }
-        // Untag all halfedges.
-        for hs in hstatus.iter_mut() {
-            hs.set_tagged2(false);
+        // Unvisit all halfedges for the next chec.
+        visited.fill(false);
+        // Ensure valid loops.
+        for h in self
+            .halfedges()
+            .filter(|h| !hstatus[h.index() as usize].deleted())
+        {
+            let i1 = h.index() as usize;
+            if visited[i1] {
+                continue;
+            }
+            let hedge = self.halfedge(h);
+            // Check face.
+            if let Some(f) = hedge.face {
+                if fstatus[f.index() as usize].deleted() {
+                    return Err(Error::DeletedFace(f));
+                }
+            }
+            if hstatus[hedge.prev.index() as usize].deleted() {
+                return Err(Error::DeletedHalfedge(hedge.prev));
+            }
+            if hstatus[hedge.next.index() as usize].deleted() {
+                return Err(Error::DeletedHalfedge(hedge.next));
+            }
+            if vstatus[hedge.vertex.index() as usize].deleted() {
+                return Err(Error::DeletedVertex(hedge.vertex));
+            }
+            let e = self.halfedge_edge(h);
+            if estatus[e.index() as usize].deleted() {
+                return Err(Error::DeletedEdge(e));
+            }
+            // Check connectivity with other halfedges.
+            if self.to_vertex(hedge.prev) != self.from_vertex(h)
+                || self.from_vertex(h) != self.to_vertex(hedge.prev)
+                || self.next_halfedge(hedge.prev) != h
+                || self.prev_halfedge(hedge.next) != h
+            {
+                return Err(Error::InvalidHalfedgeLink(hedge.prev, h));
+            }
+            // Check for errors in loop.
+            for h2 in iterator::loop_ccw_iter(self, h).filter(|h2| *h2 != h) {
+                let i2 = h2.index() as usize;
+                if hstatus[i2].deleted() {
+                    return Err(Error::DeletedHalfedge(h2));
+                }
+                if self.halfedge_face(h2) != hedge.face {
+                    return Err(Error::InconsistentFaceInLoop(h));
+                }
+                // Check for an weird cycle.
+                if std::mem::replace(&mut visited[i2], true) {
+                    return Err(Error::InvalidLoopTopology(h));
+                }
+            }
         }
-        // Ensure no cycles in face loops.
-        let fstatus = self.fstatus.try_borrow()?;
+        // Check faces.
         for f in self
             .faces()
             .filter(|f| !fstatus[f.index() as usize].deleted())
         {
-            for h in iterator::fh_ccw_iter(self, f) {
-                if hstatus[h.index() as usize].tagged2() {
-                    return Err(Error::CyclicFaceLoopHalfedges(f));
-                }
-                hstatus[h.index() as usize].set_tagged2(true);
-            }
-        }
-        // Check halfedge links.
-        for h in self.halfedges() {
+            let h = self.face_halfedge(f);
             if hstatus[h.index() as usize].deleted() {
-                continue;
+                return Err(Error::DeletedHalfedge(h));
             }
-            let nh = self.next_halfedge(h);
-            if h != self.prev_halfedge(nh) {
-                return Err(Error::IncorrectHalfedgeLink(h, nh));
-            }
-            if self.to_vertex(h) != self.from_vertex(nh) {
-                return Err(Error::IncorrectHalfedgeVertexTopology(h, nh));
-            }
-        }
-        // Untag all halfedges.
-        for hs in hstatus.iter_mut() {
-            hs.set_tagged2(false);
-        }
-        // Make sure every halfedge in the loop is connected to the same face, or no face.
-        for h1 in self.halfedges() {
-            if hstatus[h1.index() as usize].tagged2() || hstatus[h1.index() as usize].deleted() {
-                continue;
-            }
-            let f = self.halfedge_face(h1);
-            for h2 in iterator::loop_ccw_iter(self, h1) {
-                if f != self.halfedge_face(h2) {
-                    return Err(Error::IncorrectLoopTopology(h1, h2));
-                }
-                hstatus[h2.index() as usize].set_tagged2(true);
+            if self.halfedge_face(h) != Some(f) {
+                return Err(Error::InvalidFaceHalfedgeLink(f, h));
             }
         }
         Ok(())

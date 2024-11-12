@@ -1,6 +1,9 @@
-use std::path::PathBuf;
+use std::{fmt::Debug, path::PathBuf};
 
-use crate::element::{FH, HH, VH};
+use crate::{
+    element::{FH, HH, VH},
+    EH,
+};
 
 /// Error type for all operations across this crate.
 #[derive(Debug)]
@@ -19,8 +22,14 @@ pub enum Error {
     ComplexHalfedge(HH),
     /// Failed to create valid topology when adding a face.
     PatchRelinkingFailed,
-    /// Trying to access a face that has been deleted.
+    /// Encountered a face that has been deleted.
     DeletedFace(FH),
+    /// Encountered an edge that has been deleted.
+    DeletedEdge(EH),
+    /// Encountered a halfedge that has been deleted.
+    DeletedHalfedge(HH),
+    /// Encountered a vertex that has been deleted.
+    DeletedVertex(VH),
     /// The given OBJ file is not valid.
     InvalidObjFile(PathBuf),
     /// Failed to load a mesh from the given obj file.
@@ -34,14 +43,14 @@ pub enum Error {
     /// The mesh has deleted elements, which create problems for further
     /// operations. Garbage collection needs to be performed before proceeding.
     GarbageCollectionRequired,
-    /// Cycle found among the outgoing halfedges around a vertex.
-    CyclicOutgoingHalfedges(VH),
+    /// Broken topology found among the outgoing halfedges around a vertex.
+    InvalidOutgoingHalfedges(VH),
     /// Cycle found when iterating over halfedges in a face loop.
-    CyclicFaceLoopHalfedges(FH),
+    InvalidLoopTopology(HH),
+    /// Halfedges in a loop are not linked to the same face / boundary.
+    InconsistentFaceInLoop(HH),
     /// The next-previous link between a halfedge pair doesn't commute.
-    IncorrectHalfedgeLink(HH, HH),
-    /// Incorrect halfedge vertex topology
-    IncorrectHalfedgeVertexTopology(HH, HH),
-    /// Halfedges in the same loop are not linked to the same face / boundary.
-    IncorrectLoopTopology(HH, HH),
+    InvalidHalfedgeLink(HH, HH),
+    /// Invalid face-halfedge link.
+    InvalidFaceHalfedgeLink(FH, HH),
 }
