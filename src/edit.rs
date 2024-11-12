@@ -284,11 +284,6 @@ impl Topology {
             .map(move |h| [vstart, self.from_vertex(h), self.to_vertex(h)])
     }
 
-    pub fn triangulated_vertices(&self) -> impl Iterator<Item = [VH; 3]> + use<'_> {
-        self.faces()
-            .flat_map(move |f| self.triangulated_face_vertices(f))
-    }
-
     pub fn triangulate_face(&mut self, f: FH) -> Result<(), Error> {
         let mut base = self.face_halfedge(f);
         let vstart = self.from_vertex(base);
@@ -632,7 +627,8 @@ mod test {
     fn t_box_triangulated_indices() {
         let qbox = quad_box();
         assert_eq!(
-            qbox.triangulated_vertices()
+            qbox.faces()
+                .flat_map(|f| qbox.triangulated_face_vertices(f))
                 .flatten()
                 .map(|v| v.index())
                 .collect::<Vec<_>>(),

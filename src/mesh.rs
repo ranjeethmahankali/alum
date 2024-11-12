@@ -614,7 +614,8 @@ where
     /// mesh. The triangulation of a face does not take it's shape into
     /// account. It only accounts for the topology.
     pub fn triangulated_vertices(&self) -> impl Iterator<Item = [VH; 3]> + use<'_, A, DIM> {
-        self.topol.triangulated_vertices()
+        self.faces()
+            .flat_map(move |f| self.triangulated_face_vertices(f))
     }
 
     /// Iterator over the vertex triplets that represent a triangulation of the
