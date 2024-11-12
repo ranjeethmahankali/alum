@@ -922,6 +922,102 @@ impl Topology {
         self.fprops.garbage_collection();
         Ok(())
     }
+
+    pub fn check(&self) -> Result<(), Error> {
+        let mut visited = vec![false; self.num_halfedges()].into_boxed_slice();
+        let vstatus = self.vstatus.try_borrow()?;
+        let vstatus: &[Status] = &vstatus;
+        let hstatus = self.hstatus.try_borrow()?;
+        let hstatus: &[Status] = &hstatus;
+        let fstatus = self.fstatus.try_borrow()?;
+        let fstatus: &[Status] = &fstatus;
+        let estatus = self.estatus.try_borrow()?;
+        let estatus: &[Status] = &estatus;
+        // Ensure no cycles in outgoing halfedges around a vertex.
+        for v in self
+            .vertices()
+            .filter(|v| !vstatus[v.index() as usize].deleted())
+        {
+            for h in iterator::voh_ccw_iter(self, v) {
+                let hi = h.index() as usize;
+                if hstatus[hi].deleted() {
+                    return Err(Error::DeletedHalfedge(h));
+                }
+                if visited[hi] {
+                    return Err(Error::InvalidOutgoingHalfedges(v));
+                }
+                visited[hi] = true;
+            }
+        }
+        // Unvisit all halfedges for the next chec.
+        visited.fill(false);
+        // Ensure valid loops.
+        for h in self
+            .halfedges()
+            .filter(|h| !hstatus[h.index() as usize].deleted())
+        {
+            let i1 = h.index() as usize;
+            if visited[i1] {
+                continue;
+            }
+            let hedge = self.halfedge(h);
+            // Check face.
+            if let Some(f) = hedge.face {
+                if fstatus[f.index() as usize].deleted() {
+                    return Err(Error::DeletedFace(f));
+                }
+            }
+            if hstatus[hedge.prev.index() as usize].deleted() {
+                return Err(Error::DeletedHalfedge(hedge.prev));
+            }
+            if hstatus[hedge.next.index() as usize].deleted() {
+                return Err(Error::DeletedHalfedge(hedge.next));
+            }
+            if vstatus[hedge.vertex.index() as usize].deleted() {
+                return Err(Error::DeletedVertex(hedge.vertex));
+            }
+            let e = self.halfedge_edge(h);
+            if estatus[e.index() as usize].deleted() {
+                return Err(Error::DeletedEdge(e));
+            }
+            // Check connectivity with other halfedges.
+            if self.to_vertex(hedge.prev) != self.from_vertex(h)
+                || self.from_vertex(h) != self.to_vertex(hedge.prev)
+                || self.next_halfedge(hedge.prev) != h
+                || self.prev_halfedge(hedge.next) != h
+            {
+                return Err(Error::InvalidHalfedgeLink(hedge.prev, h));
+            }
+            // Check for errors in loop.
+            for h2 in iterator::loop_ccw_iter(self, h).filter(|h2| *h2 != h) {
+                let i2 = h2.index() as usize;
+                if hstatus[i2].deleted() {
+                    return Err(Error::DeletedHalfedge(h2));
+                }
+                if self.halfedge_face(h2) != hedge.face {
+                    return Err(Error::InconsistentFaceInLoop(h));
+                }
+                // Check for an weird cycle.
+                if std::mem::replace(&mut visited[i2], true) {
+                    return Err(Error::InvalidLoopTopology(h));
+                }
+            }
+        }
+        // Check faces.
+        for f in self
+            .faces()
+            .filter(|f| !fstatus[f.index() as usize].deleted())
+        {
+            let h = self.face_halfedge(f);
+            if hstatus[h.index() as usize].deleted() {
+                return Err(Error::DeletedHalfedge(h));
+            }
+            if self.halfedge_face(h) != Some(f) {
+                return Err(Error::InvalidFaceHalfedgeLink(f, h));
+            }
+        }
+        Ok(())
+    }
 }
 
 impl Default for Topology {
@@ -935,6 +1031,7 @@ pub(crate) mod test {
     use arrayvec::ArrayVec;
 
     use crate::{
+        alum_glam::PolyMeshF32,
         iterator,
         topol::{Handle, VH},
     };
@@ -1445,5 +1542,29 @@ pub(crate) mod test {
         assert_eq!(9, qbox.num_edges());
         assert_eq!(18, qbox.num_halfedges());
         assert_eq!(7, qbox.num_vertices());
+    }
+
+    #[test]
+    fn t_primitive_check_topology() {
+        PolyMeshF32::tetrahedron(1.0)
+            .expect("Cannot crate mesh")
+            .check_topology()
+            .expect("Topological check failed");
+        PolyMeshF32::hexahedron(1.0)
+            .expect("Cannot crate mesh")
+            .check_topology()
+            .expect("Topological check failed");
+        PolyMeshF32::octahedron(1.0)
+            .expect("Cannot crate mesh")
+            .check_topology()
+            .expect("Topological check failed");
+        PolyMeshF32::icosahedron(1.0)
+            .expect("Cannot crate mesh")
+            .check_topology()
+            .expect("Topological check failed");
+        PolyMeshF32::dodecahedron(1.0)
+            .expect("Cannot crate mesh")
+            .check_topology()
+            .expect("Topological check failed");
     }
 }

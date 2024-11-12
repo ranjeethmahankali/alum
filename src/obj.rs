@@ -140,4 +140,18 @@ mod test {
             6.039229
         );
     }
+
+    #[test]
+    fn t_bunny_topology_check() {
+        bunny_mesh()
+            .check_topology()
+            .expect("Found topological errors");
+    }
+
+    #[test]
+    fn t_large_bunny_topology_check() {
+        large_bunny_mesh()
+            .check_topology()
+            .expect("Found topological errors");
+    }
 }
