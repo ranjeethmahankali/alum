@@ -345,7 +345,7 @@ pub(crate) fn fh_ccw_iter_mut(
     }
 }
 
-// Expose the iterators as member functions of the mesh.
+// Expose immutable iterators as member functions of the mesh.
 impl<const DIM: usize, A> PolyMeshT<DIM, A>
 where
     A: Adaptor<DIM>,
@@ -503,14 +503,28 @@ where
     pub fn loop_cw_iter(&self, h: HH) -> impl Iterator<Item = HH> + use<'_, A, DIM> {
         loop_cw_iter(&self.topol, h)
     }
+}
 
-    // Mutable iterators.
-
+// Expose mutable iterators as member functions.
+impl<const DIM: usize, A> PolyMeshT<DIM, A>
+where
+    A: Adaptor<DIM>,
+{
     pub fn vv_ccw_iter_mut(
         &mut self,
         v: VH,
     ) -> impl Iterator<Item = (&mut Self, VH)> + use<'_, A, DIM> {
         self.voh_ccw_iter_mut(v).map(|(mesh, h)| {
+            let v = mesh.to_vertex(h);
+            (mesh, v)
+        })
+    }
+
+    pub fn vv_cw_iter_mut(
+        &mut self,
+        v: VH,
+    ) -> impl Iterator<Item = (&mut Self, VH)> + use<'_, A, DIM> {
+        self.voh_cw_iter_mut(v).map(|(mesh, h)| {
             let v = mesh.to_vertex(h);
             (mesh, v)
         })
@@ -527,6 +541,48 @@ where
             hstart: h,
             hcurrent: h,
             _phanton: PhantomData,
+        }
+    }
+
+    pub fn voh_cw_iter_mut(
+        &mut self,
+        v: VH,
+    ) -> impl Iterator<Item = (&mut Self, HH)> + use<'_, A, DIM> {
+        let h = self.topol.vertex_halfedge(v);
+        RadialHalfedgeIterMut::<false, Self> {
+            reference: self.into(),
+            topol: &mut self.topol,
+            hstart: h,
+            hcurrent: h,
+            _phanton: PhantomData,
+        }
+    }
+
+    pub fn fh_ccw_iter_mut(
+        &mut self,
+        f: FH,
+    ) -> impl Iterator<Item = (&mut Self, HH)> + use<'_, A, DIM> {
+        let h = self.face_halfedge(f);
+        LoopHalfedgeIterMut::<true, Self> {
+            reference: self.into(),
+            topol: &mut self.topol,
+            hstart: h,
+            hcurrent: Some(h),
+            _phantom: PhantomData,
+        }
+    }
+
+    pub fn fh_cw_iter_mut(
+        &mut self,
+        f: FH,
+    ) -> impl Iterator<Item = (&mut Self, HH)> + use<'_, A, DIM> {
+        let h = self.face_halfedge(f);
+        LoopHalfedgeIterMut::<false, Self> {
+            reference: self.into(),
+            topol: &mut self.topol,
+            hstart: h,
+            hcurrent: Some(h),
+            _phantom: PhantomData,
         }
     }
 }
@@ -889,6 +945,74 @@ mod test {
 
     #[test]
     fn t_box_mesh_voh_ccw_iter_mut() {
+        // I have other tests checking the mutability of the mesh etc. This is
+        // just to make sure the mutable iterator walks the same topology as the
+        // immutable iterator.
+        let mut mesh = PolyMeshF32::unit_box().expect("Cannot create a box");
+        let expected = mesh
+            .vertices()
+            .flat_map(|v| mesh.voh_ccw_iter(v))
+            .collect::<Vec<_>>();
+        let mut actual = Vec::new();
+        for v in mesh.vertices() {
+            actual.extend(mesh.voh_ccw_iter_mut(v).map(|(_mesh, h)| h));
+        }
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn t_box_mesh_voh_cw_iter_mut() {
+        // I have other tests checking the mutability of the mesh etc. This is
+        // just to make sure the mutable iterator walks the same topology as the
+        // immutable iterator.
+        let mut mesh = PolyMeshF32::unit_box().expect("Cannot create a box");
+        let expected = mesh
+            .vertices()
+            .flat_map(|v| mesh.voh_cw_iter(v))
+            .collect::<Vec<_>>();
+        let mut actual = Vec::new();
+        for v in mesh.vertices() {
+            actual.extend(mesh.voh_cw_iter_mut(v).map(|(_mesh, h)| h));
+        }
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn t_box_mesh_fh_ccw_iter_mut() {
+        // I have other tests checking the mutability of the mesh etc. This is
+        // just to make sure the mutable iterator walks the same topology as the
+        // immutable iterator.
+        let mut mesh = PolyMeshF32::unit_box().expect("Cannot create a box");
+        let expected = mesh
+            .faces()
+            .flat_map(|v| mesh.fh_ccw_iter(v))
+            .collect::<Vec<_>>();
+        let mut actual = Vec::new();
+        for v in mesh.faces() {
+            actual.extend(mesh.fh_ccw_iter_mut(v).map(|(_mesh, h)| h));
+        }
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn t_box_mesh_fh_cw_iter_mut() {
+        // I have other tests checking the mutability of the mesh etc. This is
+        // just to make sure the mutable iterator walks the same topology as the
+        // immutable iterator.
+        let mut mesh = PolyMeshF32::unit_box().expect("Cannot create a box");
+        let expected = mesh
+            .faces()
+            .flat_map(|v| mesh.fh_cw_iter(v))
+            .collect::<Vec<_>>();
+        let mut actual = Vec::new();
+        for v in mesh.faces() {
+            actual.extend(mesh.fh_cw_iter_mut(v).map(|(_mesh, h)| h));
+        }
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn t_box_mesh_voh_ccw_iter_mut_delete_faces() {
         let mut mesh = PolyMeshF32::unit_box().expect("Cannot create a box");
         // Checking to make sure I can modify the mesh while iterating over it's
         // elements.  The borrow checking and safety should still be enforced
