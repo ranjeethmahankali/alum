@@ -572,25 +572,16 @@ impl Topology {
             let fnew = self.new_face(oh)?;
             let hf = self.face_halfedge(f);
             self.halfedge_mut(h).face = Some(f);
-            // Link all faces in the other loop to the new face.
-            self.halfedge_mut(oh).face = Some(fnew);
-            // TODO: Later replace this with the mutable visitor.
-            let mut h = p1;
-            while h != oh {
+            for (mesh, h) in iterator::loop_ccw_iter_mut(self, oh) {
                 if hf == h {
-                    self.face_mut(f).halfedge = h;
+                    mesh.face_mut(f).halfedge = h;
                 }
-                self.halfedge_mut(h).face = Some(fnew);
-                h = self.next_halfedge(h);
+                mesh.halfedge_mut(h).face = Some(fnew);
             }
         } else {
             let fnew = self.new_face(h)?;
-            self.halfedge_mut(h).face = Some(fnew);
-            // TODO: Later replace this with the mutable visitor.
-            let mut h2 = next;
-            while h2 != h {
-                self.halfedge_mut(h2).face = Some(fnew);
-                h2 = self.next_halfedge(h2);
+            for (mesh, h) in iterator::loop_ccw_iter_mut(self, h) {
+                mesh.halfedge_mut(h).face = Some(fnew);
             }
         };
         self.adjust_outgoing_halfedge(v0);

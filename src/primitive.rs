@@ -58,8 +58,6 @@ where
             0..8,
             "Vertices are expected to be in one contiguous range"
         );
-        // TODO: Find a more efficient way of adding a large number of faces
-        // that doesn't require repeatedly borrowing the property buffers.
         for (a, b, c, d) in BOX_IDX {
             qbox.add_quad_face(a.into(), b.into(), c.into(), d.into())?;
         }

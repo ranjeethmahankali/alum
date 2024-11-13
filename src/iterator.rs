@@ -266,10 +266,10 @@ pub(crate) fn loop_cw_iter(topol: &Topology, h: HH) -> impl Iterator<Item = HH> 
     LoopHalfedgeIter::<false>::new(topol, h)
 }
 
-pub(crate) fn loop_ccw_iter_mut(
-    topol: &mut Topology,
+pub(crate) fn loop_ccw_iter_mut<'a>(
+    topol: &'a mut Topology,
     h: HH,
-) -> impl Iterator<Item = (&mut Topology, HH)> + use<'_> {
+) -> impl Iterator<Item = (&'a mut Topology, HH)> + use<'a> {
     LoopHalfedgeIterMut::<true> {
         topol,
         hstart: h,
