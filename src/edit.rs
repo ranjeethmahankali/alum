@@ -1220,4 +1220,22 @@ mod test {
             })
         );
     }
+
+    #[test]
+    fn t_loop_mesh_insert_edge_in_hole() {
+        let mut mesh = loop_mesh();
+        let e = mesh
+            .insert_edge(
+                mesh.find_halfedge(5.into(), 6.into())
+                    .expect("Cannot find halfedge"),
+                mesh.find_halfedge(9.into(), 5.into())
+                    .expect("Cannot find halfedge"),
+            )
+            .expect("Cannot insert halfedge");
+        let (h, oh) = mesh.halfedge_pair(e);
+        assert!(mesh.is_boundary_halfedge(oh));
+        assert!(!mesh.is_boundary_halfedge(h));
+        assert_eq!(3, iterator::loop_ccw_iter(&mesh, h).count());
+        assert_eq!(3, iterator::loop_ccw_iter(&mesh, oh).count());
+    }
 }
