@@ -669,7 +669,6 @@ impl Topology {
             self.delete_face(
                 *f,
                 delete_isolated_vertices,
-                &mut cache.halfedges,
                 &mut cache.edges,
                 &mut cache.vertices,
             )?;
@@ -682,7 +681,6 @@ impl Topology {
         &mut self,
         e: EH,
         delete_isolated_vertices: bool,
-        hcache: &mut Vec<HH>,
         ecache: &mut Vec<EH>,
         vcache: &mut Vec<VH>,
     ) -> Result<(), Error> {
@@ -691,10 +689,10 @@ impl Topology {
         let f0 = self.halfedge_face(h0);
         let f1 = self.halfedge_face(h1);
         if let Some(f) = f0 {
-            self.delete_face(f, delete_isolated_vertices, hcache, ecache, vcache)?;
+            self.delete_face(f, delete_isolated_vertices, ecache, vcache)?;
         }
         if let Some(f) = f1 {
-            self.delete_face(f, delete_isolated_vertices, hcache, ecache, vcache)?;
+            self.delete_face(f, delete_isolated_vertices, ecache, vcache)?;
         }
         /* If either face was valid, the edge is deleted inside the call to
          * delete_face. Otherwise we have to mark them deleted here. */
@@ -713,7 +711,6 @@ impl Topology {
         &mut self,
         f: FH,
         delete_isolated_vertices: bool,
-        hcache: &mut Vec<HH>,
         ecache: &mut Vec<EH>,
         vcache: &mut Vec<VH>,
     ) -> Result<(), Error> {
@@ -728,16 +725,12 @@ impl Topology {
         // Collect neighborhood topology.
         ecache.clear();
         vcache.clear();
-        // Pull the halfedges into the cache because the borrow checker won't
-        // allow modifying the mesh while it is borrowed by the iterator.
-        hcache.clear();
-        hcache.extend(iterator::fh_ccw_iter(self, f));
-        for &h in hcache.iter() {
-            self.halfedge_mut(h).face = None; // Disconnect from face.
-            if self.is_boundary_halfedge(self.opposite_halfedge(h)) {
-                ecache.push(self.halfedge_edge(h));
+        for (mesh, h) in iterator::fh_ccw_iter_mut(self, f) {
+            mesh.halfedge_mut(h).face = None; // Disconnect from face.
+            if mesh.is_boundary_halfedge(mesh.opposite_halfedge(h)) {
+                ecache.push(mesh.halfedge_edge(h));
             }
-            vcache.push(self.to_vertex(h));
+            vcache.push(mesh.to_vertex(h));
         }
         // Delete collected topology.
         for e in ecache.drain(..) {
@@ -1404,14 +1397,8 @@ pub(crate) mod test {
     fn t_quad_box_delete_face() {
         let mut qbox = quad_box();
         let mut cache = TopolCache::default();
-        qbox.delete_face(
-            5.into(),
-            true,
-            &mut cache.halfedges,
-            &mut cache.edges,
-            &mut cache.vertices,
-        )
-        .expect("Cannot delete face");
+        qbox.delete_face(5.into(), true, &mut cache.edges, &mut cache.vertices)
+            .expect("Cannot delete face");
         assert!(qbox
             .face_status(5.into())
             .expect("Cannot read face status")
@@ -1446,7 +1433,6 @@ pub(crate) mod test {
                     .expect("Cannot find halfedge"),
             ),
             true,
-            &mut cache.halfedges,
             &mut cache.edges,
             &mut cache.vertices,
         )
@@ -1523,14 +1509,8 @@ pub(crate) mod test {
         let mut qbox = quad_box();
         let mut cache = TopolCache::default();
         for fi in 0..3u32 {
-            qbox.delete_face(
-                fi.into(),
-                true,
-                &mut cache.halfedges,
-                &mut cache.edges,
-                &mut cache.vertices,
-            )
-            .expect("Cannot delete faces");
+            qbox.delete_face(fi.into(), true, &mut cache.edges, &mut cache.vertices)
+                .expect("Cannot delete faces");
         }
         qbox.garbage_collection(&mut cache)
             .expect("Failed to garbage collect");

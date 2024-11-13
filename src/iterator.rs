@@ -331,6 +331,20 @@ pub(crate) fn loop_ccw_iter_mut(
     }
 }
 
+pub(crate) fn fh_ccw_iter_mut(
+    topol: &mut Topology,
+    f: FH,
+) -> impl Iterator<Item = (&mut Topology, HH)> + use<'_> {
+    let h = topol.face_halfedge(f);
+    LoopHalfedgeIterMut::<true, Topology> {
+        reference: topol.into(),
+        topol,
+        hstart: h,
+        hcurrent: Some(h),
+        _phantom: PhantomData,
+    }
+}
+
 // Expose the iterators as member functions of the mesh.
 impl<const DIM: usize, A> PolyMeshT<DIM, A>
 where

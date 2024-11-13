@@ -665,7 +665,6 @@ where
         self.topol.delete_edge(
             e,
             delete_isolated_vertices,
-            &mut self.cache.halfedges,
             &mut self.cache.edges,
             &mut self.cache.vertices,
         )
@@ -681,7 +680,6 @@ where
         self.topol.delete_face(
             f,
             delete_isolated_vertices,
-            &mut self.cache.halfedges,
             &mut self.cache.edges,
             &mut self.cache.vertices,
         )
