@@ -123,7 +123,7 @@ struct RadialHalfedgeIterMut<'a, const CCW: bool, T> {
     topol: &'a mut Topology,
     hstart: Option<HH>,
     hcurrent: Option<HH>,
-    _phanton: PhantomData<&'a mut T>,
+    _phantom: PhantomData<&'a mut T>,
 }
 
 impl<'a, T> Iterator for RadialHalfedgeIterMut<'a, true, T> {
@@ -530,6 +530,26 @@ where
         })
     }
 
+    pub fn vih_ccw_iter_mut(
+        &mut self,
+        v: VH,
+    ) -> impl Iterator<Item = (&mut Self, HH)> + use<'_, A, DIM> {
+        self.voh_ccw_iter_mut(v).map(|(mesh, h)| {
+            let h = mesh.opposite_halfedge(h);
+            (mesh, h)
+        })
+    }
+
+    pub fn vih_cw_iter_mut(
+        &mut self,
+        v: VH,
+    ) -> impl Iterator<Item = (&mut Self, HH)> + use<'_, A, DIM> {
+        self.voh_cw_iter_mut(v).map(|(mesh, h)| {
+            let h = mesh.opposite_halfedge(h);
+            (mesh, h)
+        })
+    }
+
     pub fn voh_ccw_iter_mut(
         &mut self,
         v: VH,
@@ -540,7 +560,7 @@ where
             topol: &mut self.topol,
             hstart: h,
             hcurrent: h,
-            _phanton: PhantomData,
+            _phantom: PhantomData,
         }
     }
 
@@ -554,8 +574,70 @@ where
             topol: &mut self.topol,
             hstart: h,
             hcurrent: h,
-            _phanton: PhantomData,
+            _phantom: PhantomData,
         }
+    }
+
+    pub fn ve_ccw_iter_mut(
+        &mut self,
+        v: VH,
+    ) -> impl Iterator<Item = (&mut Self, EH)> + use<'_, A, DIM> {
+        self.voh_ccw_iter_mut(v).map(|(mesh, h)| {
+            let e = mesh.halfedge_edge(h);
+            (mesh, e)
+        })
+    }
+
+    pub fn ve_cw_iter_mut(
+        &mut self,
+        v: VH,
+    ) -> impl Iterator<Item = (&mut Self, EH)> + use<'_, A, DIM> {
+        self.voh_cw_iter_mut(v).map(|(mesh, h)| {
+            let e = mesh.halfedge_edge(h);
+            (mesh, e)
+        })
+    }
+
+    pub fn vf_ccw_iter_mut(
+        &mut self,
+        v: VH,
+    ) -> impl Iterator<Item = (&mut Self, FH)> + use<'_, A, DIM> {
+        self.voh_ccw_iter_mut(v)
+            .filter_map(|(mesh, h)| match mesh.halfedge_face(h) {
+                Some(f) => Some((mesh, f)),
+                None => None,
+            })
+    }
+
+    pub fn vf_cw_iter_mut(
+        &mut self,
+        v: VH,
+    ) -> impl Iterator<Item = (&mut Self, FH)> + use<'_, A, DIM> {
+        self.voh_cw_iter_mut(v)
+            .filter_map(|(mesh, h)| match mesh.halfedge_face(h) {
+                Some(f) => Some((mesh, f)),
+                None => None,
+            })
+    }
+
+    pub fn fv_ccw_iter_mut(
+        &mut self,
+        f: FH,
+    ) -> impl Iterator<Item = (&mut Self, VH)> + use<'_, A, DIM> {
+        self.fh_ccw_iter_mut(f).map(|(mesh, h)| {
+            let v = mesh.to_vertex(h);
+            (mesh, v)
+        })
+    }
+
+    pub fn fv_cw_iter_mut(
+        &mut self,
+        f: FH,
+    ) -> impl Iterator<Item = (&mut Self, VH)> + use<'_, A, DIM> {
+        self.fh_cw_iter_mut(f).map(|(mesh, h)| {
+            let v = mesh.to_vertex(h);
+            (mesh, v)
+        })
     }
 
     pub fn fh_ccw_iter_mut(
@@ -577,6 +659,102 @@ where
         f: FH,
     ) -> impl Iterator<Item = (&mut Self, HH)> + use<'_, A, DIM> {
         let h = self.face_halfedge(f);
+        LoopHalfedgeIterMut::<false, Self> {
+            reference: self.into(),
+            topol: &mut self.topol,
+            hstart: h,
+            hcurrent: Some(h),
+            _phantom: PhantomData,
+        }
+    }
+
+    pub fn fe_ccw_iter_mut(
+        &mut self,
+        f: FH,
+    ) -> impl Iterator<Item = (&mut Self, EH)> + use<'_, A, DIM> {
+        self.fh_ccw_iter_mut(f).map(|(mesh, h)| {
+            let e = mesh.halfedge_edge(h);
+            (mesh, e)
+        })
+    }
+
+    pub fn fe_cw_iter_mut(
+        &mut self,
+        f: FH,
+    ) -> impl Iterator<Item = (&mut Self, EH)> + use<'_, A, DIM> {
+        self.fh_cw_iter_mut(f).map(|(mesh, h)| {
+            let e = mesh.halfedge_edge(h);
+            (mesh, e)
+        })
+    }
+
+    pub fn ff_ccw_iter_mut(
+        &mut self,
+        f: FH,
+    ) -> impl Iterator<Item = (&mut Self, FH)> + use<'_, A, DIM> {
+        self.fh_ccw_iter_mut(f).filter_map(|(mesh, h)| {
+            match mesh.halfedge_face(mesh.opposite_halfedge(h)) {
+                Some(f) => Some((mesh, f)),
+                None => None,
+            }
+        })
+    }
+
+    pub fn ff_cw_iter_mut(
+        &mut self,
+        f: FH,
+    ) -> impl Iterator<Item = (&mut Self, FH)> + use<'_, A, DIM> {
+        self.fh_cw_iter_mut(f).filter_map(|(mesh, h)| {
+            match mesh.halfedge_face(mesh.opposite_halfedge(h)) {
+                Some(f) => Some((mesh, f)),
+                None => None,
+            }
+        })
+    }
+
+    pub fn ccw_rotate_iter_mut(
+        &mut self,
+        h: HH,
+    ) -> impl Iterator<Item = (&mut Self, HH)> + use<'_, A, DIM> {
+        RadialHalfedgeIterMut::<true, Self> {
+            reference: self.into(),
+            topol: &mut self.topol,
+            hstart: Some(h),
+            hcurrent: Some(h),
+            _phantom: PhantomData,
+        }
+    }
+
+    pub fn cw_rotate_iter_mut(
+        &mut self,
+        h: HH,
+    ) -> impl Iterator<Item = (&mut Self, HH)> + use<'_, A, DIM> {
+        RadialHalfedgeIterMut::<false, Self> {
+            reference: self.into(),
+            topol: &mut self.topol,
+            hstart: Some(h),
+            hcurrent: Some(h),
+            _phantom: PhantomData,
+        }
+    }
+
+    pub fn loop_ccw_iter_mut(
+        &mut self,
+        h: HH,
+    ) -> impl Iterator<Item = (&mut Self, HH)> + use<'_, A, DIM> {
+        LoopHalfedgeIterMut::<true, Self> {
+            reference: self.into(),
+            topol: &mut self.topol,
+            hstart: h,
+            hcurrent: Some(h),
+            _phantom: PhantomData,
+        }
+    }
+
+    pub fn loop_cw_iter_mut(
+        &mut self,
+        h: HH,
+    ) -> impl Iterator<Item = (&mut Self, HH)> + use<'_, A, DIM> {
         LoopHalfedgeIterMut::<false, Self> {
             reference: self.into(),
             topol: &mut self.topol,
