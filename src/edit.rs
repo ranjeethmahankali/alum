@@ -518,14 +518,8 @@ impl Topology {
             self.face_mut(f0).halfedge = p0;
         }
         // Rewire halfedge -> face for the loop of f1.
-        {
-            let mut h = n1;
-            // TODO: Later replace this with the mutable visitor.
-            while h != p1 {
-                self.halfedge_mut(h).face = Some(f0);
-                h = self.next_halfedge(h);
-            }
-            self.halfedge_mut(p1).face = Some(f0);
+        for (mesh, h) in iterator::loop_ccw_iter_mut(self, n1).take_while(|(_, h)| *h != n0) {
+            mesh.halfedge_mut(h).face = Some(f0);
         }
         estatus[e.index() as usize].set_deleted(true);
         hstatus[h0.index() as usize].set_deleted(true);
@@ -1191,6 +1185,7 @@ mod test {
         .expect("Cannot remove edge");
         qbox.garbage_collection(&mut cache)
             .expect("Cannot garbage collect");
+        qbox.check().expect("Topological errors found");
         assert_eq!(11, qbox.num_faces());
         assert_eq!(17, qbox.num_edges());
         assert_eq!(8, qbox.num_vertices());
@@ -1213,6 +1208,7 @@ mod test {
         .expect("Cannot remove edge");
         qbox.garbage_collection(&mut cache)
             .expect("Cannot garbage collect");
+        qbox.check().expect("Topological errors found");
         assert_eq!(10, qbox.num_faces());
         assert_eq!(16, qbox.num_edges());
         assert_eq!(8, qbox.num_vertices());

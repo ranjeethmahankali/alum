@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use crate::{
     element::{EH, FH, HH, VH},
     topol::Topology,
@@ -113,6 +115,53 @@ impl<'a> Iterator for LoopHalfedgeIter<'a, false> {
     }
 }
 
+struct LoopHalfedgeIterMut<'a, const CCW: bool> {
+    topol: *mut Topology,
+    hstart: HH,
+    hcurrent: Option<HH>,
+    _phantom: PhantomData<&'a mut Topology>,
+}
+
+impl<'a> Iterator for LoopHalfedgeIterMut<'a, true> {
+    type Item = (&'a mut Topology, HH);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.hcurrent {
+            Some(current) => {
+                let topol: &mut Topology = unsafe { &mut *self.topol };
+                let next = topol.next_halfedge(current);
+                self.hcurrent = if next == self.hstart {
+                    None
+                } else {
+                    Some(next)
+                };
+                Some((topol, current))
+            }
+            None => None,
+        }
+    }
+}
+
+impl<'a> Iterator for LoopHalfedgeIterMut<'a, false> {
+    type Item = (&'a mut Topology, HH);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.hcurrent {
+            Some(current) => {
+                let topol: &mut Topology = unsafe { &mut *self.topol };
+                let next = topol.prev_halfedge(current);
+                self.hcurrent = if next == self.hstart {
+                    None
+                } else {
+                    Some(next)
+                };
+                Some((topol, current))
+            }
+            None => None,
+        }
+    }
+}
+
 pub(crate) fn vv_ccw_iter(topol: &Topology, v: VH) -> impl Iterator<Item = VH> + use<'_> {
     voh_ccw_iter(topol, v).map(|h| topol.to_vertex(h))
 }
@@ -215,6 +264,18 @@ pub(crate) fn loop_ccw_iter(topol: &Topology, h: HH) -> impl Iterator<Item = HH>
 
 pub(crate) fn loop_cw_iter(topol: &Topology, h: HH) -> impl Iterator<Item = HH> + use<'_> {
     LoopHalfedgeIter::<false>::new(topol, h)
+}
+
+pub(crate) fn loop_ccw_iter_mut(
+    topol: &mut Topology,
+    h: HH,
+) -> impl Iterator<Item = (&mut Topology, HH)> + use<'_> {
+    LoopHalfedgeIterMut::<true> {
+        topol,
+        hstart: h,
+        hcurrent: Some(h),
+        _phantom: PhantomData,
+    }
 }
 
 #[cfg(test)]
