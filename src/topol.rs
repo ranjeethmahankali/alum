@@ -269,6 +269,11 @@ impl Topology {
         (h.index() >> 1).into()
     }
 
+    pub fn halfedge_pair(&self, e: EH) -> (HH, HH) {
+        let hi = e.index() << 1;
+        (hi.into(), (hi | 1).into())
+    }
+
     pub fn edge_halfedge(&self, e: EH, flag: bool) -> HH {
         ((e.index() << 1) | if flag { 1 } else { 0 }).into()
     }
