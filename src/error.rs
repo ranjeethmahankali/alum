@@ -59,4 +59,8 @@ pub enum Error {
     /// Removing a boundary edge breaks the topology of the mesh. If you really
     /// want to do this, considering deleting the edge.
     CannotRemoveBoundaryEdge(EH),
+    /// The halfedges are expected to be in the same loop, but they are not.
+    HalfedgesNotInTheSameLoop(HH, HH),
+    /// Cannot insert an edge spanning the two halfedges.
+    CannotInsertEdge(HH, HH),
 }

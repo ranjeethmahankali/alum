@@ -532,6 +532,70 @@ impl Topology {
         fstatus[f1.index() as usize].set_deleted(true);
         Ok(f0)
     }
+
+    pub fn insert_edge(&mut self, prev: HH, next: HH) -> Result<EH, Error> {
+        //    <--------- <----------v1<---------- <----------
+        //   |                next  ^|     n0                ^
+        //   |                      ||                       |
+        //   |                      ||                       |
+        //   |                     h||oh                     |
+        //   |                      ||                       |
+        //   |                      ||                       |
+        //   v                prev  |v     p1                |
+        //    ---------> ---------->v0----------> ---------->
+        let (p1, n0) = (self.next_halfedge(prev), self.prev_halfedge(next));
+        if p1 == next || prev == next {
+            return Err(Error::CannotInsertEdge(prev, next));
+        }
+        let f = self.halfedge_face(prev);
+        if f != self.halfedge_face(next) {
+            return Err(Error::HalfedgesNotInTheSameLoop(prev, next));
+        }
+        if let None = f {
+            // Check if the halfedges are part of the same boundary loop. March
+            // simultaenously starting from both prev and next halfedges, and
+            // see if you arrive at the other halfedge. Marching from both
+            // ensures we'll detect the loop as soon as possible.
+            if !iterator::loop_ccw_iter(self, prev)
+                .zip(iterator::loop_cw_iter(self, next))
+                .any(|(n, p)| n == prev || p == next)
+            {
+                return Err(Error::HalfedgesNotInTheSameLoop(prev, next));
+            }
+        }
+        let v0 = self.to_vertex(prev);
+        let v1 = self.from_vertex(next);
+        let enew = self.new_edge(v0, v1, prev, next, n0, p1)?;
+        let (h, oh) = self.halfedge_pair(enew);
+        // Rewire halfedge -> halfedge.
+        self.link_halfedges(prev, h);
+        self.link_halfedges(h, next);
+        self.link_halfedges(n0, oh);
+        self.link_halfedges(oh, p1);
+        // Rewire face -> halfedge and halfedge -> face.
+        if let Some(f) = f {
+            let fnew = self.new_face(oh)?;
+            let hf = self.face_halfedge(f);
+            let mut h = oh;
+            while h != n0 {
+                if hf == h {
+                    self.face_mut(f).halfedge = h;
+                }
+                self.halfedge_mut(h).face = Some(fnew);
+                h = self.next_halfedge(h);
+            }
+        } else {
+            let fnew = self.new_face(h)?;
+            let mut h = h;
+            while h != prev {
+                self.halfedge_mut(h).face = Some(fnew);
+                h = self.next_halfedge(h);
+            }
+        };
+        self.adjust_outgoing_halfedge(v0);
+        self.adjust_outgoing_halfedge(v1);
+        Ok(enew)
+    }
 }
 
 impl<const DIM: usize, A> PolyMeshT<DIM, A>
@@ -680,6 +744,31 @@ where
     /// ```
     pub fn remove_edge(&mut self, e: EH) -> Result<FH, Error> {
         self.topol.remove_edge(e)
+    }
+
+    /// Insert a new edge panning the end of `prev` and the start of `next` to
+    /// split the loop into two.
+    ///
+    /// ```text
+    ///     <--------- <----------  <---------- <----------
+    ///    |              next    ^|                       ^
+    ///    |                      ||                       |
+    ///    |                      ||                       |
+    ///    |              new edge||                       |
+    ///    |                      ||                       |
+    ///    |                      ||                       |
+    ///    v              prev    |v                       |
+    ///     ---------> ---------->  ----------> ---------->
+    /// ```
+    ///
+    /// The loop is split into two as shown in this diagram by inserting the new
+    /// edge to span `prev` and `next`. The two halfedges must be part of the
+    /// same loop. If this loop is a boundary loop, a new face is inserted in
+    /// the loop containing `prev` and `next`. If the original loop contains a
+    /// face, the face is split into two new faces. The existing face will
+    /// remain valid and correspond to the loop containing `prev` and `next`.
+    pub fn insert_edge(&mut self, prev: HH, next: HH) -> Result<EH, Error> {
+        self.topol.insert_edge(prev, next)
     }
 }
 
