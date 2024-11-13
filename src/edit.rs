@@ -328,7 +328,7 @@ impl Topology {
     }
 
     pub fn split_edge(&mut self, e: EH, v: VH, copy_props: bool) -> Result<EH, Error> {
-        let (h0, h1) = (self.edge_halfedge(e, false), self.edge_halfedge(e, true));
+        let (h0, h1) = self.halfedge_pair(e);
         let vfrom = self.from_vertex(h0);
         let (ph0, nh1) = (self.prev_halfedge(h0), self.next_halfedge(h1));
         let (f0, f1) = (self.halfedge_face(h0), self.halfedge_face(h1));
@@ -495,7 +495,7 @@ impl Topology {
         if !self.edge_is_unique_link(e) {
             return Err(Error::EdgeIsNotAUniqueLink(e));
         }
-        let (h0, h1) = (self.edge_halfedge(e, false), self.edge_halfedge(e, true));
+        let (h0, h1) = self.halfedge_pair(e);
         let (f0, f1) = match (self.halfedge_face(h0), self.halfedge_face(h1)) {
             (Some(f0), Some(f1)) => (f0, f1),
             _ => return Err(Error::CannotRemoveBoundaryEdge(e)),
