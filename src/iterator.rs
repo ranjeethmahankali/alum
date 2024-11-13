@@ -534,6 +534,7 @@ where
 #[cfg(test)]
 mod test {
     use crate::{
+        alum_glam::PolyMeshF32,
         element::{Handle, VH},
         iterator::{
             ff_ccw_iter, ff_cw_iter, fv_ccw_iter, fv_cw_iter, vf_ccw_iter, vf_cw_iter,
@@ -884,5 +885,33 @@ mod test {
                 fis
             );
         }
+    }
+
+    #[test]
+    fn t_box_mesh_voh_ccw_iter_mut() {
+        let mut mesh = PolyMeshF32::unit_box().expect("Cannot create a box");
+        // Checking to make sure I can modify the mesh while iterating over it's
+        // elements.  The borrow checking and safety should still be enforced
+        // because I can only modify the mesh via the mutable references that
+        // the iteator provides.
+        for v in mesh.vertices() {
+            // using a random condition to delete some faces, to make sure I can
+            // modify the mesh. If you try changing any of the `m` inside this
+            // loop to `mesh`, the borrow checker should complain and the code
+            // should not compile.
+            for (m, h) in mesh.voh_ccw_iter_mut(v) {
+                if let Some(f) = m.halfedge_face(h) {
+                    if (f.index() + h.index()) % 2 != 0 {
+                        m.delete_face(f, true).expect("Cannot delete face");
+                    }
+                }
+            }
+        }
+        mesh.garbage_collection()
+            .expect("Garbage collection failed");
+        assert_eq!(2, mesh.num_faces());
+        assert_eq!(8, mesh.num_edges());
+        assert_eq!(16, mesh.num_halfedges());
+        assert_eq!(8, mesh.num_vertices());
     }
 }
