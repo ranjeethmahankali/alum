@@ -288,11 +288,6 @@ where
         self.topol.num_faces()
     }
 
-    /// Get the topology of this mesh.
-    pub fn topology(&self) -> &Topology {
-        &self.topol
-    }
-
     /// Iterator over the vertices of the mesh.
     pub fn vertices(&self) -> impl Iterator<Item = VH> {
         self.topol.vertices()
@@ -524,6 +519,11 @@ where
         self.topol.face_halfedge(f)
     }
 
+    /// Get the pair of halfedges associated with the given edge.
+    pub fn halfedge_pair(&self, e: EH) -> (HH, HH) {
+        self.topol.halfedge_pair(e)
+    }
+
     /// Get a halfedge from the edge.
     ///
     /// The Boolean flag indicates one of the two possible orientations.
@@ -541,6 +541,11 @@ where
     /// of the given halfedge.
     pub fn ccw_rotated_halfedge(&self, h: HH) -> HH {
         self.topol.ccw_rotated_halfedge(h)
+    }
+
+    /// Find a halfedge spanning the vertices `from` and `to`, if one exists
+    pub fn find_halfedge(&self, from: VH, to: VH) -> Option<HH> {
+        self.topol.find_halfedge(from, to)
     }
 
     /// Iterator over the outgoing halfedges around a vertex, going counter-clockwise.
@@ -798,8 +803,8 @@ where
     /// This will automatically delete all incident edges and faces. Vertices in
     /// the neighborhood may become isolated. They are deleted if
     /// `delete_isolated_vertices` is true. The elements are marked as deleted,
-    /// but not removed from the mesh. `garbage_collection` must be called to
-    /// remove the elements marked as deleted.
+    /// but not removed from the mesh. [`Self::garbage_collection`] must be
+    /// called to remove the elements marked as deleted.
     pub fn delete_vertex(&mut self, delete_isolated_vertices: bool, v: VH) -> Result<(), Error> {
         self.topol
             .delete_vertex(v, delete_isolated_vertices, &mut self.cache)
@@ -810,8 +815,8 @@ where
     /// This will automatically delete all incident faces. Vertices in the
     /// neighborhood may become isolated. They are deleted if
     /// `delete_isolated_vertices` is true. The elements are marked as deleted,
-    /// but not removed from the mesh. `garbage_collection` must be called to
-    /// remove the elements marked as deleted.
+    /// but not removed from the mesh. [`Self::garbage_collection`] must be
+    /// called to remove the elements marked as deleted.
     pub fn delete_edge(&mut self, e: EH, delete_isolated_vertices: bool) -> Result<(), Error> {
         self.topol.delete_edge(
             e,
@@ -826,8 +831,8 @@ where
     ///
     /// Vertices in the neighborhood may become isolated. They are deleted if
     /// `delete_isolated_vertices` is true. The elements are marked as deleted,
-    /// but not removed from the mesh. `garbage_collection` must be called to
-    /// remove the elements marked as deleted.
+    /// but not removed from the mesh. [`Self::garbage_collection`] must be
+    /// called to remove the elements marked as deleted.
     pub fn delete_face(&mut self, f: FH, delete_isolated_vertices: bool) -> Result<(), Error> {
         self.topol.delete_face(
             f,

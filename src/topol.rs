@@ -269,6 +269,11 @@ impl Topology {
         (h.index() >> 1).into()
     }
 
+    pub fn halfedge_pair(&self, e: EH) -> (HH, HH) {
+        let hi = e.index() << 1;
+        (hi.into(), (hi | 1).into())
+    }
+
     pub fn edge_halfedge(&self, e: EH, flag: bool) -> HH {
         ((e.index() << 1) | if flag { 1 } else { 0 }).into()
     }
@@ -934,7 +939,7 @@ impl Topology {
                 if hstatus[hi].deleted() {
                     return Err(Error::DeletedHalfedge(h));
                 }
-                if visited[hi] {
+                if visited[hi] || self.from_vertex(h) != v {
                     return Err(Error::InvalidOutgoingHalfedges(v));
                 }
                 visited[hi] = true;
@@ -1074,26 +1079,26 @@ pub(crate) mod test {
         topol
     }
 
-    pub fn loop_mesh() -> Topology {
-        /*
+    /**
 
-                            12---------13---------14---------15
-                           /          /          /          /
-                          /   f5     /   f6     /    f7    /
-                         /          /          /          /
-                        /          /          /          /
-                       8----------9----------10---------11
-                      /          /          /          /
-                     /    f3    /          /    f4    /
+                        12---------13---------14---------15
+                       /          /          /          /
+                      /   f5     /   f6     /    f7    /
+                     /          /          /          /
                     /          /          /          /
-                   /          /          /          /
-                  4----------5----------6----------7
-                 /          /          /          /
-                /   f0     /    f1    /    f2    /
+                   8----------9----------10---------11
+                  /          /          /          /
+                 /    f3    /          /    f4    /
+                /          /          /          /
                /          /          /          /
-              /          /          /          /
-             0----------1----------2----------3
-        */
+              4----------5----------6----------7
+             /          /          /          /
+            /   f0     /    f1    /    f2    /
+           /          /          /          /
+          /          /          /          /
+         0----------1----------2----------3
+    */
+    pub fn loop_mesh() -> Topology {
         let mut topol = Topology::with_capacity(16, 24, 8);
         let mut cache = TopolCache::default();
         for _ in 0u32..16 {
