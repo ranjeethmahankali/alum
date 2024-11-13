@@ -909,6 +909,7 @@ mod test {
         }
         mesh.garbage_collection()
             .expect("Garbage collection failed");
+        mesh.check_topology().expect("Topological errors found");
         assert_eq!(2, mesh.num_faces());
         assert_eq!(8, mesh.num_edges());
         assert_eq!(16, mesh.num_halfedges());
