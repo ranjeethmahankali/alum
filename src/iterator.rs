@@ -3,17 +3,19 @@ use std::{marker::PhantomData, ptr::NonNull};
 use crate::{
     element::{EH, FH, HH, VH},
     topol::Topology,
+    Adaptor, PolyMeshT,
 };
 
-struct OutgoingHalfedgeIter<'a, const CCW: bool> {
+/// Iterator over halfedges radiating outward from a vertex.
+struct RadialHalfedgeIter<'a, const CCW: bool> {
     topol: &'a Topology,
     hstart: Option<HH>,
     hcurrent: Option<HH>,
 }
 
-impl<'a, const CCW: bool> OutgoingHalfedgeIter<'a, CCW> {
+impl<'a, const CCW: bool> RadialHalfedgeIter<'a, CCW> {
     fn new(topol: &'a Topology, h: Option<HH>) -> Self {
-        OutgoingHalfedgeIter {
+        RadialHalfedgeIter {
             topol,
             hstart: h,
             hcurrent: h,
@@ -21,7 +23,7 @@ impl<'a, const CCW: bool> OutgoingHalfedgeIter<'a, CCW> {
     }
 }
 
-impl<'a> Iterator for OutgoingHalfedgeIter<'a, true> {
+impl<'a> Iterator for RadialHalfedgeIter<'a, true> {
     type Item = HH;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -41,7 +43,7 @@ impl<'a> Iterator for OutgoingHalfedgeIter<'a, true> {
     }
 }
 
-impl<'a> Iterator for OutgoingHalfedgeIter<'a, false> {
+impl<'a> Iterator for RadialHalfedgeIter<'a, false> {
     type Item = HH;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -61,6 +63,7 @@ impl<'a> Iterator for OutgoingHalfedgeIter<'a, false> {
     }
 }
 
+/// Iterator for halfedges in a loop.
 struct LoopHalfedgeIter<'a, const CCW: bool> {
     topol: &'a Topology,
     hstart: HH,
@@ -115,52 +118,101 @@ impl<'a> Iterator for LoopHalfedgeIter<'a, false> {
     }
 }
 
-struct LoopHalfedgeIterMut<'a, const CCW: bool> {
-    topol: NonNull<Topology>,
+struct RadialHalfedgeIterMut<'a, const CCW: bool, T> {
+    reference: NonNull<T>,
+    topol: &'a mut Topology,
+    hstart: Option<HH>,
+    hcurrent: Option<HH>,
+    _phanton: PhantomData<&'a mut T>,
+}
+
+impl<'a, T> Iterator for RadialHalfedgeIterMut<'a, true, T> {
+    type Item = (&'a mut T, HH);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.hcurrent {
+            Some(current) => {
+                let next = self
+                    .topol
+                    .opposite_halfedge(self.topol.prev_halfedge(current));
+                self.hcurrent = match self.hstart {
+                    Some(start) if start != next => Some(next),
+                    _ => None,
+                };
+                Some((unsafe { self.reference.as_mut() }, current))
+            }
+            None => None,
+        }
+    }
+}
+
+impl<'a, T> Iterator for RadialHalfedgeIterMut<'a, false, T> {
+    type Item = (&'a mut T, HH);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.hcurrent {
+            Some(current) => {
+                let next = self
+                    .topol
+                    .next_halfedge(self.topol.opposite_halfedge(current));
+                self.hcurrent = match self.hstart {
+                    Some(start) if start != next => Some(next),
+                    _ => None,
+                };
+                Some((unsafe { self.reference.as_mut() }, current))
+            }
+            None => None,
+        }
+    }
+}
+
+struct LoopHalfedgeIterMut<'a, const CCW: bool, T> {
+    reference: NonNull<T>,
+    topol: &'a mut Topology,
     hstart: HH,
     hcurrent: Option<HH>,
-    _phantom: PhantomData<&'a mut Topology>,
+    _phantom: PhantomData<&'a mut T>,
 }
 
-impl<'a> Iterator for LoopHalfedgeIterMut<'a, true> {
-    type Item = (&'a mut Topology, HH);
+impl<'a, T> Iterator for LoopHalfedgeIterMut<'a, true, T> {
+    type Item = (&'a mut T, HH);
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.hcurrent {
             Some(current) => {
-                let topol: &mut Topology = unsafe { self.topol.as_mut() };
-                let next = topol.next_halfedge(current);
+                let next = self.topol.next_halfedge(current);
                 self.hcurrent = if next == self.hstart {
                     None
                 } else {
                     Some(next)
                 };
-                Some((topol, current))
+                Some((unsafe { self.reference.as_mut() }, current))
             }
             None => None,
         }
     }
 }
 
-impl<'a> Iterator for LoopHalfedgeIterMut<'a, false> {
-    type Item = (&'a mut Topology, HH);
+impl<'a, T> Iterator for LoopHalfedgeIterMut<'a, false, T> {
+    type Item = (&'a mut T, HH);
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.hcurrent {
             Some(current) => {
-                let topol: &mut Topology = unsafe { self.topol.as_mut() };
-                let next = topol.prev_halfedge(current);
+                let next = self.topol.prev_halfedge(current);
                 self.hcurrent = if next == self.hstart {
                     None
                 } else {
                     Some(next)
                 };
-                Some((topol, current))
+                Some((unsafe { self.reference.as_mut() }, current))
             }
             None => None,
         }
     }
 }
+
+/* Immutable iterators. */
 
 pub(crate) fn vv_ccw_iter(topol: &Topology, v: VH) -> impl Iterator<Item = VH> + use<'_> {
     voh_ccw_iter(topol, v).map(|h| topol.to_vertex(h))
@@ -171,21 +223,19 @@ pub(crate) fn vv_cw_iter(topol: &Topology, v: VH) -> impl Iterator<Item = VH> + 
 }
 
 pub(crate) fn vih_ccw_iter(topol: &Topology, v: VH) -> impl Iterator<Item = HH> + use<'_> {
-    OutgoingHalfedgeIter::<true>::new(topol, topol.vertex_halfedge(v))
-        .map(|h| topol.opposite_halfedge(h))
+    voh_ccw_iter(topol, v).map(|h| topol.opposite_halfedge(h))
 }
 
 pub(crate) fn vih_cw_iter(topol: &Topology, v: VH) -> impl Iterator<Item = HH> + use<'_> {
-    OutgoingHalfedgeIter::<false>::new(topol, topol.vertex_halfedge(v))
-        .map(|h| topol.opposite_halfedge(h))
+    voh_cw_iter(topol, v).map(|h| topol.opposite_halfedge(h))
 }
 
 pub(crate) fn voh_ccw_iter(topol: &Topology, v: VH) -> impl Iterator<Item = HH> + use<'_> {
-    OutgoingHalfedgeIter::<true>::new(topol, topol.vertex_halfedge(v))
+    RadialHalfedgeIter::<true>::new(topol, topol.vertex_halfedge(v))
 }
 
 pub(crate) fn voh_cw_iter(topol: &Topology, v: VH) -> impl Iterator<Item = HH> + use<'_> {
-    OutgoingHalfedgeIter::<false>::new(topol, topol.vertex_halfedge(v))
+    RadialHalfedgeIter::<false>::new(topol, topol.vertex_halfedge(v))
 }
 
 pub(crate) fn ve_ccw_iter(topol: &Topology, v: VH) -> impl Iterator<Item = EH> + use<'_> {
@@ -251,11 +301,11 @@ pub(crate) fn ff_cw_iter(topol: &Topology, f: FH) -> impl Iterator<Item = FH> + 
 }
 
 pub(crate) fn ccw_rotate_iter(topol: &Topology, h: HH) -> impl Iterator<Item = HH> + use<'_> {
-    OutgoingHalfedgeIter::<true>::new(topol, Some(h))
+    RadialHalfedgeIter::<true>::new(topol, Some(h))
 }
 
 pub(crate) fn cw_rotate_iter(topol: &Topology, h: HH) -> impl Iterator<Item = HH> + use<'_> {
-    OutgoingHalfedgeIter::<false>::new(topol, Some(h))
+    RadialHalfedgeIter::<false>::new(topol, Some(h))
 }
 
 pub(crate) fn loop_ccw_iter(topol: &Topology, h: HH) -> impl Iterator<Item = HH> + use<'_> {
@@ -266,16 +316,199 @@ pub(crate) fn loop_cw_iter(topol: &Topology, h: HH) -> impl Iterator<Item = HH> 
     LoopHalfedgeIter::<false>::new(topol, h)
 }
 
-pub(crate) fn loop_ccw_iter_mut<'a>(
-    topol: &'a mut Topology,
+/* Mutable iterators.*/
+
+pub(crate) fn loop_ccw_iter_mut(
+    topol: &mut Topology,
     h: HH,
-) -> impl Iterator<Item = (&'a mut Topology, HH)> + use<'a> {
-    LoopHalfedgeIterMut::<true> {
-        topol: topol.into(),
+) -> impl Iterator<Item = (&mut Topology, HH)> + use<'_> {
+    LoopHalfedgeIterMut::<true, Topology> {
+        reference: topol.into(),
+        topol,
         hstart: h,
         hcurrent: Some(h),
         _phantom: PhantomData,
     }
+}
+
+// Expose the iterators as member functions of the mesh.
+impl<const DIM: usize, A> PolyMeshT<DIM, A>
+where
+    A: Adaptor<DIM>,
+{
+    /// Iterator over the outgoing halfedges around a vertex, going counter-clockwise.
+    pub fn voh_ccw_iter(&self, v: VH) -> impl Iterator<Item = HH> + use<'_, A, DIM> {
+        voh_ccw_iter(&self.topol, v)
+    }
+
+    /// Iterator over the outgoing halfedges around a vertex, going clockwise
+    pub fn voh_cw_iter(&self, v: VH) -> impl Iterator<Item = HH> + use<'_, A, DIM> {
+        voh_cw_iter(&self.topol, v)
+    }
+
+    /// Iterator over the incoming halfedges around a vertex, going
+    /// counter-clockwise
+    pub fn vih_ccw_iter(&self, v: VH) -> impl Iterator<Item = HH> + use<'_, A, DIM> {
+        vih_ccw_iter(&self.topol, v)
+    }
+
+    /// Iterator over the incoming halfedges around a vertex, going clockwise
+    pub fn vih_cw_iter(&self, v: VH) -> impl Iterator<Item = HH> + use<'_, A, DIM> {
+        vih_cw_iter(&self.topol, v)
+    }
+
+    /// Iterator over the faces incident on a vertex, going counter-clockwise.
+    pub fn vf_ccw_iter(&self, v: VH) -> impl Iterator<Item = FH> + use<'_, A, DIM> {
+        vf_ccw_iter(&self.topol, v)
+    }
+
+    /// Iterator over the faces incident on a vertex, going clockwise.
+    pub fn vf_cw_iter(&self, v: VH) -> impl Iterator<Item = FH> + use<'_, A, DIM> {
+        vf_cw_iter(&self.topol, v)
+    }
+
+    /// Iterator over the neighboring vertices around the given vertex, going
+    /// counter-clockwise.
+    pub fn vv_ccw_iter(&self, v: VH) -> impl Iterator<Item = VH> + use<'_, A, DIM> {
+        vv_ccw_iter(&self.topol, v)
+    }
+
+    /// Iterator over the neighboring vertices around the given vertex, going
+    /// clockwise.
+    pub fn vv_cw_iter(&self, v: VH) -> impl Iterator<Item = VH> + use<'_, A, DIM> {
+        vv_cw_iter(&self.topol, v)
+    }
+
+    /// Iterator over the incident edges around an vertex, going counter-clockwise.
+    pub fn ve_ccw_iter(&self, v: VH) -> impl Iterator<Item = EH> + use<'_, A, DIM> {
+        ve_ccw_iter(&self.topol, v)
+    }
+
+    /// Iterator over the incident edges around a vertex, going clockwise.
+    pub fn ve_cw_iter(&self, v: VH) -> impl Iterator<Item = EH> + use<'_, A, DIM> {
+        ve_cw_iter(&self.topol, v)
+    }
+
+    /// Iterator over the two vertices incident on the given edge.
+    pub fn ev_iter(&self, e: EH) -> impl Iterator<Item = VH> + use<'_, A, DIM> {
+        ev_iter(&self.topol, e)
+    }
+
+    /// Iterator over the two halfedges corresponding to an edge.
+    pub fn eh_iter(&self, e: EH) -> impl Iterator<Item = HH> + use<'_, A, DIM> {
+        eh_iter(&self.topol, e)
+    }
+
+    /// Iterator over the faces incident on an edge.
+    pub fn ef_iter(&self, e: EH) -> impl Iterator<Item = FH> + use<'_, A, DIM> {
+        ef_iter(&self.topol, e)
+    }
+
+    /// Iterator over the halfedges of a face loop, going counter-clockwise.
+    pub fn fh_ccw_iter(&self, f: FH) -> impl Iterator<Item = HH> + use<'_, A, DIM> {
+        fh_ccw_iter(&self.topol, f)
+    }
+
+    /// Iterator over the halfedges of a face loop, going clockwise.
+    pub fn fh_cw_iter(&self, f: FH) -> impl Iterator<Item = HH> + use<'_, A, DIM> {
+        fh_cw_iter(&self.topol, f)
+    }
+
+    /// Iterator over the vertices incident on a face, going counter-clockwise.
+    pub fn fv_ccw_iter(&self, f: FH) -> impl Iterator<Item = VH> + use<'_, A, DIM> {
+        fv_ccw_iter(&self.topol, f)
+    }
+
+    /// Iterator over the vertices incident on a face, going clockwise.
+    pub fn fv_cw_iter(&self, f: FH) -> impl Iterator<Item = VH> + use<'_, A, DIM> {
+        fv_cw_iter(&self.topol, f)
+    }
+
+    /// Iterator over the edges incident on a face, going counter-clockwise.
+    pub fn fe_ccw_iter(&self, f: FH) -> impl Iterator<Item = EH> + use<'_, A, DIM> {
+        fe_ccw_iter(&self.topol, f)
+    }
+
+    /// Iterator over the edges incident on a face, going clockwise.
+    pub fn fe_cw_iter(&self, f: FH) -> impl Iterator<Item = EH> + use<'_, A, DIM> {
+        fe_cw_iter(&self.topol, f)
+    }
+
+    /// Iterator over the neighboring faces of the given face, going
+    /// counter-clockwise.
+    ///
+    /// This includes the faces connected via a shared, edge, but not those
+    /// connected via a shared vertex.
+    pub fn ff_ccw_iter(&self, f: FH) -> impl Iterator<Item = FH> + use<'_, A, DIM> {
+        ff_ccw_iter(&self.topol, f)
+    }
+
+    /// Iterator over the neighboring faces of the given face, going
+    /// clockwise.
+    ///
+    /// This includes the faces connected via a shared, edge, but not those
+    /// connected via a shared vertex.
+    pub fn ff_cw_iter(&self, f: FH) -> impl Iterator<Item = FH> + use<'_, A, DIM> {
+        ff_cw_iter(&self.topol, f)
+    }
+
+    /// This is similar to `voh_ccw_iter` around the base of the given halfedge,
+    /// except this iterator starts at the provided halfedge.
+    ///
+    /// This is equivalent to a circular shifted `voh_ccw_iter` of the vertex at
+    /// teh base of this halfedge.
+    pub fn ccw_rotate_iter(&self, h: HH) -> impl Iterator<Item = HH> + use<'_, A, DIM> {
+        ccw_rotate_iter(&self.topol, h)
+    }
+
+    /// This is similar to `voh_cw_iter` around the base of the given halfedge,
+    /// except this iterator starts at the provided halfedge.
+    ///
+    /// This is equivalent to a circular shifted `voh_cw_iter` of the vertex at
+    /// teh base of this halfedge.
+    pub fn cw_rotate_iter(&self, h: HH) -> impl Iterator<Item = HH> + use<'_, A, DIM> {
+        cw_rotate_iter(&self.topol, h)
+    }
+
+    /// Counter-clockwise iterator over the halfedges in a loop.
+    ///
+    /// The iterator will start at the given halfedge. If the halfedge has an
+    /// incident face, this iterator is equivalent to a circular shifted
+    /// `fh_ccw_iter` of the incident face. If the halfedge is on the boundary,
+    /// this iterator goes over the boundary loop counter-clockwise.
+    pub fn loop_ccw_iter(&self, h: HH) -> impl Iterator<Item = HH> + use<'_, A, DIM> {
+        loop_ccw_iter(&self.topol, h)
+    }
+
+    /// Counter-clockwise iterator over the halfedges in a loop.
+    ///
+    /// The iterator will start at the given halfedge. If the halfedge has an
+    /// incident face, this iterator is equivalent to a circular shifted
+    /// `fh_cw_iter` of the incident face. If the halfedge is on the boundary,
+    /// this iterator goes over the boundary loop clockwise.
+    pub fn loop_cw_iter(&self, h: HH) -> impl Iterator<Item = HH> + use<'_, A, DIM> {
+        loop_cw_iter(&self.topol, h)
+    }
+
+    // Mutable iterators.
+
+    // pub fn vv_ccw_iter_mut(
+    //     &mut self,
+    //     v: VH,
+    // ) -> impl Iterator<Item = (&mut Self, VH)> + use<'_, A, DIM> {
+    //     self.voh_ccw_iter_mut(v).map(|(mesh, h)| {
+    //         let v = mesh.to_vertex(h);
+    //         (mesh, v)
+    //     })
+    // }
+
+    // pub fn voh_ccw_iter_mut(
+    //     &mut self,
+    //     v: VH,
+    // ) -> impl Iterator<Item = (&mut Self, HH)> + use<'_, A, DIM> {
+    //     // RadialHalfedgeIterMut::<true, Self>
+    //     todo!()
+    // }
 }
 
 #[cfg(test)]

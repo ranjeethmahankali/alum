@@ -45,7 +45,7 @@ impl TopolCache {
     }
 }
 
-pub struct Topology {
+pub(crate) struct Topology {
     vertices: Vec<Vertex>,
     edges: Vec<Edge>,
     faces: Vec<Face>,
