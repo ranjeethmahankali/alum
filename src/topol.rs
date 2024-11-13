@@ -287,8 +287,8 @@ impl Topology {
     }
 
     pub fn is_boundary_edge(&self, e: EH) -> bool {
-        let h = (e.index() << 1).into();
-        self.is_boundary_halfedge(h) || self.is_boundary_halfedge(self.opposite_halfedge(h))
+        let (h, oh) = self.halfedge_pair(e);
+        self.is_boundary_halfedge(h) || self.is_boundary_halfedge(oh)
     }
 
     pub fn is_boundary_vertex(&self, v: VH) -> bool {
@@ -1022,6 +1022,7 @@ pub(crate) mod test {
     use crate::{
         alum_glam::PolyMeshF32,
         iterator,
+        macros::assert_f32_eq,
         topol::{Handle, VH},
     };
 
@@ -1542,5 +1543,53 @@ pub(crate) mod test {
             .expect("Cannot crate mesh")
             .check_topology()
             .expect("Topological check failed");
+    }
+
+    #[test]
+    fn t_hexahedron_delete_faces_iter_mut() {
+        let mut mesh = PolyMeshF32::hexahedron(1.0).expect("Cannot create hexahedron");
+        let area = mesh.try_calc_area().expect("Cannot compute area");
+        assert_eq!(8, mesh.num_vertices());
+        assert_eq!(12, mesh.num_edges());
+        assert_eq!(24, mesh.num_halfedges());
+        assert_eq!(6, mesh.num_faces());
+        for v in mesh.vertices() {
+            // using a random condition to delete some faces, to make sure I can
+            // modify the mesh. If you try changing any of the `m` inside this
+            // loop to `mesh`, the borrow checker should complain and the code
+            // should not compile.
+            for (m, h) in mesh.voh_ccw_iter_mut(v) {
+                if let Some(f) = m.halfedge_face(h) {
+                    if (f.index() + h.index()) % 2 != 0 {
+                        m.delete_face(f, true).expect("Cannot delete face");
+                    }
+                }
+            }
+        }
+        mesh.garbage_collection()
+            .expect("Garbage collection failed");
+        mesh.check_topology().expect("Topological errors found");
+        // It just so happens, we should be left with two adjacent faces meeting
+        // at 90 degrees. This is because of the specific topology of the
+        // hexahedron. I am just asserting the stuff below to ensure
+        // determinimsm.
+        assert_eq!(6, mesh.num_vertices());
+        assert_eq!(7, mesh.num_edges());
+        assert_eq!(14, mesh.num_halfedges());
+        assert_eq!(2, mesh.num_faces());
+        assert_f32_eq!(
+            area / 3.0,
+            mesh.try_calc_area().expect("Cannot compute area"),
+            1e-6
+        );
+        assert_eq!(
+            (6, 1),
+            mesh.edges()
+                .fold((0usize, 0usize), |(b, nb), e| if mesh.is_boundary_edge(e) {
+                    (b + 1, nb)
+                } else {
+                    (b, nb + 1)
+                })
+        );
     }
 }
