@@ -476,6 +476,13 @@ impl Topology {
     }
 
     pub fn remove_edge(&mut self, e: EH) -> Result<FH, Error> {
+        //   +---------+---------+           +---------+---------+
+        //   |         |         |           |                   |
+        //   |         |         |           |                   |
+        //   |    f0   e    f1   |   ====>   |         f0        |  (f1 is deleted)
+        //   |         |         |           |                   |
+        //   |         |         |           |                   |
+        //   +---------+---------+           +---------+---------+
         let mut estatus = self.estatus.clone();
         let mut estatus = estatus.try_borrow_mut()?;
         let mut fstatus = self.fstatus.clone();
@@ -661,6 +668,16 @@ where
     }
 
     /// Remove an edge and unite the two incident faces into one face.
+    ///
+    /// ```text
+    ///     +---------+---------+             +---------+---------+
+    ///     |         |         |             |                   |
+    ///     |         |         |             |                   |
+    ///     |    f0   e    f1   |     ====>   |         f0        |  (f1 is deleted)
+    ///     |         |         |             |                   |
+    ///     |         |         |             |                   |
+    ///     +---------+---------+             +---------+---------+
+    /// ```
     pub fn remove_edge(&mut self, e: EH) -> Result<FH, Error> {
         self.topol.remove_edge(e)
     }
