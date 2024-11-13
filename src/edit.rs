@@ -520,6 +520,7 @@ impl Topology {
         // Rewire halfedge -> face for the loop of f1.
         {
             let mut h = n1;
+            // TODO: Later replace this with the mutable visitor.
             while h != p1 {
                 self.halfedge_mut(h).face = Some(f0);
                 h = self.next_halfedge(h);
@@ -579,6 +580,7 @@ impl Topology {
             self.halfedge_mut(h).face = Some(f);
             // Link all faces in the other loop to the new face.
             self.halfedge_mut(oh).face = Some(fnew);
+            // TODO: Later replace this with the mutable visitor.
             let mut h = p1;
             while h != oh {
                 if hf == h {
@@ -590,6 +592,7 @@ impl Topology {
         } else {
             let fnew = self.new_face(h)?;
             self.halfedge_mut(h).face = Some(fnew);
+            // TODO: Later replace this with the mutable visitor.
             let mut h2 = next;
             while h2 != h {
                 self.halfedge_mut(h2).face = Some(fnew);
