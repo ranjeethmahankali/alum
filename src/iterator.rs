@@ -492,23 +492,29 @@ where
 
     // Mutable iterators.
 
-    // pub fn vv_ccw_iter_mut(
-    //     &mut self,
-    //     v: VH,
-    // ) -> impl Iterator<Item = (&mut Self, VH)> + use<'_, A, DIM> {
-    //     self.voh_ccw_iter_mut(v).map(|(mesh, h)| {
-    //         let v = mesh.to_vertex(h);
-    //         (mesh, v)
-    //     })
-    // }
+    pub fn vv_ccw_iter_mut(
+        &mut self,
+        v: VH,
+    ) -> impl Iterator<Item = (&mut Self, VH)> + use<'_, A, DIM> {
+        self.voh_ccw_iter_mut(v).map(|(mesh, h)| {
+            let v = mesh.to_vertex(h);
+            (mesh, v)
+        })
+    }
 
-    // pub fn voh_ccw_iter_mut(
-    //     &mut self,
-    //     v: VH,
-    // ) -> impl Iterator<Item = (&mut Self, HH)> + use<'_, A, DIM> {
-    //     // RadialHalfedgeIterMut::<true, Self>
-    //     todo!()
-    // }
+    pub fn voh_ccw_iter_mut(
+        &mut self,
+        v: VH,
+    ) -> impl Iterator<Item = (&mut Self, HH)> + use<'_, A, DIM> {
+        let h = self.topol.vertex_halfedge(v);
+        RadialHalfedgeIterMut::<true, Self> {
+            reference: self.into(),
+            topol: &mut self.topol,
+            hstart: h,
+            hcurrent: h,
+            _phanton: PhantomData,
+        }
+    }
 }
 
 #[cfg(test)]

@@ -1,13 +1,11 @@
-use std::ops::Range;
-
 use crate::{
     element::{EH, FH, HH, VH},
     error::Error,
-    iterator,
     property::{EProperty, FProperty, HProperty, VProperty},
     status::Status,
     topol::{TopolCache, Topology},
 };
+use std::ops::Range;
 
 /// Trait for an adaptor that tells this crate how to work with user specified
 /// geometric types.
