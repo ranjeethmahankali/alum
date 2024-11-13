@@ -1,4 +1,4 @@
-use std::marker::PhantomData;
+use std::{marker::PhantomData, ptr::NonNull};
 
 use crate::{
     element::{EH, FH, HH, VH},
@@ -116,7 +116,7 @@ impl<'a> Iterator for LoopHalfedgeIter<'a, false> {
 }
 
 struct LoopHalfedgeIterMut<'a, const CCW: bool> {
-    topol: *mut Topology,
+    topol: NonNull<Topology>,
     hstart: HH,
     hcurrent: Option<HH>,
     _phantom: PhantomData<&'a mut Topology>,
@@ -128,7 +128,7 @@ impl<'a> Iterator for LoopHalfedgeIterMut<'a, true> {
     fn next(&mut self) -> Option<Self::Item> {
         match self.hcurrent {
             Some(current) => {
-                let topol: &mut Topology = unsafe { &mut *self.topol };
+                let topol: &mut Topology = unsafe { self.topol.as_mut() };
                 let next = topol.next_halfedge(current);
                 self.hcurrent = if next == self.hstart {
                     None
@@ -148,7 +148,7 @@ impl<'a> Iterator for LoopHalfedgeIterMut<'a, false> {
     fn next(&mut self) -> Option<Self::Item> {
         match self.hcurrent {
             Some(current) => {
-                let topol: &mut Topology = unsafe { &mut *self.topol };
+                let topol: &mut Topology = unsafe { self.topol.as_mut() };
                 let next = topol.prev_halfedge(current);
                 self.hcurrent = if next == self.hstart {
                     None
@@ -271,7 +271,7 @@ pub(crate) fn loop_ccw_iter_mut<'a>(
     h: HH,
 ) -> impl Iterator<Item = (&'a mut Topology, HH)> + use<'a> {
     LoopHalfedgeIterMut::<true> {
-        topol,
+        topol: topol.into(),
         hstart: h,
         hcurrent: Some(h),
         _phantom: PhantomData,
