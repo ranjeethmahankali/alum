@@ -576,8 +576,11 @@ impl Topology {
         if let Some(f) = f {
             let fnew = self.new_face(oh)?;
             let hf = self.face_halfedge(f);
-            let mut h = oh;
-            while h != n0 {
+            self.halfedge_mut(h).face = Some(f);
+            // Link all faces in the other loop to the new face.
+            self.halfedge_mut(oh).face = Some(fnew);
+            let mut h = p1;
+            while h != oh {
                 if hf == h {
                     self.face_mut(f).halfedge = h;
                 }
@@ -586,10 +589,11 @@ impl Topology {
             }
         } else {
             let fnew = self.new_face(h)?;
-            let mut h = h;
-            while h != prev {
-                self.halfedge_mut(h).face = Some(fnew);
-                h = self.next_halfedge(h);
+            self.halfedge_mut(h).face = Some(fnew);
+            let mut h2 = next;
+            while h2 != h {
+                self.halfedge_mut(h2).face = Some(fnew);
+                h2 = self.next_halfedge(h2);
             }
         };
         self.adjust_outgoing_halfedge(v0);
@@ -1233,8 +1237,39 @@ mod test {
             )
             .expect("Cannot insert halfedge");
         let (h, oh) = mesh.halfedge_pair(e);
+        mesh.check().expect("Topological errors found");
         assert!(mesh.is_boundary_halfedge(oh));
         assert!(!mesh.is_boundary_halfedge(h));
+        assert_eq!(3, iterator::loop_ccw_iter(&mesh, h).count());
+        assert_eq!(3, iterator::loop_ccw_iter(&mesh, oh).count());
+        assert_eq!(
+            (1, 8),
+            mesh.faces().fold((0usize, 0usize), |(tris, quads), f| {
+                match mesh.face_valence(f) {
+                    3 => (tris + 1, quads),
+                    4 => (tris, quads + 1),
+                    _ => (tris, quads),
+                }
+            })
+        );
+    }
+
+    #[test]
+    fn t_box_insert_edge() {
+        let mut mesh = quad_box();
+        let e = mesh
+            .insert_edge(
+                mesh.find_halfedge(4.into(), 5.into())
+                    .expect("Cannot find halfedge"),
+                mesh.find_halfedge(7.into(), 4.into())
+                    .expect("Cannot find halfedge"),
+            )
+            .expect("Cannot insert edge");
+        let (h, oh) = mesh.halfedge_pair(e);
+        dbg!(mesh.from_vertex(17.into()), mesh.to_vertex(17.into()));
+        mesh.check().expect("Topological errors found");
+        assert!(!mesh.is_boundary_halfedge(h));
+        assert!(!mesh.is_boundary_halfedge(oh));
         assert_eq!(3, iterator::loop_ccw_iter(&mesh, h).count());
         assert_eq!(3, iterator::loop_ccw_iter(&mesh, oh).count());
     }
