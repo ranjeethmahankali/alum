@@ -1,10 +1,21 @@
-use std::{marker::PhantomData, ptr::NonNull};
-
 use crate::{
     element::{EH, FH, HH, VH},
     topol::Topology,
     Adaptor, PolyMeshT,
 };
+use std::{marker::PhantomData, ptr::NonNull};
+
+/*
+Halfedges are at the core of all iterators, because halfedges have the most
+amount of connectivity information than any other type of mesh element. There
+are two base types of iterators: Radial and Loop. Radial iterators go over the
+halfedges rotated around their tail vertex. Loop iterators traverse the
+next/previous halfedge links, hence traverse loops. Both of these iterator types
+can go either counter-clockwise or clockwise. Further more, they can either
+borrow the mesh immutably or mutably. All other iterators such as face-vertex,
+and vertex-vertex etc. can be expressed in terms of these base iterators using
+`.map()`.
+ */
 
 /// Iterator over halfedges radiating outward from a vertex.
 struct RadialHalfedgeIter<'a, const CCW: bool> {
