@@ -486,13 +486,15 @@ impl Topology {
     }
 
     pub fn remove_edge(&mut self, e: EH) -> Result<FH, Error> {
-        //   +---------+---------+           +---------+---------+
-        //   |         |         |           |                   |
-        //   |         |         |           |                   |
-        //   |    f0   e    f1   |   ====>   |         f0        |  (f1 is deleted)
-        //   |         |         |           |                   |
-        //   |         |         |           |                   |
-        //   +---------+---------+           +---------+---------+
+        //    <--------- <----------v0<---------- <----------
+        //   |                n0    ^|     p1                ^
+        //   |                      ||                       |
+        //   |                      ||                       |
+        //   |         f0         h0||h1         f1          |
+        //   |                      ||                       |
+        //   |                      ||                       |
+        //   v                p0    |v     n1                |
+        //    ---------> ---------->v1----------> ---------->
         let mut estatus = self.estatus.clone();
         let mut estatus = estatus.try_borrow_mut()?;
         let mut fstatus = self.fstatus.clone();
@@ -517,7 +519,7 @@ impl Topology {
         if self.vertex_halfedge(v0) == Some(h1) {
             self.vertex_mut(v0).halfedge = Some(n0);
         }
-        if self.vertex_halfedge(v1) == Some(h1) {
+        if self.vertex_halfedge(v1) == Some(h0) {
             self.vertex_mut(v1).halfedge = Some(n1);
         }
         // Rewire halfedge -> halfedge.
