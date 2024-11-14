@@ -543,8 +543,8 @@ where
     // Modify the mesh while using a mutable iterator - pull points closer to origin.
     let f: FH = 2.into();
     for (mesh, v) in boxmesh.fv_ccw_iter_mut(f) {
-        // Inside this loop, while the iterator is alive, I cannot borrow `boxmesh`
-        // because the iterator already borrowed `boxmesh` mutably. Instead I will use
+        // Inside this loop, while the iterator is alive, we cannot borrow `boxmesh`
+        // because the iterator already borrowed `boxmesh` mutably. Instead we will use
         // the `mesh` mutable reference yielded by the iterator along with the halfedge.
         let mut pos = mesh.point(v).expect("Cannot read position");
         pos *= 0.75;
