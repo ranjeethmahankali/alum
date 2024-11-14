@@ -54,6 +54,7 @@ mod mesh;
 mod obj;
 mod property;
 mod status;
+mod subidv;
 mod topol;
 
 #[cfg(feature = "use_glam")]

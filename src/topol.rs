@@ -170,28 +170,28 @@ impl Topology {
         self.fstatus.get_mut(f)
     }
 
-    pub fn new_vprop<T>(&mut self, default: T) -> VProperty<T>
+    pub fn create_vertex_prop<T>(&mut self, default: T) -> VProperty<T>
     where
         T: Clone + Copy + 'static,
     {
         VProperty::<T>::new(&mut self.vprops, default)
     }
 
-    pub fn new_hprop<T>(&mut self, default: T) -> HProperty<T>
+    pub fn create_halfedge_prop<T>(&mut self, default: T) -> HProperty<T>
     where
         T: Clone + Copy + 'static,
     {
         HProperty::<T>::new(&mut self.hprops, default)
     }
 
-    pub fn new_eprop<T>(&mut self, default: T) -> EProperty<T>
+    pub fn create_edge_prop<T>(&mut self, default: T) -> EProperty<T>
     where
         T: Clone + Copy + 'static,
     {
         EProperty::<T>::new(&mut self.eprops, default)
     }
 
-    pub fn new_fprop<T>(&mut self, default: T) -> FProperty<T>
+    pub fn create_face_prop<T>(&mut self, default: T) -> FProperty<T>
     where
         T: Clone + Copy + 'static,
     {

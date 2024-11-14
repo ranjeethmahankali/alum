@@ -40,9 +40,6 @@ pub enum Error {
     /// Two arrays whose lengths are expected to be the same, have different
     /// lengths.
     MismatchedArrayLengths(usize, usize),
-    /// The mesh has deleted elements, which create problems for further
-    /// operations. Garbage collection needs to be performed before proceeding.
-    GarbageCollectionRequired,
 
     // Topological checks.
     /// The outgoing halfedge of a boundary vertex must be a boundary halfedge.

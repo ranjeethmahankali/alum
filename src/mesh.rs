@@ -143,7 +143,7 @@ where
     /// Create a new empty mesh.
     pub fn new() -> Self {
         let mut topol = Topology::new();
-        let points = topol.new_vprop(A::zero_vector());
+        let points = topol.create_vertex_prop(A::zero_vector());
         PolyMeshT {
             topol,
             cache: TopolCache::default(),
@@ -188,7 +188,7 @@ where
     where
         T: Clone + Copy + 'static,
     {
-        self.topol.new_vprop(default)
+        self.topol.create_vertex_prop(default)
     }
 
     /// Create a new halfedge property of type T, with the `default` value.
@@ -209,7 +209,7 @@ where
     where
         T: Clone + Copy + 'static,
     {
-        self.topol.new_hprop(default)
+        self.topol.create_halfedge_prop(default)
     }
 
     /// Create a new edge property of type T, with the `default` value.
@@ -230,7 +230,7 @@ where
     where
         T: Clone + Copy + 'static,
     {
-        self.topol.new_eprop(default)
+        self.topol.create_edge_prop(default)
     }
 
     /// Create a new face property of type T, with the `default` value.
@@ -251,7 +251,7 @@ where
     where
         T: Clone + Copy + 'static,
     {
-        self.topol.new_fprop(default)
+        self.topol.create_face_prop(default)
     }
 
     /// Reserve memory for the given number of elements.
@@ -442,7 +442,7 @@ where
     /// ```
     pub fn request_vertex_normals(&mut self) -> VProperty<A::Vector> {
         self.vnormals
-            .get_or_insert_with(|| self.topol.new_vprop(A::zero_vector()))
+            .get_or_insert_with(|| self.topol.create_vertex_prop(A::zero_vector()))
             .clone()
     }
 
@@ -473,7 +473,7 @@ where
     /// ```
     pub fn request_face_normals(&mut self) -> FProperty<A::Vector> {
         self.fnormals
-            .get_or_insert_with(|| self.topol.new_fprop(A::zero_vector()))
+            .get_or_insert_with(|| self.topol.create_face_prop(A::zero_vector()))
             .clone()
     }
 

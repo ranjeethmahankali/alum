@@ -151,7 +151,7 @@ where
 
 impl<const DIM: usize, A> PolyMeshT<DIM, A>
 where
-    A: Adaptor<DIM> + FloatScalarAdaptor<DIM>,
+    A: FloatScalarAdaptor<DIM>,
     A::Scalar: Add<Output = A::Scalar>,
     A::Vector: Add<Output = A::Vector> + Div<A::Scalar, Output = A::Vector>,
 {
