@@ -42,6 +42,7 @@ crate has an API that is very similar to OpenMesh.
     floating point types to represent the geometry.
 */
 
+mod create;
 mod edit;
 mod element;
 mod error;
@@ -50,7 +51,6 @@ mod macros;
 mod math;
 mod mesh;
 mod obj;
-mod primitive;
 mod property;
 mod status;
 mod topol;
