@@ -1,13 +1,11 @@
-use std::ops::Range;
-
 use crate::{
     element::{EH, FH, HH, VH},
     error::Error,
-    iterator,
     property::{EProperty, FProperty, HProperty, VProperty},
     status::Status,
     topol::{TopolCache, Topology},
 };
+use std::ops::Range;
 
 /// Trait for an adaptor that tells this crate how to work with user specified
 /// geometric types.
@@ -480,13 +478,13 @@ where
     }
 
     /// Get the vertex the halfedge points to.
-    pub fn to_vertex(&self, h: HH) -> VH {
-        self.topol.to_vertex(h)
+    pub fn head_vertex(&self, h: HH) -> VH {
+        self.topol.head_vertex(h)
     }
 
     /// Get the vertex the halfedge is pointing away from.
-    pub fn from_vertex(&self, h: HH) -> VH {
-        self.topol.from_vertex(h)
+    pub fn tail_vertex(&self, h: HH) -> VH {
+        self.topol.tail_vertex(h)
     }
 
     /// Get the next halfedge in the loop.
@@ -546,160 +544,6 @@ where
     /// Find a halfedge spanning the vertices `from` and `to`, if one exists
     pub fn find_halfedge(&self, from: VH, to: VH) -> Option<HH> {
         self.topol.find_halfedge(from, to)
-    }
-
-    /// Iterator over the outgoing halfedges around a vertex, going counter-clockwise.
-    pub fn voh_ccw_iter(&self, v: VH) -> impl Iterator<Item = HH> + use<'_, A, DIM> {
-        iterator::voh_ccw_iter(&self.topol, v)
-    }
-
-    /// Iterator over the outgoing halfedges around a vertex, going clockwise
-    pub fn voh_cw_iter(&self, v: VH) -> impl Iterator<Item = HH> + use<'_, A, DIM> {
-        iterator::voh_cw_iter(&self.topol, v)
-    }
-
-    /// Iterator over the incoming halfedges around a vertex, going
-    /// counter-clockwise
-    pub fn vih_ccw_iter(&self, v: VH) -> impl Iterator<Item = HH> + use<'_, A, DIM> {
-        iterator::vih_ccw_iter(&self.topol, v)
-    }
-
-    /// Iterator over the incoming halfedges around a vertex, going clockwise
-    pub fn vih_cw_iter(&self, v: VH) -> impl Iterator<Item = HH> + use<'_, A, DIM> {
-        iterator::vih_cw_iter(&self.topol, v)
-    }
-
-    /// Iterator over the faces incident on a vertex, going counter-clockwise.
-    pub fn vf_ccw_iter(&self, v: VH) -> impl Iterator<Item = FH> + use<'_, A, DIM> {
-        iterator::vf_ccw_iter(&self.topol, v)
-    }
-
-    /// Iterator over the faces incident on a vertex, going clockwise.
-    pub fn vf_cw_iter(&self, v: VH) -> impl Iterator<Item = FH> + use<'_, A, DIM> {
-        iterator::vf_cw_iter(&self.topol, v)
-    }
-
-    /// Iterator over the neighboring vertices around the given vertex, going
-    /// counter-clockwise.
-    pub fn vv_ccw_iter(&self, v: VH) -> impl Iterator<Item = VH> + use<'_, A, DIM> {
-        iterator::vv_ccw_iter(&self.topol, v)
-    }
-
-    /// Iterator over the neighboring vertices around the given vertex, going
-    /// clockwise.
-    pub fn vv_cw_iter(&self, v: VH) -> impl Iterator<Item = VH> + use<'_, A, DIM> {
-        iterator::vv_cw_iter(&self.topol, v)
-    }
-
-    /// Iterator over the incident edges around an vertex, going counter-clockwise.
-    pub fn ve_ccw_iter(&self, v: VH) -> impl Iterator<Item = EH> + use<'_, A, DIM> {
-        iterator::ve_ccw_iter(&self.topol, v)
-    }
-
-    /// Iterator over the incident edges around a vertex, going clockwise.
-    pub fn ve_cw_iter(&self, v: VH) -> impl Iterator<Item = EH> + use<'_, A, DIM> {
-        iterator::ve_cw_iter(&self.topol, v)
-    }
-
-    /// Iterator over the two vertices incident on the given edge.
-    pub fn ev_iter(&self, e: EH) -> impl Iterator<Item = VH> + use<'_, A, DIM> {
-        iterator::ev_iter(&self.topol, e)
-    }
-
-    /// Iterator over the two halfedges corresponding to an edge.
-    pub fn eh_iter(&self, e: EH) -> impl Iterator<Item = HH> + use<'_, A, DIM> {
-        iterator::eh_iter(&self.topol, e)
-    }
-
-    /// Iterator over the faces incident on an edge.
-    pub fn ef_iter(&self, e: EH) -> impl Iterator<Item = FH> + use<'_, A, DIM> {
-        iterator::ef_iter(&self.topol, e)
-    }
-
-    /// Iterator over the halfedges of a face loop, going counter-clockwise.
-    pub fn fh_ccw_iter(&self, f: FH) -> impl Iterator<Item = HH> + use<'_, A, DIM> {
-        iterator::fh_ccw_iter(&self.topol, f)
-    }
-
-    /// Iterator over the halfedges of a face loop, going clockwise.
-    pub fn fh_cw_iter(&self, f: FH) -> impl Iterator<Item = HH> + use<'_, A, DIM> {
-        iterator::fh_cw_iter(&self.topol, f)
-    }
-
-    /// Iterator over the vertices incident on a face, going counter-clockwise.
-    pub fn fv_ccw_iter(&self, f: FH) -> impl Iterator<Item = VH> + use<'_, A, DIM> {
-        iterator::fv_ccw_iter(&self.topol, f)
-    }
-
-    /// Iterator over the vertices incident on a face, going clockwise.
-    pub fn fv_cw_iter(&self, f: FH) -> impl Iterator<Item = VH> + use<'_, A, DIM> {
-        iterator::fv_cw_iter(&self.topol, f)
-    }
-
-    /// Iterator over the edges incident on a face, going counter-clockwise.
-    pub fn fe_ccw_iter(&self, f: FH) -> impl Iterator<Item = EH> + use<'_, A, DIM> {
-        iterator::fe_ccw_iter(&self.topol, f)
-    }
-
-    /// Iterator over the edges incident on a face, going clockwise.
-    pub fn fe_cw_iter(&self, f: FH) -> impl Iterator<Item = EH> + use<'_, A, DIM> {
-        iterator::fe_cw_iter(&self.topol, f)
-    }
-
-    /// Iterator over the neighboring faces of the given face, going
-    /// counter-clockwise.
-    ///
-    /// This includes the faces connected via a shared, edge, but not those
-    /// connected via a shared vertex.
-    pub fn ff_ccw_iter(&self, f: FH) -> impl Iterator<Item = FH> + use<'_, A, DIM> {
-        iterator::ff_ccw_iter(&self.topol, f)
-    }
-
-    /// Iterator over the neighboring faces of the given face, going
-    /// clockwise.
-    ///
-    /// This includes the faces connected via a shared, edge, but not those
-    /// connected via a shared vertex.
-    pub fn ff_cw_iter(&self, f: FH) -> impl Iterator<Item = FH> + use<'_, A, DIM> {
-        iterator::ff_cw_iter(&self.topol, f)
-    }
-
-    /// This is similar to `voh_ccw_iter` around the base of the given halfedge,
-    /// except this iterator starts at the provided halfedge.
-    ///
-    /// This is equivalent to a circular shifted `voh_ccw_iter` of the vertex at
-    /// teh base of this halfedge.
-    pub fn ccw_rotate_iter(&self, h: HH) -> impl Iterator<Item = HH> + use<'_, A, DIM> {
-        iterator::ccw_rotate_iter(&self.topol, h)
-    }
-
-    /// This is similar to `voh_cw_iter` around the base of the given halfedge,
-    /// except this iterator starts at the provided halfedge.
-    ///
-    /// This is equivalent to a circular shifted `voh_cw_iter` of the vertex at
-    /// teh base of this halfedge.
-    pub fn cw_rotate_iter(&self, h: HH) -> impl Iterator<Item = HH> + use<'_, A, DIM> {
-        iterator::cw_rotate_iter(&self.topol, h)
-    }
-
-    /// Counter-clockwise iterator over the halfedges in a loop.
-    ///
-    /// The iterator will start at the given halfedge. If the halfedge has an
-    /// incident face, this iterator is equivalent to a circular shifted
-    /// `fh_ccw_iter` of the incident face. If the halfedge is on the boundary,
-    /// this iterator goes over the boundary loop counter-clockwise.
-    pub fn loop_ccw_iter(&self, h: HH) -> impl Iterator<Item = HH> + use<'_, A, DIM> {
-        iterator::loop_ccw_iter(&self.topol, h)
-    }
-
-    /// Counter-clockwise iterator over the halfedges in a loop.
-    ///
-    /// The iterator will start at the given halfedge. If the halfedge has an
-    /// incident face, this iterator is equivalent to a circular shifted
-    /// `fh_cw_iter` of the incident face. If the halfedge is on the boundary,
-    /// this iterator goes over the boundary loop clockwise.
-    pub fn loop_cw_iter(&self, h: HH) -> impl Iterator<Item = HH> + use<'_, A, DIM> {
-        iterator::loop_cw_iter(&self.topol, h)
     }
 
     /// Iterator over the vertex triplets that represent a triangulation of this
@@ -821,7 +665,6 @@ where
         self.topol.delete_edge(
             e,
             delete_isolated_vertices,
-            &mut self.cache.halfedges,
             &mut self.cache.edges,
             &mut self.cache.vertices,
         )
@@ -837,7 +680,6 @@ where
         self.topol.delete_face(
             f,
             delete_isolated_vertices,
-            &mut self.cache.halfedges,
             &mut self.cache.edges,
             &mut self.cache.vertices,
         )

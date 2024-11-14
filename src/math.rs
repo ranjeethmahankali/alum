@@ -45,8 +45,8 @@ where
                 ),
                 |(nverts, x, y, z): (usize, A::Scalar, A::Scalar, A::Scalar), h| {
                     let (a, b) = {
-                        let pc = points[self.from_vertex(h).index() as usize];
-                        let pn = points[self.to_vertex(h).index() as usize];
+                        let pc = points[self.tail_vertex(h).index() as usize];
+                        let pn = points[self.head_vertex(h).index() as usize];
                         (pc - pn, pc + pn)
                     };
                     (
@@ -107,7 +107,7 @@ where
                         return A::zero_vector();
                     }
                     // Iterate over adjacent pairs of outgoing halfedges.
-                    iterator::ccw_rotate_iter(&topol, h).zip(iterator::ccw_rotate_iter(&topol, h2))
+                    iterator::ccw_rotate_iter(topol, h).zip(iterator::ccw_rotate_iter(topol, h2))
                 }
                 None => return A::zero_vector(),
             }
@@ -244,7 +244,7 @@ where
     /// Compute the vector spanning from the start of the halfedge to the head
     /// of the halfedge.
     pub fn calc_halfedge_vector(&self, h: HH, points: &[A::Vector]) -> A::Vector {
-        points[self.to_vertex(h).index() as usize] - points[self.from_vertex(h).index() as usize]
+        points[self.head_vertex(h).index() as usize] - points[self.tail_vertex(h).index() as usize]
     }
 }
 

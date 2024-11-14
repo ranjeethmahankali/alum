@@ -45,7 +45,7 @@ impl TopolCache {
     }
 }
 
-pub struct Topology {
+pub(crate) struct Topology {
     vertices: Vec<Vertex>,
     edges: Vec<Edge>,
     faces: Vec<Face>,
@@ -245,11 +245,11 @@ impl Topology {
         self.vertex(v).halfedge
     }
 
-    pub fn to_vertex(&self, h: HH) -> VH {
+    pub fn head_vertex(&self, h: HH) -> VH {
         self.halfedge(h).vertex
     }
 
-    pub fn from_vertex(&self, h: HH) -> VH {
+    pub fn tail_vertex(&self, h: HH) -> VH {
         self.halfedge(self.opposite_halfedge(h)).vertex
     }
 
@@ -287,8 +287,8 @@ impl Topology {
     }
 
     pub fn is_boundary_edge(&self, e: EH) -> bool {
-        let h = (e.index() << 1).into();
-        self.is_boundary_halfedge(h) || self.is_boundary_halfedge(self.opposite_halfedge(h))
+        let (h, oh) = self.halfedge_pair(e);
+        self.is_boundary_halfedge(h) || self.is_boundary_halfedge(oh)
     }
 
     pub fn is_boundary_vertex(&self, v: VH) -> bool {
@@ -343,7 +343,7 @@ impl Topology {
     }
 
     pub fn find_halfedge(&self, from: VH, to: VH) -> Option<HH> {
-        iterator::voh_ccw_iter(self, from).find(|h| self.to_vertex(*h) == to)
+        iterator::voh_ccw_iter(self, from).find(|h| self.head_vertex(*h) == to)
     }
 
     pub fn is_manifold_vertex(&self, v: VH) -> bool {
@@ -669,7 +669,6 @@ impl Topology {
             self.delete_face(
                 *f,
                 delete_isolated_vertices,
-                &mut cache.halfedges,
                 &mut cache.edges,
                 &mut cache.vertices,
             )?;
@@ -682,7 +681,6 @@ impl Topology {
         &mut self,
         e: EH,
         delete_isolated_vertices: bool,
-        hcache: &mut Vec<HH>,
         ecache: &mut Vec<EH>,
         vcache: &mut Vec<VH>,
     ) -> Result<(), Error> {
@@ -691,10 +689,10 @@ impl Topology {
         let f0 = self.halfedge_face(h0);
         let f1 = self.halfedge_face(h1);
         if let Some(f) = f0 {
-            self.delete_face(f, delete_isolated_vertices, hcache, ecache, vcache)?;
+            self.delete_face(f, delete_isolated_vertices, ecache, vcache)?;
         }
         if let Some(f) = f1 {
-            self.delete_face(f, delete_isolated_vertices, hcache, ecache, vcache)?;
+            self.delete_face(f, delete_isolated_vertices, ecache, vcache)?;
         }
         /* If either face was valid, the edge is deleted inside the call to
          * delete_face. Otherwise we have to mark them deleted here. */
@@ -713,7 +711,6 @@ impl Topology {
         &mut self,
         f: FH,
         delete_isolated_vertices: bool,
-        hcache: &mut Vec<HH>,
         ecache: &mut Vec<EH>,
         vcache: &mut Vec<VH>,
     ) -> Result<(), Error> {
@@ -728,25 +725,21 @@ impl Topology {
         // Collect neighborhood topology.
         ecache.clear();
         vcache.clear();
-        // Pull the halfedges into the cache because the borrow checker won't
-        // allow modifying the mesh while it is borrowed by the iterator.
-        hcache.clear();
-        hcache.extend(iterator::fh_ccw_iter(self, f));
-        for &h in hcache.iter() {
-            self.halfedge_mut(h).face = None; // Disconnect from face.
-            if self.is_boundary_halfedge(self.opposite_halfedge(h)) {
-                ecache.push(self.halfedge_edge(h));
+        for (mesh, h) in iterator::fh_ccw_iter_mut(self, f) {
+            mesh.halfedge_mut(h).face = None; // Disconnect from face.
+            if mesh.is_boundary_halfedge(mesh.opposite_halfedge(h)) {
+                ecache.push(mesh.halfedge_edge(h));
             }
-            vcache.push(self.to_vertex(h));
+            vcache.push(mesh.head_vertex(h));
         }
         // Delete collected topology.
         for e in ecache.drain(..) {
             let h0 = self.edge_halfedge(e, false);
-            let v0 = self.to_vertex(h0);
+            let v0 = self.head_vertex(h0);
             let next0 = self.next_halfedge(h0);
             let prev0 = self.prev_halfedge(h0);
             let h1 = self.edge_halfedge(e, true);
-            let v1 = self.to_vertex(h1);
+            let v1 = self.head_vertex(h1);
             let next1 = self.next_halfedge(h1);
             let prev1 = self.prev_halfedge(h1);
             // Adjust halfedge links and mark edge and halfedges deleted.
@@ -939,7 +932,7 @@ impl Topology {
                 if hstatus[hi].deleted() {
                     return Err(Error::DeletedHalfedge(h));
                 }
-                if visited[hi] || self.from_vertex(h) != v {
+                if visited[hi] || self.tail_vertex(h) != v {
                     return Err(Error::InvalidOutgoingHalfedges(v));
                 }
                 visited[hi] = true;
@@ -977,8 +970,8 @@ impl Topology {
                 return Err(Error::DeletedEdge(e));
             }
             // Check connectivity with other halfedges.
-            if self.to_vertex(hedge.prev) != self.from_vertex(h)
-                || self.from_vertex(h) != self.to_vertex(hedge.prev)
+            if self.head_vertex(hedge.prev) != self.tail_vertex(h)
+                || self.tail_vertex(h) != self.head_vertex(hedge.prev)
                 || self.next_halfedge(hedge.prev) != h
                 || self.prev_halfedge(hedge.next) != h
             {
@@ -1029,6 +1022,7 @@ pub(crate) mod test {
     use crate::{
         alum_glam::PolyMeshF32,
         iterator,
+        macros::assert_f32_eq,
         topol::{Handle, VH},
     };
 
@@ -1329,8 +1323,8 @@ pub(crate) mod test {
             let h = mesh
                 .find_halfedge(5.into(), 6.into())
                 .expect("Cannot find halfedge");
-            assert_eq!(mesh.from_vertex(h), 5.into());
-            assert_eq!(mesh.to_vertex(h), 6.into());
+            assert_eq!(mesh.tail_vertex(h), 5.into());
+            assert_eq!(mesh.head_vertex(h), 6.into());
             let h1 = mesh.next_halfedge(h);
             assert_eq!(
                 h1,
@@ -1340,8 +1334,8 @@ pub(crate) mod test {
             let h = mesh
                 .find_halfedge(6.into(), 10.into())
                 .expect("Cannot find halfedge");
-            assert_eq!(mesh.from_vertex(h), 6.into());
-            assert_eq!(mesh.to_vertex(h), 10.into());
+            assert_eq!(mesh.tail_vertex(h), 6.into());
+            assert_eq!(mesh.head_vertex(h), 10.into());
             let h = mesh.prev_halfedge(h);
             assert_eq!(
                 h,
@@ -1404,14 +1398,8 @@ pub(crate) mod test {
     fn t_quad_box_delete_face() {
         let mut qbox = quad_box();
         let mut cache = TopolCache::default();
-        qbox.delete_face(
-            5.into(),
-            true,
-            &mut cache.halfedges,
-            &mut cache.edges,
-            &mut cache.vertices,
-        )
-        .expect("Cannot delete face");
+        qbox.delete_face(5.into(), true, &mut cache.edges, &mut cache.vertices)
+            .expect("Cannot delete face");
         assert!(qbox
             .face_status(5.into())
             .expect("Cannot read face status")
@@ -1446,7 +1434,6 @@ pub(crate) mod test {
                     .expect("Cannot find halfedge"),
             ),
             true,
-            &mut cache.halfedges,
             &mut cache.edges,
             &mut cache.vertices,
         )
@@ -1523,14 +1510,8 @@ pub(crate) mod test {
         let mut qbox = quad_box();
         let mut cache = TopolCache::default();
         for fi in 0..3u32 {
-            qbox.delete_face(
-                fi.into(),
-                true,
-                &mut cache.halfedges,
-                &mut cache.edges,
-                &mut cache.vertices,
-            )
-            .expect("Cannot delete faces");
+            qbox.delete_face(fi.into(), true, &mut cache.edges, &mut cache.vertices)
+                .expect("Cannot delete faces");
         }
         qbox.garbage_collection(&mut cache)
             .expect("Failed to garbage collect");
@@ -1562,5 +1543,53 @@ pub(crate) mod test {
             .expect("Cannot crate mesh")
             .check_topology()
             .expect("Topological check failed");
+    }
+
+    #[test]
+    fn t_hexahedron_delete_faces_iter_mut() {
+        let mut mesh = PolyMeshF32::hexahedron(1.0).expect("Cannot create hexahedron");
+        let area = mesh.try_calc_area().expect("Cannot compute area");
+        assert_eq!(8, mesh.num_vertices());
+        assert_eq!(12, mesh.num_edges());
+        assert_eq!(24, mesh.num_halfedges());
+        assert_eq!(6, mesh.num_faces());
+        for v in mesh.vertices() {
+            // using a random condition to delete some faces, to make sure I can
+            // modify the mesh. If you try changing any of the `m` inside this
+            // loop to `mesh`, the borrow checker should complain and the code
+            // should not compile.
+            for (m, h) in mesh.voh_ccw_iter_mut(v) {
+                if let Some(f) = m.halfedge_face(h) {
+                    if (f.index() + h.index()) % 2 != 0 {
+                        m.delete_face(f, true).expect("Cannot delete face");
+                    }
+                }
+            }
+        }
+        mesh.garbage_collection()
+            .expect("Garbage collection failed");
+        mesh.check_topology().expect("Topological errors found");
+        // It just so happens, we should be left with two adjacent faces meeting
+        // at 90 degrees. This is because of the specific topology of the
+        // hexahedron. I am just asserting the stuff below to ensure
+        // determinimsm.
+        assert_eq!(6, mesh.num_vertices());
+        assert_eq!(7, mesh.num_edges());
+        assert_eq!(14, mesh.num_halfedges());
+        assert_eq!(2, mesh.num_faces());
+        assert_f32_eq!(
+            area / 3.0,
+            mesh.try_calc_area().expect("Cannot compute area"),
+            1e-6
+        );
+        assert_eq!(
+            (6, 1),
+            mesh.edges()
+                .fold((0usize, 0usize), |(b, nb), e| if mesh.is_boundary_edge(e) {
+                    (b + 1, nb)
+                } else {
+                    (b, nb + 1)
+                })
+        );
     }
 }

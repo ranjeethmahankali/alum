@@ -530,14 +530,8 @@ mod test {
         };
         let mut cache = TopolCache::default();
         for fi in [1, 2, 5] {
-            qbox.delete_face(
-                fi.into(),
-                true,
-                &mut cache.halfedges,
-                &mut cache.edges,
-                &mut cache.vertices,
-            )
-            .expect("Cannot delete a face");
+            qbox.delete_face(fi.into(), true, &mut cache.edges, &mut cache.vertices)
+                .expect("Cannot delete a face");
         }
         qbox.garbage_collection(&mut cache)
             .expect("Cannot garbage collect");
