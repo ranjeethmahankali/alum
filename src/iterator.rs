@@ -215,11 +215,11 @@ impl<'a, T> Iterator for LoopHalfedgeIterMut<'a, false, T> {
 /* Immutable iterators. */
 
 pub(crate) fn vv_ccw_iter(topol: &Topology, v: VH) -> impl Iterator<Item = VH> + use<'_> {
-    voh_ccw_iter(topol, v).map(|h| topol.to_vertex(h))
+    voh_ccw_iter(topol, v).map(|h| topol.head_vertex(h))
 }
 
 pub(crate) fn vv_cw_iter(topol: &Topology, v: VH) -> impl Iterator<Item = VH> + use<'_> {
-    voh_cw_iter(topol, v).map(|h| topol.to_vertex(h))
+    voh_cw_iter(topol, v).map(|h| topol.head_vertex(h))
 }
 
 pub(crate) fn vih_ccw_iter(topol: &Topology, v: VH) -> impl Iterator<Item = HH> + use<'_> {
@@ -255,7 +255,7 @@ pub(crate) fn vf_cw_iter(topol: &Topology, v: VH) -> impl Iterator<Item = FH> + 
 }
 
 pub(crate) fn ev_iter(topol: &Topology, e: EH) -> impl Iterator<Item = VH> + use<'_> {
-    eh_iter(topol, e).map(|h| topol.to_vertex(h))
+    eh_iter(topol, e).map(|h| topol.head_vertex(h))
 }
 
 pub(crate) fn eh_iter(topol: &Topology, e: EH) -> impl Iterator<Item = HH> + use<'_> {
@@ -269,11 +269,11 @@ pub(crate) fn ef_iter(topol: &Topology, e: EH) -> impl Iterator<Item = FH> + use
 }
 
 pub(crate) fn fv_ccw_iter(topol: &Topology, f: FH) -> impl Iterator<Item = VH> + use<'_> {
-    fh_ccw_iter(topol, f).map(|h| topol.to_vertex(h))
+    fh_ccw_iter(topol, f).map(|h| topol.head_vertex(h))
 }
 
 pub(crate) fn fv_cw_iter(topol: &Topology, f: FH) -> impl Iterator<Item = VH> + use<'_> {
-    fh_cw_iter(topol, f).map(|h| topol.to_vertex(h))
+    fh_cw_iter(topol, f).map(|h| topol.head_vertex(h))
 }
 
 pub(crate) fn fh_ccw_iter(topol: &Topology, f: FH) -> impl Iterator<Item = HH> + use<'_> {
@@ -515,7 +515,7 @@ where
         v: VH,
     ) -> impl Iterator<Item = (&mut Self, VH)> + use<'_, A, DIM> {
         self.voh_ccw_iter_mut(v).map(|(mesh, h)| {
-            let v = mesh.to_vertex(h);
+            let v = mesh.head_vertex(h);
             (mesh, v)
         })
     }
@@ -525,7 +525,7 @@ where
         v: VH,
     ) -> impl Iterator<Item = (&mut Self, VH)> + use<'_, A, DIM> {
         self.voh_cw_iter_mut(v).map(|(mesh, h)| {
-            let v = mesh.to_vertex(h);
+            let v = mesh.head_vertex(h);
             (mesh, v)
         })
     }
@@ -619,7 +619,7 @@ where
         f: FH,
     ) -> impl Iterator<Item = (&mut Self, VH)> + use<'_, A, DIM> {
         self.fh_ccw_iter_mut(f).map(|(mesh, h)| {
-            let v = mesh.to_vertex(h);
+            let v = mesh.head_vertex(h);
             (mesh, v)
         })
     }
@@ -629,7 +629,7 @@ where
         f: FH,
     ) -> impl Iterator<Item = (&mut Self, VH)> + use<'_, A, DIM> {
         self.fh_cw_iter_mut(f).map(|(mesh, h)| {
-            let v = mesh.to_vertex(h);
+            let v = mesh.head_vertex(h);
             (mesh, v)
         })
     }
@@ -906,10 +906,10 @@ mod test {
         let qbox = quad_box();
         for v in qbox.vertices() {
             assert!(
-                vih_ccw_iter(&qbox, v).all(|h| qbox.to_vertex(h) == v && qbox.from_vertex(h) != v)
+                vih_ccw_iter(&qbox, v).all(|h| qbox.head_vertex(h) == v && qbox.tail_vertex(h) != v)
             );
             assert!(
-                vih_cw_iter(&qbox, v).all(|h| qbox.to_vertex(h) == v && qbox.from_vertex(h) != v)
+                vih_cw_iter(&qbox, v).all(|h| qbox.head_vertex(h) == v && qbox.tail_vertex(h) != v)
             );
         }
     }
@@ -919,10 +919,10 @@ mod test {
         let qbox = quad_box();
         for v in qbox.vertices() {
             assert!(
-                voh_ccw_iter(&qbox, v).all(|h| qbox.from_vertex(h) == v && qbox.to_vertex(h) != v)
+                voh_ccw_iter(&qbox, v).all(|h| qbox.tail_vertex(h) == v && qbox.head_vertex(h) != v)
             );
             assert!(
-                voh_cw_iter(&qbox, v).all(|h| qbox.from_vertex(h) == v && qbox.to_vertex(h) != v)
+                voh_cw_iter(&qbox, v).all(|h| qbox.tail_vertex(h) == v && qbox.head_vertex(h) != v)
             );
         }
     }

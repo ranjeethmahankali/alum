@@ -478,13 +478,13 @@ where
     }
 
     /// Get the vertex the halfedge points to.
-    pub fn to_vertex(&self, h: HH) -> VH {
-        self.topol.to_vertex(h)
+    pub fn head_vertex(&self, h: HH) -> VH {
+        self.topol.head_vertex(h)
     }
 
     /// Get the vertex the halfedge is pointing away from.
-    pub fn from_vertex(&self, h: HH) -> VH {
-        self.topol.from_vertex(h)
+    pub fn tail_vertex(&self, h: HH) -> VH {
+        self.topol.tail_vertex(h)
     }
 
     /// Get the next halfedge in the loop.

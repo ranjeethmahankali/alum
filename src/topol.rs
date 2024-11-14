@@ -245,11 +245,11 @@ impl Topology {
         self.vertex(v).halfedge
     }
 
-    pub fn to_vertex(&self, h: HH) -> VH {
+    pub fn head_vertex(&self, h: HH) -> VH {
         self.halfedge(h).vertex
     }
 
-    pub fn from_vertex(&self, h: HH) -> VH {
+    pub fn tail_vertex(&self, h: HH) -> VH {
         self.halfedge(self.opposite_halfedge(h)).vertex
     }
 
@@ -343,7 +343,7 @@ impl Topology {
     }
 
     pub fn find_halfedge(&self, from: VH, to: VH) -> Option<HH> {
-        iterator::voh_ccw_iter(self, from).find(|h| self.to_vertex(*h) == to)
+        iterator::voh_ccw_iter(self, from).find(|h| self.head_vertex(*h) == to)
     }
 
     pub fn is_manifold_vertex(&self, v: VH) -> bool {
@@ -730,16 +730,16 @@ impl Topology {
             if mesh.is_boundary_halfedge(mesh.opposite_halfedge(h)) {
                 ecache.push(mesh.halfedge_edge(h));
             }
-            vcache.push(mesh.to_vertex(h));
+            vcache.push(mesh.head_vertex(h));
         }
         // Delete collected topology.
         for e in ecache.drain(..) {
             let h0 = self.edge_halfedge(e, false);
-            let v0 = self.to_vertex(h0);
+            let v0 = self.head_vertex(h0);
             let next0 = self.next_halfedge(h0);
             let prev0 = self.prev_halfedge(h0);
             let h1 = self.edge_halfedge(e, true);
-            let v1 = self.to_vertex(h1);
+            let v1 = self.head_vertex(h1);
             let next1 = self.next_halfedge(h1);
             let prev1 = self.prev_halfedge(h1);
             // Adjust halfedge links and mark edge and halfedges deleted.
@@ -932,7 +932,7 @@ impl Topology {
                 if hstatus[hi].deleted() {
                     return Err(Error::DeletedHalfedge(h));
                 }
-                if visited[hi] || self.from_vertex(h) != v {
+                if visited[hi] || self.tail_vertex(h) != v {
                     return Err(Error::InvalidOutgoingHalfedges(v));
                 }
                 visited[hi] = true;
@@ -970,8 +970,8 @@ impl Topology {
                 return Err(Error::DeletedEdge(e));
             }
             // Check connectivity with other halfedges.
-            if self.to_vertex(hedge.prev) != self.from_vertex(h)
-                || self.from_vertex(h) != self.to_vertex(hedge.prev)
+            if self.head_vertex(hedge.prev) != self.tail_vertex(h)
+                || self.tail_vertex(h) != self.head_vertex(hedge.prev)
                 || self.next_halfedge(hedge.prev) != h
                 || self.prev_halfedge(hedge.next) != h
             {
@@ -1323,8 +1323,8 @@ pub(crate) mod test {
             let h = mesh
                 .find_halfedge(5.into(), 6.into())
                 .expect("Cannot find halfedge");
-            assert_eq!(mesh.from_vertex(h), 5.into());
-            assert_eq!(mesh.to_vertex(h), 6.into());
+            assert_eq!(mesh.tail_vertex(h), 5.into());
+            assert_eq!(mesh.head_vertex(h), 6.into());
             let h1 = mesh.next_halfedge(h);
             assert_eq!(
                 h1,
@@ -1334,8 +1334,8 @@ pub(crate) mod test {
             let h = mesh
                 .find_halfedge(6.into(), 10.into())
                 .expect("Cannot find halfedge");
-            assert_eq!(mesh.from_vertex(h), 6.into());
-            assert_eq!(mesh.to_vertex(h), 10.into());
+            assert_eq!(mesh.tail_vertex(h), 6.into());
+            assert_eq!(mesh.head_vertex(h), 10.into());
             let h = mesh.prev_halfedge(h);
             assert_eq!(
                 h,
