@@ -1,4 +1,4 @@
-use crate::{Adaptor, Error, FloatScalarAdaptor, Handle, PolyMeshT};
+use crate::{iterator, topol::Topology, Adaptor, Error, FloatScalarAdaptor, Handle, PolyMeshT, HH};
 use std::{
     marker::PhantomData,
     ops::{Add, Div, Mul},
@@ -18,6 +18,24 @@ where
         + Div<A::Scalar, Output = A::Vector>
         + Mul<A::Scalar, Output = A::Vector>,
 {
+    fn count_topol(mesh: &Topology, niter: usize) -> (usize, usize, usize) {
+        assert!(niter > 0);
+        let mut nv = mesh.num_vertices();
+        let mut ne = mesh.num_edges();
+        let mut nf = mesh.num_faces();
+        for i in 1..niter {
+            let v = nv + ne + nf;
+            let f = if i == 1 {
+                mesh.faces().map(|f| mesh.face_valence(f)).sum::<usize>()
+            } else {
+                nf * 4
+            };
+            let e = 2 * ne + f;
+            (nv, ne, nf) = (v, e, f);
+        }
+        (nv, ne, nf)
+    }
+
     fn calc_face_edge_points(
         mesh: &mut PolyMeshT<DIM, A>,
         update_points: bool,
@@ -28,11 +46,9 @@ where
         let points = points.try_borrow()?;
         // Compute face points.
         fpos.clear();
-        fpos.reserve(mesh.num_faces());
         fpos.extend(mesh.faces().map(|f| mesh.calc_face_centroid(f, &points)));
         // Compute edge points.
         epos.clear();
-        epos.reserve(mesh.num_edges());
         epos.extend(mesh.edges().map(|e| {
             let (h, oh) = mesh.halfedge_pair(e);
             match (mesh.halfedge_face(h), mesh.halfedge_face(oh)) {
@@ -63,7 +79,6 @@ where
         let points = mesh.points();
         let points = points.try_borrow()?;
         vpos.clear();
-        vpos.reserve(mesh.num_vertices());
         vpos.extend(mesh.vertices().map(|v| {
             if mesh.is_boundary_vertex(v) {
                 let (count, sum) = mesh
@@ -128,9 +143,16 @@ where
         }
         // Use vectors instead of properties because we don't want these to
         // change when we add new topology.
-        let mut fpos = Vec::with_capacity(self.num_faces());
-        let mut epos = Vec::with_capacity(self.num_edges());
-        let mut vpos = Vec::new();
+        let (nverts, nedges, nfaces) = CatmullClark::<DIM, A>::count_topol(&self.topol, iters);
+        self.reserve(nverts, nedges, nfaces)?;
+        let mut fpos = Vec::with_capacity(nfaces);
+        let mut epos = Vec::with_capacity(nedges);
+        let vpos = if update_points {
+            Some(Vec::with_capacity(nverts))
+        } else {
+            None
+        };
+        let mut fhs = Vec::new();
         for _ in 0..iters {
             CatmullClark::<DIM, A>::calc_face_edge_points(
                 self,
@@ -138,10 +160,40 @@ where
                 &mut fpos,
                 &mut epos,
             )?;
-            if update_points {
+            // Make them immutable from here.
+            let fpos: &[A::Vector] = &fpos;
+            let epos: &[A::Vector] = &epos;
+            if let Some(mut vpos) = vpos {
                 CatmullClark::<DIM, A>::update_vertex_positions(self, &fpos, &epos, &mut vpos)?;
             }
-            todo!("Modify the topolgy");
+            let num_old_verts = self.num_vertices() as u32;
+            for ei in 0..self.num_edges() {
+                self.split_edge((ei as u32).into(), epos[ei], true)?;
+            }
+            for f in self.faces() {
+                // New vertex in the middle.
+                let fv = self.add_vertex(fpos[f.index() as usize])?;
+                // Find a halfedge that points to an old vertex, and collect the
+                // loop of halfedges starting from there.
+                let hstart = self
+                    .fh_ccw_iter(f)
+                    .find(|&h| self.head_vertex(h).index() < num_old_verts)
+                    .ok_or(Error::CannotSplitFace(f))?;
+                fhs.clear();
+                fhs.extend(iterator::loop_ccw_iter(&self.topol, hstart));
+                let fhs: &[HH] = &fhs; // Immutable.
+                assert!(fhs.len() % 2 == 0);
+                for hpair in fhs.chunks_exact(2) {
+                    let h1 = hpair[0];
+                    let h2 = hpair[2];
+                    let flocal = if h1 == hstart {
+                        f
+                    } else {
+                        self.topol.new_face(h1)?
+                    };
+                }
+            }
+            todo!("Split the faces");
         }
         todo!()
     }

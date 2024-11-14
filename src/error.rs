@@ -70,4 +70,7 @@ pub enum Error {
     HalfedgesNotInTheSameLoop(HH, HH),
     /// Cannot insert an edge spanning the two halfedges.
     CannotInsertEdge(HH, HH),
+
+    /// Something went wrong when trying to split a face.
+    CannotSplitFace(FH),
 }
