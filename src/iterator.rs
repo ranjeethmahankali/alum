@@ -603,10 +603,7 @@ where
         v: VH,
     ) -> impl Iterator<Item = (&mut Self, FH)> + use<'_, A, DIM> {
         self.voh_ccw_iter_mut(v)
-            .filter_map(|(mesh, h)| match mesh.halfedge_face(h) {
-                Some(f) => Some((mesh, f)),
-                None => None,
-            })
+            .filter_map(|(mesh, h)| mesh.halfedge_face(h).map(|f| (mesh, f)))
     }
 
     pub fn vf_cw_iter_mut(
@@ -614,10 +611,7 @@ where
         v: VH,
     ) -> impl Iterator<Item = (&mut Self, FH)> + use<'_, A, DIM> {
         self.voh_cw_iter_mut(v)
-            .filter_map(|(mesh, h)| match mesh.halfedge_face(h) {
-                Some(f) => Some((mesh, f)),
-                None => None,
-            })
+            .filter_map(|(mesh, h)| mesh.halfedge_face(h).map(|f| (mesh, f)))
     }
 
     pub fn fv_ccw_iter_mut(
@@ -693,10 +687,8 @@ where
         f: FH,
     ) -> impl Iterator<Item = (&mut Self, FH)> + use<'_, A, DIM> {
         self.fh_ccw_iter_mut(f).filter_map(|(mesh, h)| {
-            match mesh.halfedge_face(mesh.opposite_halfedge(h)) {
-                Some(f) => Some((mesh, f)),
-                None => None,
-            }
+            mesh.halfedge_face(mesh.opposite_halfedge(h))
+                .map(|f| (mesh, f))
         })
     }
 
@@ -705,10 +697,8 @@ where
         f: FH,
     ) -> impl Iterator<Item = (&mut Self, FH)> + use<'_, A, DIM> {
         self.fh_cw_iter_mut(f).filter_map(|(mesh, h)| {
-            match mesh.halfedge_face(mesh.opposite_halfedge(h)) {
-                Some(f) => Some((mesh, f)),
-                None => None,
-            }
+            mesh.halfedge_face(mesh.opposite_halfedge(h))
+                .map(|f| (mesh, f))
         })
     }
 

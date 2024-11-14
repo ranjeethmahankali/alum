@@ -107,7 +107,7 @@ where
                         return A::zero_vector();
                     }
                     // Iterate over adjacent pairs of outgoing halfedges.
-                    iterator::ccw_rotate_iter(&topol, h).zip(iterator::ccw_rotate_iter(&topol, h2))
+                    iterator::ccw_rotate_iter(topol, h).zip(iterator::ccw_rotate_iter(topol, h2))
                 }
                 None => return A::zero_vector(),
             }

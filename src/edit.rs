@@ -546,7 +546,7 @@ impl Topology {
         if f != self.halfedge_face(next) {
             return Err(Error::HalfedgesNotInTheSameLoop(prev, next));
         }
-        if let None = f {
+        if f.is_none() {
             // Check if the halfedges are part of the same boundary loop. March
             // simultaenously starting from both prev and next halfedges, and
             // see if you arrive at the other halfedge. Marching from both
