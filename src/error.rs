@@ -43,16 +43,26 @@ pub enum Error {
     /// The mesh has deleted elements, which create problems for further
     /// operations. Garbage collection needs to be performed before proceeding.
     GarbageCollectionRequired,
+
+    // Topological checks.
+    /// The outgoing halfedge of a boundary vertex must be a boundary halfedge.
+    OutgoingHalfedgeNotBoundary(VH),
+    /// Invalid halfedge.
+    InvalidHalfedge(HH),
     /// Broken topology found among the outgoing halfedges around a vertex.
     InvalidOutgoingHalfedges(VH),
+    /// Halfedge has the same tail and head vertex.
+    DegenerateHalfedge(HH),
+
     /// Cycle found when iterating over halfedges in a face loop.
     InvalidLoopTopology(HH),
     /// Halfedges in a loop are not linked to the same face / boundary.
     InconsistentFaceInLoop(HH),
     /// The next-previous link between a halfedge pair doesn't commute.
-    InvalidHalfedgeLink(HH, HH),
+    InvalidHalfedgeLink(HH),
     /// Invalid face-halfedge link.
     InvalidFaceHalfedgeLink(FH, HH),
+
     /// Edge is not a unique link between its incident faces. Removing it will
     /// produce dangling / invalid topology.
     EdgeIsNotAUniqueLink(EH),
