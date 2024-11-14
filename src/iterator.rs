@@ -905,9 +905,8 @@ mod test {
     fn t_box_vih_iter() {
         let qbox = quad_box();
         for v in qbox.vertices() {
-            assert!(
-                vih_ccw_iter(&qbox, v).all(|h| qbox.head_vertex(h) == v && qbox.tail_vertex(h) != v)
-            );
+            assert!(vih_ccw_iter(&qbox, v)
+                .all(|h| qbox.head_vertex(h) == v && qbox.tail_vertex(h) != v));
             assert!(
                 vih_cw_iter(&qbox, v).all(|h| qbox.head_vertex(h) == v && qbox.tail_vertex(h) != v)
             );
@@ -918,9 +917,8 @@ mod test {
     fn t_box_voh_iter() {
         let qbox = quad_box();
         for v in qbox.vertices() {
-            assert!(
-                voh_ccw_iter(&qbox, v).all(|h| qbox.tail_vertex(h) == v && qbox.head_vertex(h) != v)
-            );
+            assert!(voh_ccw_iter(&qbox, v)
+                .all(|h| qbox.tail_vertex(h) == v && qbox.head_vertex(h) != v));
             assert!(
                 voh_cw_iter(&qbox, v).all(|h| qbox.tail_vertex(h) == v && qbox.head_vertex(h) != v)
             );

@@ -372,7 +372,12 @@ impl Topology {
         let v0 = self.tail_vertex(h);
         let v1 = self.head_vertex(h);
         // Check for degeneracy.
-        if f == of || hn == oh || self.head_vertex(hn) == v0 || on == h || self.head_vertex(on) == v1 {
+        if f == of
+            || hn == oh
+            || self.head_vertex(hn) == v0
+            || on == h
+            || self.head_vertex(on) == v1
+        {
             return false;
         }
         let hp = self.prev_halfedge(h);
@@ -423,7 +428,12 @@ impl Topology {
         let v0 = self.tail_vertex(h);
         let v1 = self.head_vertex(h);
         // Check for degeneracy.
-        if f == of || hn == oh || self.head_vertex(hn) == v0 || on == h || self.head_vertex(on) == v1 {
+        if f == of
+            || hn == oh
+            || self.head_vertex(hn) == v0
+            || on == h
+            || self.head_vertex(on) == v1
+        {
             return false;
         }
         let hp = self.prev_halfedge(h);
