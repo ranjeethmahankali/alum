@@ -142,6 +142,9 @@ impl Topology {
         Ok(self.check_edge_collapse(h, &estatus, &mut vstatus))
     }
 
+    /// Sometimes after collapsing an edge, if the neighboring faces are
+    /// triangles, we end up with degenerate loops / faces. This cleans up such
+    /// loops.
     fn collapse_degenerate_triangle(
         &mut self,
         h: HH,
