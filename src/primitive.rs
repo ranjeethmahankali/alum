@@ -1,10 +1,9 @@
-use std::ops::{Add, Div, Mul, Neg};
-
 use crate::{
     element::{Handle, VH},
     error::Error,
     mesh::{Adaptor, FloatScalarAdaptor, PolyMeshT},
 };
+use std::ops::{Add, Div, Mul, Neg};
 
 impl<A> PolyMeshT<3, A>
 where
