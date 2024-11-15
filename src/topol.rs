@@ -229,17 +229,13 @@ impl Topology {
         &self.faces[f.index() as usize]
     }
 
-    pub fn is_boundary_halfedge(&self, h: HH) -> bool {
-        self.halfedge(h).face.is_none()
-    }
-
     pub fn is_boundary_edge(&self, e: EH) -> bool {
         e.is_boundary(self)
     }
 
     pub fn is_boundary_vertex(&self, v: VH) -> bool {
         match self.vertices[v.index() as usize].halfedge {
-            Some(h) => self.is_boundary_halfedge(h),
+            Some(h) => h.is_boundary(self),
             None => true,
         }
     }
@@ -298,11 +294,11 @@ impl Topology {
          * reason, we skip the first halfedge and check the rest. */
         iterator::voh_ccw_iter(self, v)
             .skip(1)
-            .all(|h| !self.is_boundary_halfedge(h))
+            .all(|h| !h.is_boundary(self))
     }
 
     pub(crate) fn adjust_outgoing_halfedge(&mut self, v: VH) {
-        let h = iterator::voh_ccw_iter(self, v).find(|h| self.is_boundary_halfedge(*h));
+        let h = iterator::voh_ccw_iter(self, v).find(|h| h.is_boundary(self));
         if let Some(h) = h {
             self.vertex_mut(v).halfedge = Some(h);
         }
@@ -380,7 +376,7 @@ impl Topology {
             // Ensure edge is manifold.
             let h = self.find_halfedge(verts[i], verts[(i + 1) % verts.len()]);
             match h {
-                Some(h) if !self.is_boundary_halfedge(h) => return Err(Error::ComplexHalfedge(h)),
+                Some(h) if !h.is_boundary(self) => return Err(Error::ComplexHalfedge(h)),
                 _ => {} // Do nothing.
             }
             cache.loop_halfedges.push(h);
@@ -401,7 +397,7 @@ impl Topology {
                 let mut out = next.opposite();
                 loop {
                     out = out.next(self).opposite();
-                    if self.is_boundary_halfedge(out) {
+                    if out.is_boundary(self) {
                         break;
                     }
                 }
@@ -412,9 +408,7 @@ impl Topology {
             if boundprev == prev {
                 return Err(Error::PatchRelinkingFailed);
             }
-            debug_assert!(
-                self.is_boundary_halfedge(boundprev) && self.is_boundary_halfedge(boundnext)
-            );
+            debug_assert!(boundprev.is_boundary(self) && boundnext.is_boundary(self));
             // other halfedges.
             let pstart = prev.next(self);
             let pend = next.prev(self);
@@ -661,7 +655,7 @@ impl Topology {
         vcache.clear();
         for (mesh, h) in iterator::fh_ccw_iter_mut(self, f) {
             mesh.halfedge_mut(h).face = None; // Disconnect from face.
-            if mesh.is_boundary_halfedge(h.opposite()) {
+            if h.opposite().is_boundary(mesh) {
                 ecache.push(h.edge());
             }
             vcache.push(h.head(mesh));
@@ -968,9 +962,9 @@ pub(crate) mod test {
             let h = v
                 .halfedge(&topol)
                 .expect("Vertex must have an incident halfedge");
-            assert!(topol.is_boundary_halfedge(h));
+            assert!(h.is_boundary(&topol));
             let oh = h.opposite();
-            assert!(!topol.is_boundary_halfedge(oh));
+            assert!(!oh.is_boundary(&topol));
             assert_eq!(
                 oh.face(&topol)
                     .expect("Halfedge must have an incident face"),
@@ -978,22 +972,16 @@ pub(crate) mod test {
             );
         }
         assert_eq!(
-            topol
-                .halfedges()
-                .filter(|h| topol.is_boundary_halfedge(*h))
-                .count(),
+            topol.halfedges().filter(|h| h.is_boundary(&topol)).count(),
             3
         );
         assert_eq!(
-            topol
-                .halfedges()
-                .filter(|h| !topol.is_boundary_halfedge(*h))
-                .count(),
+            topol.halfedges().filter(|h| !h.is_boundary(&topol)).count(),
             3
         );
         for (i, j) in (0u32..3).map(|i| (i, (i + 1) % 3)) {
             let h = topol.find_halfedge(i.into(), j.into()).unwrap();
-            assert!(!topol.is_boundary_halfedge(h));
+            assert!(!h.is_boundary(&topol));
         }
     }
 
@@ -1050,9 +1038,9 @@ pub(crate) mod test {
             let h = v
                 .halfedge(&topol)
                 .expect("Vertex must have an incident halfedge");
-            assert!(topol.is_boundary_halfedge(h));
+            assert!(h.is_boundary(&topol));
             let oh = h.opposite();
-            assert!(!topol.is_boundary_halfedge(oh));
+            assert!(!oh.is_boundary(&topol));
             assert_eq!(
                 oh.face(&topol)
                     .expect("Halfedge must have an incident face"),
@@ -1060,17 +1048,11 @@ pub(crate) mod test {
             );
         }
         assert_eq!(
-            topol
-                .halfedges()
-                .filter(|h| topol.is_boundary_halfedge(*h))
-                .count(),
+            topol.halfedges().filter(|h| h.is_boundary(&topol)).count(),
             4
         );
         assert_eq!(
-            topol
-                .halfedges()
-                .filter(|h| !topol.is_boundary_halfedge(*h))
-                .count(),
+            topol.halfedges().filter(|h| !h.is_boundary(&topol)).count(),
             4
         );
     }
@@ -1079,7 +1061,7 @@ pub(crate) mod test {
     fn t_box_manifold() {
         let qbox = quad_box();
         assert!(
-            qbox.halfedges().all(|h| !qbox.is_boundary_halfedge(h)),
+            qbox.halfedges().all(|h| !h.is_boundary(&qbox)),
             "Not expecting any boundary edges"
         );
     }

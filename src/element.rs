@@ -273,7 +273,7 @@ impl HH {
     ///
     /// A halfedge is considered interior if it has a face incident on it.
     pub fn is_boundary(self, mesh: &impl HasTopology) -> bool {
-        mesh.topology().is_boundary_halfedge(self)
+        self.face(mesh.topology()).is_none()
     }
 }
 

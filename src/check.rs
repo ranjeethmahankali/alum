@@ -21,8 +21,7 @@ fn check_vertices(
             }
             // The outgoing halfedge must be a boundary halfedge, or none of the
             // halfedges are boundary.
-            if !mesh.is_boundary_halfedge(h)
-                && iterator::voh_ccw_iter(mesh, v).any(|h| mesh.is_boundary_halfedge(h))
+            if !h.is_boundary(mesh) && iterator::voh_ccw_iter(mesh, v).any(|h| h.is_boundary(mesh))
             {
                 return Err(Error::OutgoingHalfedgeNotBoundary(v));
             }

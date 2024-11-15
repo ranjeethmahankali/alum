@@ -403,7 +403,7 @@ where
     /// Calling this function with borrowed `points` property avoids an internal
     /// borrow of properties.
     pub fn calc_volume(&self, points: &[A::Vector]) -> A::Scalar {
-        if self.halfedges().any(|h| self.topol.is_boundary_halfedge(h)) {
+        if self.halfedges().any(|h| h.is_boundary(&self.topol)) {
             // Not closed.
             return A::scalarf64(0.0);
         }

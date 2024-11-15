@@ -45,8 +45,7 @@ impl Topology {
         let vl = if htriangle {
             let h1 = h.next(self);
             let h2 = h1.next(self);
-            if self.is_boundary_halfedge(h1.opposite()) && self.is_boundary_halfedge(h2.opposite())
-            {
+            if h1.opposite().is_boundary(self) && h2.opposite().is_boundary(self) {
                 return false;
             }
             Some(h1.head(self))
@@ -56,8 +55,7 @@ impl Topology {
         let vr = if ohtriangle {
             let h1 = oh.next(self);
             let h2 = h1.next(self);
-            if self.is_boundary_halfedge(h1.opposite()) && self.is_boundary_halfedge(h2.opposite())
-            {
+            if h1.opposite().is_boundary(self) && h2.opposite().is_boundary(self) {
                 return false;
             }
             Some(h1.head(self))
@@ -72,8 +70,8 @@ impl Topology {
         // Check if we're collapsing across two different boundaries.
         if self.is_boundary_vertex(v0)
             && self.is_boundary_vertex(v1)
-            && !self.is_boundary_halfedge(h)
-            && !self.is_boundary_halfedge(oh)
+            && !h.is_boundary(self)
+            && !oh.is_boundary(self)
         {
             return false;
         }
@@ -1229,8 +1227,8 @@ mod test {
             .expect("Cannot insert halfedge");
         let (h, oh) = e.halfedges();
         mesh.check().expect("Topological errors found");
-        assert!(mesh.is_boundary_halfedge(oh));
-        assert!(!mesh.is_boundary_halfedge(h));
+        assert!(oh.is_boundary(&mesh));
+        assert!(!h.is_boundary(&mesh));
         assert_eq!(3, iterator::loop_ccw_iter(&mesh, h).count());
         assert_eq!(3, iterator::loop_ccw_iter(&mesh, oh).count());
         assert_eq!(
@@ -1258,8 +1256,8 @@ mod test {
             .expect("Cannot insert edge");
         let (h, oh) = e.halfedges();
         mesh.check().expect("Topological errors found");
-        assert!(!mesh.is_boundary_halfedge(h));
-        assert!(!mesh.is_boundary_halfedge(oh));
+        assert!(!h.is_boundary(&mesh));
+        assert!(!oh.is_boundary(&mesh));
         assert_eq!(3, iterator::loop_ccw_iter(&mesh, h).count());
         assert_eq!(3, iterator::loop_ccw_iter(&mesh, oh).count());
     }
