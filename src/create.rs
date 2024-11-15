@@ -2,6 +2,7 @@ use crate::{
     element::{Handle, VH},
     error::Error,
     mesh::{Adaptor, FloatScalarAdaptor, PolyMeshT},
+    HasTopology,
 };
 use std::ops::{Add, Div, Mul, Neg};
 
@@ -105,7 +106,7 @@ where
             outmesh.add_vertex(self.calc_face_centroid(f, &points))?;
         }
         let mut fverts: Vec<VH> = Vec::new();
-        for v in self.vertices().filter(|v| !self.is_boundary_vertex(*v)) {
+        for v in self.vertices().filter(|v| !v.is_boundary(self)) {
             fverts.clear();
             fverts.extend(self.vf_ccw_iter(v).map(|f| -> VH { f.index().into() }));
             outmesh.add_face(&fverts)?;
@@ -429,7 +430,7 @@ where
 mod test {
     use core::f32;
 
-    use crate::{alum_glam::PolyMeshF32, macros::assert_f32_eq};
+    use crate::{alum_glam::PolyMeshF32, macros::assert_f32_eq, HasTopology};
 
     #[test]
     fn t_quad_box() {

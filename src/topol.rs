@@ -1,5 +1,7 @@
 use crate::{
-    element::{Edge, Face, Halfedge, Handle, Vertex, EH, FH, HH, VH},
+    element::{
+        ERange, Edge, FRange, Face, HRange, Halfedge, Handle, VRange, Vertex, EH, FH, HH, VH,
+    },
     error::Error,
     iterator,
     property::{EProperty, FProperty, HProperty, PropertyContainer, VProperty},
@@ -45,7 +47,212 @@ impl TopolCache {
     }
 }
 
-pub(crate) struct Topology {
+pub trait HasTopology {
+    fn topology(&self) -> &Topology;
+
+    fn topology_mut(&mut self) -> &mut Topology;
+
+    /// Number of vertices.
+    fn num_vertices(&self) -> usize {
+        self.topology().vertices.len()
+    }
+
+    /// Number of halfedges.
+    fn num_halfedges(&self) -> usize {
+        self.num_edges() * 2
+    }
+
+    /// Number of edges.
+    fn num_edges(&self) -> usize {
+        self.topology().edges.len()
+    }
+
+    /// Number of faces.
+    fn num_faces(&self) -> usize {
+        self.topology().faces.len()
+    }
+
+    /// Create a new vertex property of type T, with the `default` value.
+    ///
+    /// The default value will be used when new elements are added to the mesh.
+    ///
+    /// ```rust
+    /// use alum::{alum_glam::PolyMeshF32, HasTopology};
+    ///
+    /// let mut mesh = PolyMeshF32::tetrahedron(1.0).expect("Cannot crate tetrahedron");
+    /// let prop = mesh.create_vertex_prop(42usize);
+    /// // To use th property, you have to borrow it.
+    /// let prop = prop.try_borrow().expect("Cannot borrow property");
+    /// assert_eq!(mesh.num_vertices(), prop.len());
+    /// assert!(prop.iter().all(|v| *v == 42));
+    /// ```
+    fn create_vertex_prop<T>(&mut self, default: T) -> VProperty<T>
+    where
+        T: Clone + Copy + 'static,
+    {
+        VProperty::<T>::new(&mut self.topology_mut().vprops, default)
+    }
+
+    /// Create a new halfedge property of type T, with the `default` value.
+    ///
+    /// The default value will be used when new elements are added to the mesh.
+    ///
+    /// ```rust
+    /// use alum::{alum_glam::PolyMeshF32, HasTopology};
+    ///
+    /// let mut mesh = PolyMeshF32::tetrahedron(1.0).expect("Cannot crate tetrahedron");
+    /// let prop = mesh.create_halfedge_prop(42usize);
+    /// // To use th property, you have to borrow it.
+    /// let prop = prop.try_borrow().expect("Cannot borrow property");
+    /// assert_eq!(mesh.num_halfedges(), prop.len());
+    /// assert!(prop.iter().all(|v| *v == 42));
+    /// ```
+    fn create_halfedge_prop<T>(&mut self, default: T) -> HProperty<T>
+    where
+        T: Clone + Copy + 'static,
+    {
+        HProperty::<T>::new(&mut self.topology_mut().hprops, default)
+    }
+
+    /// Create a new edge property of type T, with the `default` value.
+    ///
+    /// The default value will be used when new elements are added to the mesh.
+    ///
+    /// ```rust
+    /// use alum::{alum_glam::PolyMeshF32, HasTopology};
+    ///
+    /// let mut mesh = PolyMeshF32::tetrahedron(1.0).expect("Cannot crate tetrahedron");
+    /// let prop = mesh.create_edge_prop(42usize);
+    /// // To use th property, you have to borrow it.
+    /// let prop = prop.try_borrow().expect("Cannot borrow property");
+    /// assert_eq!(mesh.num_edges(), prop.len());
+    /// assert!(prop.iter().all(|v| *v == 42));
+    /// ```
+    fn create_edge_prop<T>(&mut self, default: T) -> EProperty<T>
+    where
+        T: Clone + Copy + 'static,
+    {
+        EProperty::<T>::new(&mut self.topology_mut().eprops, default)
+    }
+
+    /// Create a new face property of type T, with the `default` value.
+    ///
+    /// The default value will be used when new elements are added to the mesh.
+    ///
+    /// ```rust
+    /// use alum::{alum_glam::PolyMeshF32, HasTopology};
+    ///
+    /// let mut mesh = PolyMeshF32::tetrahedron(1.0).expect("Cannot crate tetrahedron");
+    /// let prop = mesh.create_face_prop(42usize);
+    /// // To use th property, you have to borrow it.
+    /// let prop = prop.try_borrow().expect("Cannot borrow property");
+    /// assert_eq!(mesh.num_faces(), prop.len());
+    /// assert!(prop.iter().all(|v| *v == 42));
+    /// ```
+    fn create_face_prop<T>(&mut self, default: T) -> FProperty<T>
+    where
+        T: Clone + Copy + 'static,
+    {
+        FProperty::<T>::new(&mut self.topology_mut().fprops, default)
+    }
+
+    /// Reserve memory for the given number of elements.
+    ///
+    /// The memory is also reserved for all properties.
+    fn reserve(&mut self, nverts: usize, nedges: usize, nfaces: usize) -> Result<(), Error> {
+        // Elements.
+        self.topology_mut().vertices.reserve(nverts);
+        self.topology_mut().edges.reserve(nedges);
+        self.topology_mut().faces.reserve(nfaces);
+        // Properties.
+        self.topology_mut().vprops.reserve(nverts)?;
+        self.topology_mut().hprops.reserve(nedges * 2)?;
+        self.topology_mut().eprops.reserve(nedges)?;
+        self.topology_mut().fprops.reserve(nfaces)?;
+        Ok(())
+    }
+
+    /// Delete all elements and their properties.
+    fn clear(&mut self) -> Result<(), Error> {
+        // Elements.
+        self.topology_mut().vertices.clear();
+        self.topology_mut().edges.clear();
+        self.topology_mut().faces.clear();
+        // Properties.
+        self.topology_mut().vprops.clear()?;
+        self.topology_mut().hprops.clear()?;
+        self.topology_mut().eprops.clear()?;
+        self.topology_mut().fprops.clear()?;
+        Ok(())
+    }
+
+    /// Iterator over the vertices of the mesh.
+    fn vertices(&self) -> VRange {
+        (0..(self.num_vertices() as u32)).into()
+    }
+
+    /// Iterator over the halfedges of the mesh.
+    fn halfedges(&self) -> HRange {
+        (0..(self.num_halfedges() as u32)).into()
+    }
+
+    /// Iterator over the edges of the mesh.
+    fn edges(&self) -> ERange {
+        (0..(self.num_edges() as u32)).into()
+    }
+
+    /// Iterator over the faces of the mesh.
+    fn faces(&self) -> FRange {
+        (0..(self.num_faces() as u32)).into()
+    }
+
+    /// The status of a vertex.
+    fn vertex_status(&self, v: VH) -> Result<Status, Error> {
+        self.topology().vstatus.get(v)
+    }
+
+    /// The status of a halfedge.
+    fn halfedge_status(&self, h: HH) -> Result<Status, Error> {
+        self.topology().hstatus.get(h)
+    }
+
+    /// The status of an edge.
+    fn edge_status(&self, e: EH) -> Result<Status, Error> {
+        self.topology().estatus.get(e)
+    }
+
+    /// The status of a face.
+    fn face_status(&self, f: FH) -> Result<Status, Error> {
+        self.topology().fstatus.get(f)
+    }
+
+    /// The status of a vertex as mutable.
+    fn vertex_status_mut(&mut self, v: VH) -> Result<RefMut<'_, Status>, Error> {
+        self.topology_mut().vstatus.get_mut(v)
+    }
+
+    /// The status of a halfedge as mutable.
+    fn halfedge_status_mut(&mut self, h: HH) -> Result<RefMut<'_, Status>, Error> {
+        self.topology_mut().hstatus.get_mut(h)
+    }
+
+    /// The status of an edge as mutable.
+    fn edge_status_mut(&mut self, e: EH) -> Result<RefMut<'_, Status>, Error> {
+        self.topology_mut().estatus.get_mut(e)
+    }
+
+    /// The status of a face as mutable.
+    fn face_status_mut(&mut self, f: FH) -> Result<RefMut<'_, Status>, Error> {
+        self.topology_mut().fstatus.get_mut(f)
+    }
+
+    /// Find a halfedge spanning the vertices `from` and `to`, if one exists
+    fn find_halfedge(&self, from: VH, to: VH) -> Option<HH> {
+        iterator::voh_ccw_iter(self.topology(), from).find(|h| h.head(self.topology()) == to)
+    }
+}
+
+pub struct Topology {
     vertices: Vec<Vertex>,
     edges: Vec<Edge>,
     faces: Vec<Face>,
@@ -116,112 +323,7 @@ impl Topology {
         }
     }
 
-    pub fn reserve(&mut self, nverts: usize, nedges: usize, nfaces: usize) -> Result<(), Error> {
-        // Elements.
-        self.vertices.reserve(nverts);
-        self.edges.reserve(nedges);
-        self.faces.reserve(nfaces);
-        // Properties.
-        self.vprops.reserve(nverts)?;
-        self.hprops.reserve(nedges * 2)?;
-        self.eprops.reserve(nedges)?;
-        self.fprops.reserve(nfaces)?;
-        Ok(())
-    }
-
-    pub fn clear(&mut self) -> Result<(), Error> {
-        // Elements.
-        self.vertices.clear();
-        self.edges.clear();
-        self.faces.clear();
-        // Properties.
-        self.vprops.clear()?;
-        self.hprops.clear()?;
-        self.eprops.clear()?;
-        self.fprops.clear()?;
-        Ok(())
-    }
-
-    pub fn vertex_status(&self, v: VH) -> Result<Status, Error> {
-        self.vstatus.get(v)
-    }
-
-    pub fn vertex_status_mut(&mut self, v: VH) -> Result<RefMut<'_, Status>, Error> {
-        self.vstatus.get_mut(v)
-    }
-
-    pub fn halfedge_status(&self, h: HH) -> Result<Status, Error> {
-        self.hstatus.get(h)
-    }
-
-    pub fn edge_status(&self, e: EH) -> Result<Status, Error> {
-        self.estatus.get(e)
-    }
-
-    pub fn edge_status_mut(&mut self, e: EH) -> Result<RefMut<'_, Status>, Error> {
-        self.estatus.get_mut(e)
-    }
-
-    pub fn face_status(&self, f: FH) -> Result<Status, Error> {
-        self.fstatus.get(f)
-    }
-
-    pub fn face_status_mut(&mut self, f: FH) -> Result<RefMut<'_, Status>, Error> {
-        self.fstatus.get_mut(f)
-    }
-
-    pub fn create_vertex_prop<T>(&mut self, default: T) -> VProperty<T>
-    where
-        T: Clone + Copy + 'static,
-    {
-        VProperty::<T>::new(&mut self.vprops, default)
-    }
-
-    pub fn create_halfedge_prop<T>(&mut self, default: T) -> HProperty<T>
-    where
-        T: Clone + Copy + 'static,
-    {
-        HProperty::<T>::new(&mut self.hprops, default)
-    }
-
-    pub fn create_edge_prop<T>(&mut self, default: T) -> EProperty<T>
-    where
-        T: Clone + Copy + 'static,
-    {
-        EProperty::<T>::new(&mut self.eprops, default)
-    }
-
-    pub fn create_face_prop<T>(&mut self, default: T) -> FProperty<T>
-    where
-        T: Clone + Copy + 'static,
-    {
-        FProperty::<T>::new(&mut self.fprops, default)
-    }
-
-    pub fn new_vprop_with_capacity<T>(&mut self, n: usize, default: T) -> VProperty<T>
-    where
-        T: Clone + Copy + 'static,
-    {
-        VProperty::<T>::with_capacity(n, &mut self.vprops, default)
-    }
-
-    pub fn is_valid_vertex(&self, v: VH) -> bool {
-        (v.index() as usize) < self.num_vertices()
-    }
-
-    pub fn is_valid_halfedge(&self, h: HH) -> bool {
-        (h.index() as usize) < self.num_halfedges()
-    }
-
-    pub fn is_valid_edge(&self, e: EH) -> bool {
-        (e.index() as usize) < self.num_edges()
-    }
-
-    pub fn is_valid_face(&self, f: FH) -> bool {
-        (f.index() as usize) < self.num_faces()
-    }
-
-    fn vertex(&self, v: VH) -> &Vertex {
+    pub(crate) fn vertex(&self, v: VH) -> &Vertex {
         &self.vertices[v.index() as usize]
     }
 
@@ -237,130 +339,16 @@ impl Topology {
         &mut self.edges[(h.index() >> 1) as usize].halfedges[(h.index() & 1) as usize]
     }
 
+    pub(crate) fn face(&self, f: FH) -> &Face {
+        &self.faces[f.index() as usize]
+    }
+
     pub(crate) fn face_mut(&mut self, f: FH) -> &mut Face {
         &mut self.faces[f.index() as usize]
     }
 
-    pub fn vertex_halfedge(&self, v: VH) -> Option<HH> {
-        self.vertex(v).halfedge
-    }
-
-    pub fn head_vertex(&self, h: HH) -> VH {
-        self.halfedge(h).vertex
-    }
-
-    pub fn tail_vertex(&self, h: HH) -> VH {
-        self.halfedge(self.opposite_halfedge(h)).vertex
-    }
-
-    pub fn prev_halfedge(&self, h: HH) -> HH {
-        self.halfedge(h).prev
-    }
-
-    pub fn next_halfedge(&self, h: HH) -> HH {
-        self.halfedge(h).next
-    }
-
-    pub fn halfedge_face(&self, h: HH) -> Option<FH> {
-        self.halfedge(h).face
-    }
-
-    pub fn halfedge_edge(&self, h: HH) -> EH {
-        (h.index() >> 1).into()
-    }
-
-    pub fn halfedge_pair(&self, e: EH) -> (HH, HH) {
-        let hi = e.index() << 1;
-        (hi.into(), (hi | 1).into())
-    }
-
-    pub fn edge_halfedge(&self, e: EH, flag: bool) -> HH {
-        ((e.index() << 1) | if flag { 1 } else { 0 }).into()
-    }
-
-    pub fn face_halfedge(&self, f: FH) -> HH {
-        self.faces[f.index() as usize].halfedge
-    }
-
-    pub fn is_boundary_halfedge(&self, h: HH) -> bool {
-        self.halfedge(h).face.is_none()
-    }
-
-    pub fn is_boundary_edge(&self, e: EH) -> bool {
-        let (h, oh) = self.halfedge_pair(e);
-        self.is_boundary_halfedge(h) || self.is_boundary_halfedge(oh)
-    }
-
-    pub fn is_boundary_vertex(&self, v: VH) -> bool {
-        match self.vertices[v.index() as usize].halfedge {
-            Some(h) => self.is_boundary_halfedge(h),
-            None => true,
-        }
-    }
-
-    pub fn opposite_halfedge(&self, h: HH) -> HH {
-        (h.index() ^ 1).into()
-    }
-
-    pub fn cw_rotated_halfedge(&self, h: HH) -> HH {
-        self.halfedge(self.opposite_halfedge(h)).next
-    }
-
-    pub fn ccw_rotated_halfedge(&self, h: HH) -> HH {
-        self.opposite_halfedge(self.halfedge(h).prev)
-    }
-
-    pub fn num_vertices(&self) -> usize {
-        self.vertices.len()
-    }
-
-    pub fn num_edges(&self) -> usize {
-        self.edges.len()
-    }
-
-    pub fn num_halfedges(&self) -> usize {
-        self.num_edges() * 2
-    }
-
-    pub fn vertices(&self) -> impl Iterator<Item = VH> {
-        (0..(self.num_vertices() as u32)).map(|i| i.into())
-    }
-
-    pub fn halfedges(&self) -> impl Iterator<Item = HH> {
-        (0..(self.num_halfedges() as u32)).map(|i| i.into())
-    }
-
-    pub fn edges(&self) -> impl Iterator<Item = EH> {
-        (0..(self.num_edges() as u32)).map(|i| i.into())
-    }
-
-    pub fn faces(&self) -> impl Iterator<Item = FH> {
-        (0..(self.num_faces() as u32)).map(|i| i.into())
-    }
-
-    pub fn num_faces(&self) -> usize {
-        self.faces.len()
-    }
-
-    pub fn find_halfedge(&self, from: VH, to: VH) -> Option<HH> {
-        iterator::voh_ccw_iter(self, from).find(|h| self.head_vertex(*h) == to)
-    }
-
-    pub fn is_manifold_vertex(&self, v: VH) -> bool {
-        /* If just the first outgoing halfedge is on the boundary, it just means
-         * the vertex is on the boundary. If the first outgoing halfedge is not
-         * on the boundary, it implies the vertex is in the interior. In both
-         * cases the vertex is manifold. If any outgoing halfedge apart from the
-         * first is on the boundary, it implies there are more than one gaps
-         * when circulating around the vertex, making it non-manifold. For this
-         * reason, we skip the first halfedge and check the rest. */
-        iterator::voh_ccw_iter(self, v)
-            .skip(1)
-            .all(|h| !self.is_boundary_halfedge(h))
-    }
-
     pub(crate) fn adjust_outgoing_halfedge(&mut self, v: VH) {
-        let h = iterator::voh_ccw_iter(self, v).find(|h| self.is_boundary_halfedge(*h));
+        let h = iterator::voh_ccw_iter(self, v).find(|h| h.is_boundary(self));
         if let Some(h) = h {
             self.vertex_mut(v).halfedge = Some(h);
         }
@@ -431,14 +419,14 @@ impl Topology {
         cache.next_cache.reserve(verts.len() * 6);
         // Check for topological errors.
         for i in 0..verts.len() {
-            if !self.is_boundary_vertex(verts[i]) {
+            if !verts[i].is_boundary(self) {
                 // Ensure vertex is manifold.
                 return Err(Error::ComplexVertex(verts[i]));
             }
             // Ensure edge is manifold.
             let h = self.find_halfedge(verts[i], verts[(i + 1) % verts.len()]);
             match h {
-                Some(h) if !self.is_boundary_halfedge(h) => return Err(Error::ComplexHalfedge(h)),
+                Some(h) if !h.is_boundary(self) => return Err(Error::ComplexHalfedge(h)),
                 _ => {} // Do nothing.
             }
             cache.loop_halfedges.push(h);
@@ -450,32 +438,30 @@ impl Topology {
                 cache.loop_halfedges[i],
                 cache.loop_halfedges[(i + 1) % verts.len()],
             ) {
-                (Some(prev), Some(next)) if self.next_halfedge(prev) != next => Some((prev, next)),
+                (Some(prev), Some(next)) if prev.next(self) != next => Some((prev, next)),
                 _ => None,
             }
         }) {
             // Relink the patch.
             let boundprev = {
-                let mut out = self.opposite_halfedge(next);
+                let mut out = next.opposite();
                 loop {
-                    out = self.opposite_halfedge(self.next_halfedge(out));
-                    if self.is_boundary_halfedge(out) {
+                    out = out.next(self).opposite();
+                    if out.is_boundary(self) {
                         break;
                     }
                 }
                 out
             };
-            let boundnext = self.next_halfedge(boundprev);
+            let boundnext = boundprev.next(self);
             // Ok ?
             if boundprev == prev {
                 return Err(Error::PatchRelinkingFailed);
             }
-            debug_assert!(
-                self.is_boundary_halfedge(boundprev) && self.is_boundary_halfedge(boundnext)
-            );
+            debug_assert!(boundprev.is_boundary(self) && boundnext.is_boundary(self));
             // other halfedges.
-            let pstart = self.next_halfedge(prev);
-            let pend = self.prev_halfedge(next);
+            let pstart = prev.next(self);
+            let pend = next.prev(self);
             // relink.
             cache.next_cache.extend_from_slice(&[
                 (boundprev, pstart),
@@ -519,7 +505,7 @@ impl Topology {
             let v = verts[j];
             match (e0, e1) {
                 (TentativeEdge::Old(_), TentativeEdge::Old(innernext)) => {
-                    cache.needs_adjust[j] = self.vertex_halfedge(v) == Some(*innernext);
+                    cache.needs_adjust[j] = v.halfedge(self) == Some(*innernext);
                 }
                 (
                     TentativeEdge::New {
@@ -531,9 +517,9 @@ impl Topology {
                     TentativeEdge::Old(innernext),
                 ) => {
                     let innernext = *innernext;
-                    let innerprev = innerprev.into();
-                    let outernext = self.opposite_halfedge(innerprev);
-                    let boundprev = self.prev_halfedge(innernext);
+                    let innerprev: HH = innerprev.into();
+                    let outernext = innerprev.opposite();
+                    let boundprev = innernext.prev(self);
                     cache.next_cache.push((boundprev, outernext));
                     *opp_prev = Some(boundprev);
                     cache.next_cache.push((innerprev, innernext));
@@ -550,9 +536,9 @@ impl Topology {
                     },
                 ) => {
                     let innerprev = *innerprev;
-                    let innernext = innernext.into();
-                    let outerprev = self.opposite_halfedge(innernext);
-                    let boundnext = self.next_halfedge(innerprev);
+                    let innernext: HH = innernext.into();
+                    let outerprev = innernext.opposite();
+                    let boundnext = innerprev.next(self);
                     cache.next_cache.push((outerprev, boundnext));
                     *opp_next = Some(boundnext);
                     cache.next_cache.push((innerprev, innernext));
@@ -573,12 +559,12 @@ impl Topology {
                         ..
                     },
                 ) => {
-                    let innerprev = innerprev.into();
-                    let innernext = innernext.into();
-                    let outernext = self.opposite_halfedge(innerprev);
-                    let outerprev = self.opposite_halfedge(innernext);
-                    if let Some(boundnext) = self.vertex_halfedge(v) {
-                        let boundprev = self.prev_halfedge(boundnext);
+                    let innerprev: HH = innerprev.into();
+                    let innernext: HH = innernext.into();
+                    let outernext = innerprev.opposite();
+                    let outerprev = innernext.opposite();
+                    if let Some(boundnext) = v.halfedge(self) {
+                        let boundprev = boundnext.prev(self);
                         cache
                             .next_cache
                             .extend(&[(boundprev, outernext), (outerprev, boundnext)]);
@@ -646,14 +632,6 @@ impl Topology {
         Ok(fnew)
     }
 
-    pub fn vertex_valence(&self, v: VH) -> usize {
-        iterator::voh_ccw_iter(self, v).count()
-    }
-
-    pub fn face_valence(&self, f: FH) -> usize {
-        iterator::fv_ccw_iter(self, f).count()
-    }
-
     pub fn delete_vertex(
         &mut self,
         v: VH,
@@ -684,10 +662,10 @@ impl Topology {
         ecache: &mut Vec<EH>,
         vcache: &mut Vec<VH>,
     ) -> Result<(), Error> {
-        let h0 = self.edge_halfedge(e, false);
-        let h1 = self.edge_halfedge(e, true);
-        let f0 = self.halfedge_face(h0);
-        let f1 = self.halfedge_face(h1);
+        let h0 = e.halfedge(false);
+        let h1 = e.halfedge(true);
+        let f0 = h0.face(self);
+        let f1 = h1.face(self);
         if let Some(f) = f0 {
             self.delete_face(f, delete_isolated_vertices, ecache, vcache)?;
         }
@@ -727,21 +705,21 @@ impl Topology {
         vcache.clear();
         for (mesh, h) in iterator::fh_ccw_iter_mut(self, f) {
             mesh.halfedge_mut(h).face = None; // Disconnect from face.
-            if mesh.is_boundary_halfedge(mesh.opposite_halfedge(h)) {
-                ecache.push(mesh.halfedge_edge(h));
+            if h.opposite().is_boundary(mesh) {
+                ecache.push(h.edge());
             }
-            vcache.push(mesh.head_vertex(h));
+            vcache.push(h.head(mesh));
         }
         // Delete collected topology.
         for e in ecache.drain(..) {
-            let h0 = self.edge_halfedge(e, false);
-            let v0 = self.head_vertex(h0);
-            let next0 = self.next_halfedge(h0);
-            let prev0 = self.prev_halfedge(h0);
-            let h1 = self.edge_halfedge(e, true);
-            let v1 = self.head_vertex(h1);
-            let next1 = self.next_halfedge(h1);
-            let prev1 = self.prev_halfedge(h1);
+            let h0 = e.halfedge(false);
+            let v0 = h0.head(self);
+            let next0 = h0.next(self);
+            let prev0 = h0.prev(self);
+            let h1 = e.halfedge(true);
+            let v1 = h1.head(self);
+            let next1 = h1.next(self);
+            let prev1 = h1.prev(self);
             // Adjust halfedge links and mark edge and halfedges deleted.
             self.link_halfedges(prev0, next1);
             self.link_halfedges(prev1, next0);
@@ -752,7 +730,7 @@ impl Topology {
                 hstatus[h1.index() as usize].set_deleted(true);
             }
             // Update vertices.
-            if self.vertex_halfedge(v0) == Some(h1) {
+            if v0.halfedge(self) == Some(h1) {
                 // Isolated?
                 if next0 == h1 {
                     if delete_isolated_vertices {
@@ -763,7 +741,7 @@ impl Topology {
                     self.vertex_mut(v0).halfedge = Some(next0);
                 }
             }
-            if self.vertex_halfedge(v1) == Some(h0) {
+            if v1.halfedge(self) == Some(h0) {
                 // Isolated?
                 if next1 == h0 {
                     if delete_isolated_vertices {
@@ -895,8 +873,8 @@ impl Topology {
         }
         // Update halfedge connectivity.
         for h in self.halfedges() {
-            self.link_halfedges(h, hmap[self.next_halfedge(h).index() as usize]);
-            if let Some(f) = self.halfedge_face(h) {
+            self.link_halfedges(h, hmap[h.next(self).index() as usize]);
+            if let Some(f) = h.face(self) {
                 self.halfedge_mut(h).face = Some(fmap[f.index() as usize]);
             }
         }
@@ -910,6 +888,16 @@ impl Topology {
         self.eprops.garbage_collection();
         self.fprops.garbage_collection();
         Ok(())
+    }
+}
+
+impl HasTopology for Topology {
+    fn topology(&self) -> &Topology {
+        self
+    }
+
+    fn topology_mut(&mut self) -> &mut Topology {
+        self
     }
 }
 
@@ -927,7 +915,7 @@ pub(crate) mod test {
         alum_glam::PolyMeshF32,
         iterator,
         macros::assert_f32_eq,
-        topol::{Handle, VH},
+        topol::{Handle, HasTopology, VH},
     };
 
     use super::{TopolCache, Topology};
@@ -1031,36 +1019,29 @@ pub(crate) mod test {
         assert_eq!(topol.num_vertices(), 3);
         assert_eq!(face.index(), 0);
         for v in topol.vertices() {
-            let h = topol
-                .vertex_halfedge(v)
+            let h = v
+                .halfedge(&topol)
                 .expect("Vertex must have an incident halfedge");
-            assert!(topol.is_boundary_halfedge(h));
-            let oh = topol.opposite_halfedge(h);
-            assert!(!topol.is_boundary_halfedge(oh));
+            assert!(h.is_boundary(&topol));
+            let oh = h.opposite();
+            assert!(!oh.is_boundary(&topol));
             assert_eq!(
-                topol
-                    .halfedge_face(oh)
+                oh.face(&topol)
                     .expect("Halfedge must have an incident face"),
                 face
             );
         }
         assert_eq!(
-            topol
-                .halfedges()
-                .filter(|h| topol.is_boundary_halfedge(*h))
-                .count(),
+            topol.halfedges().filter(|h| h.is_boundary(&topol)).count(),
             3
         );
         assert_eq!(
-            topol
-                .halfedges()
-                .filter(|h| !topol.is_boundary_halfedge(*h))
-                .count(),
+            topol.halfedges().filter(|h| !h.is_boundary(&topol)).count(),
             3
         );
         for (i, j) in (0u32..3).map(|i| (i, (i + 1) % 3)) {
             let h = topol.find_halfedge(i.into(), j.into()).unwrap();
-            assert!(!topol.is_boundary_halfedge(h));
+            assert!(!h.is_boundary(&topol));
         }
     }
 
@@ -1088,17 +1069,8 @@ pub(crate) mod test {
         assert_eq!(topol.num_halfedges(), 10);
         assert_eq!(topol.num_edges(), 5);
         assert_eq!(topol.num_faces(), 2);
-        assert_eq!(
-            topol.edges().filter(|e| topol.is_boundary_edge(*e)).count(),
-            4
-        );
-        assert_eq!(
-            topol
-                .edges()
-                .filter(|e| !topol.is_boundary_edge(*e))
-                .count(),
-            1
-        );
+        assert_eq!(topol.edges().filter(|e| e.is_boundary(&topol)).count(), 4);
+        assert_eq!(topol.edges().filter(|e| !e.is_boundary(&topol)).count(), 1);
     }
 
     #[test]
@@ -1114,31 +1086,24 @@ pub(crate) mod test {
         assert_eq!(topol.num_vertices(), 4);
         assert_eq!(face, 0.into());
         for v in topol.vertices() {
-            let h = topol
-                .vertex_halfedge(v)
+            let h = v
+                .halfedge(&topol)
                 .expect("Vertex must have an incident halfedge");
-            assert!(topol.is_boundary_halfedge(h));
-            let oh = topol.opposite_halfedge(h);
-            assert!(!topol.is_boundary_halfedge(oh));
+            assert!(h.is_boundary(&topol));
+            let oh = h.opposite();
+            assert!(!oh.is_boundary(&topol));
             assert_eq!(
-                topol
-                    .halfedge_face(oh)
+                oh.face(&topol)
                     .expect("Halfedge must have an incident face"),
                 face
             );
         }
         assert_eq!(
-            topol
-                .halfedges()
-                .filter(|h| topol.is_boundary_halfedge(*h))
-                .count(),
+            topol.halfedges().filter(|h| h.is_boundary(&topol)).count(),
             4
         );
         assert_eq!(
-            topol
-                .halfedges()
-                .filter(|h| !topol.is_boundary_halfedge(*h))
-                .count(),
+            topol.halfedges().filter(|h| !h.is_boundary(&topol)).count(),
             4
         );
     }
@@ -1147,7 +1112,7 @@ pub(crate) mod test {
     fn t_box_manifold() {
         let qbox = quad_box();
         assert!(
-            qbox.halfedges().all(|h| !qbox.is_boundary_halfedge(h)),
+            qbox.halfedges().all(|h| !h.is_boundary(&qbox)),
             "Not expecting any boundary edges"
         );
     }
@@ -1156,7 +1121,7 @@ pub(crate) mod test {
     fn t_box_vertex_valences() {
         let qbox = quad_box();
         for v in qbox.vertices() {
-            assert_eq!(qbox.vertex_valence(v), 3);
+            assert_eq!(v.valence(&qbox), 3);
         }
     }
 
@@ -1164,7 +1129,7 @@ pub(crate) mod test {
     fn t_box_face_valence() {
         let qbox = quad_box();
         for f in qbox.faces() {
-            assert_eq!(qbox.face_valence(f), 4);
+            assert_eq!(f.valence(&qbox), 4);
         }
     }
 
@@ -1190,10 +1155,7 @@ pub(crate) mod test {
              0----------1----------2----------3
         */
         let mut mesh = loop_mesh();
-        assert_eq!(
-            mesh.edges().filter(|e| mesh.is_boundary_edge(*e)).count(),
-            16
-        );
+        assert_eq!(mesh.edges().filter(|e| e.is_boundary(&mesh)).count(), 16);
         // Add a floating triangle at v6.
         let v0 = mesh.add_vertex().expect("Unable to add vertex");
         let v1 = mesh.add_vertex().expect("Unable to add vertex");
@@ -1215,21 +1177,17 @@ pub(crate) mod test {
             [10, v0.index(), v1.index(), 5, 2, 7]
         );
         assert_eq!(iterator::ve_ccw_iter(&mesh, 6.into()).count(), 6);
-        assert_eq!(
-            mesh.vertices()
-                .filter(|v| mesh.is_manifold_vertex(*v))
-                .count(),
-            17
-        );
-        assert!(!mesh.is_manifold_vertex(6.into()));
+        assert_eq!(mesh.vertices().filter(|v| v.is_manifold(&mesh)).count(), 17);
+        let v: VH = 6.into();
+        assert!(!v.is_manifold(&mesh));
         // Check halfedge connectivity at v6.
         {
             let h = mesh
                 .find_halfedge(5.into(), 6.into())
                 .expect("Cannot find halfedge");
-            assert_eq!(mesh.tail_vertex(h), 5.into());
-            assert_eq!(mesh.head_vertex(h), 6.into());
-            let h1 = mesh.next_halfedge(h);
+            assert_eq!(h.tail(&mesh), 5.into());
+            assert_eq!(h.head(&mesh), 6.into());
+            let h1 = h.next(&mesh);
             assert_eq!(
                 h1,
                 mesh.find_halfedge(6.into(), v1)
@@ -1238,29 +1196,23 @@ pub(crate) mod test {
             let h = mesh
                 .find_halfedge(6.into(), 10.into())
                 .expect("Cannot find halfedge");
-            assert_eq!(mesh.tail_vertex(h), 6.into());
-            assert_eq!(mesh.head_vertex(h), 10.into());
-            let h = mesh.prev_halfedge(h);
+            assert_eq!(h.tail(&mesh), 6.into());
+            assert_eq!(h.head(&mesh), 10.into());
+            let h = h.prev(&mesh);
             assert_eq!(
                 h,
                 mesh.find_halfedge(v0, 6.into())
                     .expect("Cannot find halfedge")
             );
         }
-        assert_eq!(
-            mesh.edges().filter(|e| mesh.is_boundary_edge(*e)).count(),
-            19
-        );
+        assert_eq!(mesh.edges().filter(|e| e.is_boundary(&mesh)).count(), 19);
         // Add another face.
         let f1 = mesh
             .add_face(&[5.into(), 6.into(), v1], &mut cache)
             .expect("Unable to add face");
         assert_eq!(f1.index(), 9);
         assert_eq!(mesh.num_edges(), 28);
-        assert_eq!(
-            mesh.edges().filter(|e| mesh.is_boundary_edge(*e)).count(),
-            18
-        );
+        assert_eq!(mesh.edges().filter(|e| e.is_boundary(&mesh)).count(), 18);
         assert_eq!(
             iterator::vf_ccw_iter(&mesh, 6.into())
                 .map(|f| f.index())
@@ -1285,8 +1237,9 @@ pub(crate) mod test {
                 .collect::<Vec<_>>(),
             [v1.index(), 9, 4, 1, 6]
         );
-        assert!(mesh.is_manifold_vertex(6.into()));
-        assert!(mesh.is_manifold_vertex(5.into()));
+        let (v0, v1): (VH, VH) = (6.into(), 5.into());
+        assert!(v0.is_manifold(&mesh));
+        assert!(v1.is_manifold(&mesh));
     }
 
     #[test]
@@ -1314,18 +1267,10 @@ pub(crate) mod test {
         assert_eq!(qbox.num_edges(), 12);
         assert_eq!(qbox.num_vertices(), 8);
         for v in qbox.vertices() {
-            assert_eq!(qbox.is_boundary_vertex(v), v.index() > 3);
+            assert_eq!(v.is_boundary(&qbox), v.index() > 3);
         }
-        assert_eq!(
-            4,
-            qbox.edges().filter(|e| qbox.is_boundary_edge(*e)).count()
-        );
-        assert_eq!(
-            4,
-            qbox.vertices()
-                .filter(|v| qbox.is_boundary_vertex(*v))
-                .count()
-        );
+        assert_eq!(4, qbox.edges().filter(|e| e.is_boundary(&qbox)).count());
+        assert_eq!(4, qbox.vertices().filter(|v| v.is_boundary(&qbox)).count());
     }
 
     #[test]
@@ -1333,10 +1278,9 @@ pub(crate) mod test {
         let mut qbox = quad_box();
         let mut cache = TopolCache::default();
         qbox.delete_edge(
-            qbox.halfedge_edge(
-                qbox.find_halfedge(5.into(), 6.into())
-                    .expect("Cannot find halfedge"),
-            ),
+            qbox.find_halfedge(5.into(), 6.into())
+                .expect("Cannot find halfedge")
+                .edge(),
             true,
             &mut cache.edges,
             &mut cache.vertices,
@@ -1365,16 +1309,8 @@ pub(crate) mod test {
         assert_eq!(qbox.num_faces(), 4);
         assert_eq!(qbox.num_edges(), 11);
         assert_eq!(qbox.num_vertices(), 8);
-        assert_eq!(
-            6,
-            qbox.edges().filter(|e| qbox.is_boundary_edge(*e)).count()
-        );
-        assert_eq!(
-            6,
-            qbox.vertices()
-                .filter(|v| qbox.is_boundary_vertex(*v))
-                .count()
-        );
+        assert_eq!(6, qbox.edges().filter(|e| e.is_boundary(&qbox)).count());
+        assert_eq!(6, qbox.vertices().filter(|v| v.is_boundary(&qbox)).count());
     }
 
     #[test]
@@ -1397,16 +1333,8 @@ pub(crate) mod test {
         assert_eq!(qbox.num_edges(), 9);
         assert_eq!(qbox.num_halfedges(), 18);
         assert_eq!(qbox.num_faces(), 3);
-        assert_eq!(
-            6,
-            qbox.edges().filter(|e| qbox.is_boundary_edge(*e)).count()
-        );
-        assert_eq!(
-            6,
-            qbox.vertices()
-                .filter(|v| qbox.is_boundary_vertex(*v))
-                .count()
-        );
+        assert_eq!(6, qbox.edges().filter(|e| e.is_boundary(&qbox)).count());
+        assert_eq!(6, qbox.vertices().filter(|v| v.is_boundary(&qbox)).count());
     }
 
     #[test]
@@ -1463,7 +1391,7 @@ pub(crate) mod test {
             // loop to `mesh`, the borrow checker should complain and the code
             // should not compile.
             for (m, h) in mesh.voh_ccw_iter_mut(v) {
-                if let Some(f) = m.halfedge_face(h) {
+                if let Some(f) = h.face(m) {
                     if (f.index() + h.index()) % 2 != 0 {
                         m.delete_face(f, true).expect("Cannot delete face");
                     }
@@ -1489,7 +1417,7 @@ pub(crate) mod test {
         assert_eq!(
             (6, 1),
             mesh.edges()
-                .fold((0usize, 0usize), |(b, nb), e| if mesh.is_boundary_edge(e) {
+                .fold((0usize, 0usize), |(b, nb), e| if e.is_boundary(&mesh) {
                     (b + 1, nb)
                 } else {
                     (b, nb + 1)

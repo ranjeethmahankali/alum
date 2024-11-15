@@ -1,4 +1,9 @@
-use crate::{element::Handle, iterator, topol::Topology, Adaptor, Error, PolyMeshT, Status};
+use crate::{
+    element::Handle,
+    iterator,
+    topol::{HasTopology, Topology},
+    Adaptor, Error, PolyMeshT, Status,
+};
 
 fn check_vertices(
     mesh: &Topology,
@@ -11,9 +16,9 @@ fn check_vertices(
         .vertices()
         .filter(|v| !vstatus[v.index() as usize].deleted())
     {
-        if let Some(h) = mesh.vertex_halfedge(v) {
+        if let Some(h) = v.halfedge(mesh) {
             // Invalid index, or deleted halfedge.
-            if !mesh.is_valid_halfedge(h) {
+            if !h.is_valid(mesh) {
                 return Err(Error::InvalidHalfedge(h));
             }
             if hstatus[h.index() as usize].deleted() {
@@ -21,13 +26,12 @@ fn check_vertices(
             }
             // The outgoing halfedge must be a boundary halfedge, or none of the
             // halfedges are boundary.
-            if !mesh.is_boundary_halfedge(h)
-                && iterator::voh_ccw_iter(mesh, v).any(|h| mesh.is_boundary_halfedge(h))
+            if !h.is_boundary(mesh) && iterator::voh_ccw_iter(mesh, v).any(|h| h.is_boundary(mesh))
             {
                 return Err(Error::OutgoingHalfedgeNotBoundary(v));
             }
             // Outgoing halfedge must point back to this vertex.
-            if mesh.tail_vertex(h) != v {
+            if h.tail(mesh) != v {
                 return Err(Error::InvalidOutgoingHalfedges(v));
             }
         }
@@ -60,7 +64,7 @@ fn check_edges(
         .filter(|h| !hstatus[h.index() as usize].deleted())
     {
         // Check if degenerate.
-        if mesh.tail_vertex(h) == mesh.head_vertex(h) {
+        if h.tail(mesh) == h.head(mesh) {
             return Err(Error::DegenerateHalfedge(h));
         }
         let hedge = mesh.halfedge(h);
@@ -79,17 +83,17 @@ fn check_edges(
                 return Err(Error::DeletedFace(f));
             }
         }
-        let e = mesh.halfedge_edge(h);
+        let e = h.edge();
         if estatus[e.index() as usize].deleted() {
             return Err(Error::DeletedEdge(e));
         }
         // Check connctivity.
-        let head = mesh.head_vertex(h);
-        let tail = mesh.tail_vertex(h);
-        if mesh.next_halfedge(hedge.prev) != h
-            || mesh.prev_halfedge(hedge.next) != h
-            || head != mesh.tail_vertex(hedge.next)
-            || tail != mesh.head_vertex(hedge.prev)
+        let head = h.head(mesh);
+        let tail = h.tail(mesh);
+        if hedge.prev.next(mesh) != h
+            || hedge.next.prev(mesh) != h
+            || head != hedge.next.tail(mesh)
+            || tail != hedge.prev.head(mesh)
         {
             return Err(Error::InvalidHalfedgeLink(h));
         }
@@ -108,12 +112,12 @@ fn check_edges(
         if hflags[h.index() as usize] {
             continue;
         }
-        let f = mesh.halfedge_face(h);
+        let f = h.face(mesh);
         for h in iterator::loop_ccw_iter(mesh, h) {
             if std::mem::replace(&mut hflags[h.index() as usize], true) {
                 return Err(Error::InvalidLoopTopology(h));
             }
-            if mesh.halfedge_face(h) != f {
+            if h.face(mesh) != f {
                 return Err(Error::InconsistentFaceInLoop(h));
             }
         }
@@ -125,12 +129,12 @@ fn check_edges(
         if !hflags[h.index() as usize] {
             continue;
         }
-        let f = mesh.halfedge_face(h);
+        let f = h.face(mesh);
         for h in iterator::loop_ccw_iter(mesh, h) {
             if !std::mem::replace(&mut hflags[h.index() as usize], false) {
                 return Err(Error::InvalidLoopTopology(h));
             }
-            if mesh.halfedge_face(h) != f {
+            if h.face(mesh) != f {
                 return Err(Error::InconsistentFaceInLoop(h));
             }
         }
@@ -144,11 +148,11 @@ fn check_faces(mesh: &Topology, hstatus: &[Status], fstatus: &[Status]) -> Resul
         .faces()
         .filter(|f| !fstatus[f.index() as usize].deleted())
     {
-        let h = mesh.face_halfedge(f);
+        let h = f.halfedge(mesh);
         if hstatus[h.index() as usize].deleted() {
             return Err(Error::DeletedHalfedge(h));
         }
-        if mesh.halfedge_face(h) != Some(f) {
+        if h.face(mesh) != Some(f) {
             return Err(Error::InvalidFaceHalfedgeLink(f, h));
         }
     }

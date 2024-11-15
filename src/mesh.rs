@@ -1,9 +1,8 @@
 use crate::{
-    element::{EH, FH, HH, VH},
+    element::{EH, FH, VH},
     error::Error,
-    property::{EProperty, FProperty, HProperty, VProperty},
-    status::Status,
-    topol::{TopolCache, Topology},
+    property::{FProperty, VProperty},
+    topol::{HasTopology, TopolCache, Topology},
 };
 use std::ops::Range;
 
@@ -160,7 +159,7 @@ where
     /// not computed.
     pub fn with_capacity(nverts: usize, nedges: usize, nfaces: usize) -> Self {
         let mut topol = Topology::with_capacity(nverts, nedges, nfaces);
-        let points = topol.new_vprop_with_capacity(nverts, A::zero_vector());
+        let points = VProperty::with_capacity(nverts, &mut topol.vprops, A::zero_vector());
         PolyMeshT {
             topol,
             cache: TopolCache::default(),
@@ -170,239 +169,9 @@ where
         }
     }
 
-    /// Create a new vertex property of type T, with the `default` value.
-    ///
-    /// The default value will be used when new elements are added to the mesh.
-    ///
-    /// ```rust
-    /// use alum::alum_glam::PolyMeshF32;
-    ///
-    /// let mut mesh = PolyMeshF32::tetrahedron(1.0).expect("Cannot crate tetrahedron");
-    /// let prop = mesh.create_vertex_prop(42usize);
-    /// // To use th property, you have to borrow it.
-    /// let prop = prop.try_borrow().expect("Cannot borrow property");
-    /// assert_eq!(mesh.num_vertices(), prop.len());
-    /// assert!(prop.iter().all(|v| *v == 42));
-    /// ```
-    pub fn create_vertex_prop<T>(&mut self, default: T) -> VProperty<T>
-    where
-        T: Clone + Copy + 'static,
-    {
-        self.topol.create_vertex_prop(default)
-    }
-
-    /// Create a new halfedge property of type T, with the `default` value.
-    ///
-    /// The default value will be used when new elements are added to the mesh.
-    ///
-    /// ```rust
-    /// use alum::alum_glam::PolyMeshF32;
-    ///
-    /// let mut mesh = PolyMeshF32::tetrahedron(1.0).expect("Cannot crate tetrahedron");
-    /// let prop = mesh.create_halfedge_prop(42usize);
-    /// // To use th property, you have to borrow it.
-    /// let prop = prop.try_borrow().expect("Cannot borrow property");
-    /// assert_eq!(mesh.num_halfedges(), prop.len());
-    /// assert!(prop.iter().all(|v| *v == 42));
-    /// ```
-    pub fn create_halfedge_prop<T>(&mut self, default: T) -> HProperty<T>
-    where
-        T: Clone + Copy + 'static,
-    {
-        self.topol.create_halfedge_prop(default)
-    }
-
-    /// Create a new edge property of type T, with the `default` value.
-    ///
-    /// The default value will be used when new elements are added to the mesh.
-    ///
-    /// ```rust
-    /// use alum::alum_glam::PolyMeshF32;
-    ///
-    /// let mut mesh = PolyMeshF32::tetrahedron(1.0).expect("Cannot crate tetrahedron");
-    /// let prop = mesh.create_edge_prop(42usize);
-    /// // To use th property, you have to borrow it.
-    /// let prop = prop.try_borrow().expect("Cannot borrow property");
-    /// assert_eq!(mesh.num_edges(), prop.len());
-    /// assert!(prop.iter().all(|v| *v == 42));
-    /// ```
-    pub fn create_edge_prop<T>(&mut self, default: T) -> EProperty<T>
-    where
-        T: Clone + Copy + 'static,
-    {
-        self.topol.create_edge_prop(default)
-    }
-
-    /// Create a new face property of type T, with the `default` value.
-    ///
-    /// The default value will be used when new elements are added to the mesh.
-    ///
-    /// ```rust
-    /// use alum::alum_glam::PolyMeshF32;
-    ///
-    /// let mut mesh = PolyMeshF32::tetrahedron(1.0).expect("Cannot crate tetrahedron");
-    /// let prop = mesh.create_face_prop(42usize);
-    /// // To use th property, you have to borrow it.
-    /// let prop = prop.try_borrow().expect("Cannot borrow property");
-    /// assert_eq!(mesh.num_faces(), prop.len());
-    /// assert!(prop.iter().all(|v| *v == 42));
-    /// ```
-    pub fn create_face_prop<T>(&mut self, default: T) -> FProperty<T>
-    where
-        T: Clone + Copy + 'static,
-    {
-        self.topol.create_face_prop(default)
-    }
-
-    /// Reserve memory for the given number of elements.
-    ///
-    /// The memory is also reserved for all properties.
-    pub fn reserve(&mut self, nverts: usize, nedges: usize, nfaces: usize) -> Result<(), Error> {
-        self.topol.reserve(nverts, nedges, nfaces)
-    }
-
-    /// Delete all elements and their properties.
-    pub fn clear(&mut self) -> Result<(), Error> {
-        self.topol.clear()
-    }
-
-    /// Number of vertices.
-    pub fn num_vertices(&self) -> usize {
-        self.topol.num_vertices()
-    }
-
-    /// Number of edges.
-    pub fn num_edges(&self) -> usize {
-        self.topol.num_edges()
-    }
-
-    /// Number of halfedges.
-    pub fn num_halfedges(&self) -> usize {
-        self.topol.num_halfedges()
-    }
-
-    /// Number of faces.
-    pub fn num_faces(&self) -> usize {
-        self.topol.num_faces()
-    }
-
-    /// Iterator over the vertices of the mesh.
-    pub fn vertices(&self) -> impl Iterator<Item = VH> {
-        self.topol.vertices()
-    }
-
-    /// Iterator over the halfedges of the mesh.
-    pub fn halfedges(&self) -> impl Iterator<Item = HH> {
-        self.topol.halfedges()
-    }
-
-    /// Iterator over the edges of the mesh.
-    pub fn edges(&self) -> impl Iterator<Item = EH> {
-        self.topol.edges()
-    }
-
-    /// Iterator over the faces of the mesh.
-    pub fn faces(&self) -> impl Iterator<Item = FH> {
-        self.topol.faces()
-    }
-
-    /// Check if this vertex is valid for this mesh.
-    ///
-    /// It's index has to be less than the number of vertices.
-    pub fn is_valid_vertex(&self, v: VH) -> bool {
-        self.topol.is_valid_vertex(v)
-    }
-
-    /// Check if this halfedge is valid for this mesh.
-    ///
-    /// It's index has to be less than the number of halfedges.
-    pub fn is_valid_halfedge(&self, h: HH) -> bool {
-        self.topol.is_valid_halfedge(h)
-    }
-
-    /// Check if this edge is valid for this mesh.
-    ///
-    /// It's index has to be less than the number of edges.
-    pub fn is_valid_edge(&self, e: EH) -> bool {
-        self.topol.is_valid_edge(e)
-    }
-
-    /// Check if the face is valid for this mesh.
-    ///
-    /// It's index has to be less than the number of faces.
-    pub fn is_valid_face(&self, f: FH) -> bool {
-        self.topol.is_valid_face(f)
-    }
-
-    /// Check if the vertex is manifold.
-    ///
-    /// A vertex is manifold if it has at most 1 outgoing halfedge.
-    /// ```text
-    ///    .......|     .......|.......     ....\     /...
-    ///    .......|     .......|.......     .....\   /....
-    ///    .......|     .......|.......     ......\ /.....
-    ///    -------v     -------v-------     -------v------
-    ///    .......|     .......|.......     ....../ \.....
-    ///    .......|     .......|.......     ...../   \....
-    ///    .......|     .......|.......     ..../     \...
-    ///    Manifold     Manifold            Not manifold
-    /// ```
-    pub fn is_manifold_vertex(&self, v: VH) -> bool {
-        self.topol.is_manifold_vertex(v)
-    }
-
-    /// Check if the vertex is on the boundary of the mesh.
-    pub fn is_boundary_vertex(&self, v: VH) -> bool {
-        self.topol.is_boundary_vertex(v)
-    }
-
-    /// Check if the halfedge is on the boundary.
-    ///
-    /// A halfedge is considered interior if it has a face incident on it.
-    pub fn is_boundary_halfedge(&self, h: HH) -> bool {
-        self.topol.is_boundary_halfedge(h)
-    }
-
-    /// Check if the edge is a boundary edge.
-    ///
-    /// An edge is considered interior if it has two faces incident on both of it's halfedges.
-    pub fn is_boundary_edge(&self, e: EH) -> bool {
-        self.topol.is_boundary_edge(e)
-    }
-
-    /// The number of edges incident on a vertex.
-    pub fn vertex_valence(&self, v: VH) -> usize {
-        self.topol.vertex_valence(v)
-    }
-
-    /// The number of vertices incident on a face.
-    pub fn face_valence(&self, f: FH) -> usize {
-        self.topol.face_valence(f)
-    }
-
     /// The position of a vertex.
     pub fn point(&self, vi: VH) -> Result<A::Vector, Error> {
         self.points.get(vi)
-    }
-
-    /// The status of a vertex.
-    pub fn vertex_status(&self, v: VH) -> Result<Status, Error> {
-        self.topol.vertex_status(v)
-    }
-
-    /// The status of a halfedge.
-    pub fn halfedge_status(&self, h: HH) -> Result<Status, Error> {
-        self.topol.halfedge_status(h)
-    }
-
-    /// The status of an edge.
-    pub fn edge_status(&self, e: EH) -> Result<Status, Error> {
-        self.topol.edge_status(e)
-    }
-
-    /// The status of a face.
-    pub fn face_status(&self, f: FH) -> Result<Status, Error> {
-        self.topol.face_status(f)
     }
 
     /// Set the position of a vertex.
@@ -475,75 +244,6 @@ where
         self.fnormals
             .get_or_insert_with(|| self.topol.create_face_prop(A::zero_vector()))
             .clone()
-    }
-
-    /// Get the vertex the halfedge points to.
-    pub fn head_vertex(&self, h: HH) -> VH {
-        self.topol.head_vertex(h)
-    }
-
-    /// Get the vertex the halfedge is pointing away from.
-    pub fn tail_vertex(&self, h: HH) -> VH {
-        self.topol.tail_vertex(h)
-    }
-
-    /// Get the next halfedge in the loop.
-    pub fn next_halfedge(&self, h: HH) -> HH {
-        self.topol.next_halfedge(h)
-    }
-
-    /// Get the previous halfedge in the loop.
-    pub fn prev_halfedge(&self, h: HH) -> HH {
-        self.topol.prev_halfedge(h)
-    }
-
-    /// Get the opposite halfedge.
-    pub fn opposite_halfedge(&self, h: HH) -> HH {
-        self.topol.opposite_halfedge(h)
-    }
-
-    /// Get the face incident on the halfedge.
-    pub fn halfedge_face(&self, h: HH) -> Option<FH> {
-        self.topol.halfedge_face(h)
-    }
-
-    /// Get the edge corresponding to the halfedge.
-    pub fn halfedge_edge(&self, h: HH) -> EH {
-        self.topol.halfedge_edge(h)
-    }
-
-    /// Get the halfedge corresponding to the face.
-    pub fn face_halfedge(&self, f: FH) -> HH {
-        self.topol.face_halfedge(f)
-    }
-
-    /// Get the pair of halfedges associated with the given edge.
-    pub fn halfedge_pair(&self, e: EH) -> (HH, HH) {
-        self.topol.halfedge_pair(e)
-    }
-
-    /// Get a halfedge from the edge.
-    ///
-    /// The Boolean flag indicates one of the two possible orientations.
-    pub fn edge_halfedge(&self, e: EH, flag: bool) -> HH {
-        self.topol.edge_halfedge(e, flag)
-    }
-
-    /// Get the clockwise rotated halfedge around the vertex at the base of the
-    /// given halfedge.
-    pub fn cw_rotated_halfedge(&self, h: HH) -> HH {
-        self.topol.cw_rotated_halfedge(h)
-    }
-
-    /// Get the counter-clockwise rotated hafedge around teh vertex at the base
-    /// of the given halfedge.
-    pub fn ccw_rotated_halfedge(&self, h: HH) -> HH {
-        self.topol.ccw_rotated_halfedge(h)
-    }
-
-    /// Find a halfedge spanning the vertices `from` and `to`, if one exists
-    pub fn find_halfedge(&self, from: VH, to: VH) -> Option<HH> {
-        self.topol.find_halfedge(from, to)
     }
 
     /// Iterator over the vertex triplets that represent a triangulation of this
@@ -693,5 +393,18 @@ where
     /// safe because they are automatically synchronized.
     pub fn garbage_collection(&mut self) -> Result<(), Error> {
         self.topol.garbage_collection(&mut self.cache)
+    }
+}
+
+impl<const DIM: usize, A> HasTopology for PolyMeshT<DIM, A>
+where
+    A: Adaptor<DIM>,
+{
+    fn topology(&self) -> &Topology {
+        &self.topol
+    }
+
+    fn topology_mut(&mut self) -> &mut Topology {
+        &mut self.topol
     }
 }

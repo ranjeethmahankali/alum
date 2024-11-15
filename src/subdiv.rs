@@ -1,5 +1,7 @@
 use crate::{
-    iterator, topol::Topology, Adaptor, Error, FloatScalarAdaptor, Handle, PolyMeshT, FH, HH,
+    iterator,
+    topol::{HasTopology, Topology},
+    Adaptor, Error, FloatScalarAdaptor, Handle, PolyMeshT, FH, HH,
 };
 use std::{
     marker::PhantomData,
@@ -49,7 +51,7 @@ where
             }
             let v = nv + ne + nf;
             let f = if i == 0 {
-                mesh.faces().map(|f| mesh.face_valence(f)).sum::<usize>()
+                mesh.faces().map(|f| f.valence(mesh)).sum::<usize>()
             } else {
                 nf * 4
             };
@@ -77,18 +79,17 @@ where
         // Compute edge points.
         edge_points.clear();
         edge_points.extend(mesh.edges().map(|e| {
-            let (h, oh) = mesh.halfedge_pair(e);
-            match (mesh.halfedge_face(h), mesh.halfedge_face(oh)) {
+            let (h, oh) = e.halfedges();
+            match (h.face(mesh), oh.face(mesh)) {
                 (Some(fa), Some(fb)) if update_points => {
-                    (points[mesh.head_vertex(h).index() as usize]
-                        + points[mesh.head_vertex(oh).index() as usize]
+                    (points[h.head(mesh).index() as usize]
+                        + points[oh.head(mesh).index() as usize]
                         + face_points[fa.index() as usize]
                         + face_points[fb.index() as usize])
                         * A::scalarf64(0.25)
                 }
                 _ => {
-                    (points[mesh.head_vertex(h).index() as usize]
-                        + points[mesh.head_vertex(oh).index() as usize])
+                    (points[h.head(mesh).index() as usize] + points[oh.head(mesh).index() as usize])
                         * A::scalarf64(0.5)
                 }
             }
@@ -112,16 +113,16 @@ where
         {
             let points: &[A::Vector] = &points;
             vertex_points.extend(mesh.vertices().map(|v| {
-                if mesh.is_boundary_vertex(v) {
+                if v.is_boundary(mesh) {
                     let (count, sum) = mesh
                         .ve_ccw_iter(v)
-                        .filter(|e| mesh.is_boundary_edge(*e))
+                        .filter(|e| e.is_boundary(mesh))
                         .fold((1usize, points[v.index() as usize]), |(count, total), e| {
                             (count + 1, total + edge_points[e.index() as usize])
                         });
                     sum / A::scalarf64(count as f64)
                 } else {
-                    let valence = mesh.vertex_valence(v) as f64;
+                    let valence = v.valence(mesh) as f64;
                     (((mesh.vf_ccw_iter(v).fold(A::zero_vector(), |total, f| {
                         total + face_points[f.index() as usize]
                     }) + mesh.vv_ccw_iter(v).fold(A::zero_vector(), |total, v| {
@@ -154,14 +155,14 @@ where
         // loop of halfedges starting from there.
         let hstart = mesh
             .fh_ccw_iter(f)
-            .find(|&h| mesh.head_vertex(h).index() < num_old_verts)
+            .find(|&h| h.head(mesh).index() < num_old_verts)
             .ok_or(Error::CannotSplitFace(f))?;
         hloop.clear();
         hloop.extend(iterator::loop_ccw_iter(&mesh.topol, hstart));
-        let fhs: &[HH] = &hloop; // Immutable.
-        debug_assert!(fhs.len() % 2 == 0);
+        let hloop: &[HH] = hloop; // Immutable.
+        debug_assert!(hloop.len() % 2 == 0);
         let valence = iterator::loop_ccw_iter(&mesh.topol, hstart).count() / 2;
-        debug_assert_eq!(valence * 2, fhs.len());
+        debug_assert_eq!(valence * 2, hloop.len());
         let ne = mesh.num_edges();
         // New vertex in the middle.
         let fv = mesh.add_vertex(face_points[f.index() as usize])?;
@@ -170,20 +171,20 @@ where
         // should be safe with ample testing.
         spliths.clear();
         subfaces.clear();
-        for (lei, hpair) in fhs.chunks_exact(2).enumerate() {
+        for (lei, hpair) in hloop.chunks_exact(2).enumerate() {
             let h1 = hpair[0];
             let pei = (ne + ((lei + valence - 1) % valence)) as u32;
             let nei = (ne + ((lei + 1) % valence)) as u32;
             let enew = mesh.topol.new_edge(
-                mesh.tail_vertex(h1),
+                h1.tail(mesh),
                 fv,
-                mesh.prev_halfedge(h1),
+                h1.prev(mesh),
                 (2 * pei + 1).into(),
                 (2 * nei).into(),
                 h1,
             )?;
             debug_assert_eq!(enew.index(), (lei + ne) as u32);
-            spliths.push(mesh.edge_halfedge(enew, false));
+            spliths.push(enew.halfedge(false));
             let flocal = if h1 == hstart {
                 f
             } else {
@@ -191,9 +192,9 @@ where
             };
             subfaces.push(flocal);
         }
-        for (i, hpair) in fhs.chunks_exact(2).enumerate() {
+        for (i, hpair) in hloop.chunks_exact(2).enumerate() {
             let rh = spliths[i];
-            let orh = mesh.opposite_halfedge(rh);
+            let orh = rh.opposite();
             let flocal = subfaces[i];
             let pflocal = subfaces[(i + valence - 1) % valence];
             let h1 = hpair[0];
@@ -205,11 +206,11 @@ where
             mesh.topol.halfedge_mut(h1).face = Some(flocal);
             mesh.topol.halfedge_mut(h2).face = Some(flocal);
             // Link halfedges.
-            mesh.topol.link_halfedges(mesh.prev_halfedge(rh), rh);
+            mesh.topol.link_halfedges(rh.prev(mesh), rh);
             mesh.topol.link_halfedges(orh, h1);
             mesh.topol.link_halfedges(h1, h2);
         }
-        mesh.topol.vertex_mut(fv).halfedge = Some(mesh.opposite_halfedge(spliths[0]));
+        mesh.topol.vertex_mut(fv).halfedge = Some(spliths[0].opposite());
         Ok(())
     }
 }
@@ -232,7 +233,7 @@ where
     /// the shape is smoothed according to the Catmull-Clark scheme.
     ///
     /// ```rust
-    /// use alum::alum_glam::PolyMeshF32;
+    /// use alum::{alum_glam::PolyMeshF32, HasTopology};
     ///
     /// let mut mesh = PolyMeshF32::unit_box().expect("Cannot create box");
     /// assert_eq!((8, 12, 6), (mesh.num_vertices(), mesh.num_edges(), mesh.num_faces()));
@@ -323,7 +324,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::{alum_glam::PolyMeshF32, obj::test::bunny_mesh};
+    use crate::{alum_glam::PolyMeshF32, obj::test::bunny_mesh, HasTopology};
 
     #[test]
     fn t_box_catmull_clark() {

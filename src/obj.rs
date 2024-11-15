@@ -3,7 +3,7 @@ use std::path::Path;
 use crate::{
     error::Error,
     mesh::{Adaptor, FloatScalarAdaptor, PolyMeshT},
-    VH,
+    HasTopology, VH,
 };
 
 impl<A> PolyMeshT<3, A>
@@ -85,7 +85,7 @@ where
 
 #[cfg(all(test, feature = "use_glam"))]
 pub(crate) mod test {
-    use crate::alum_glam::PolyMeshF32;
+    use crate::{alum_glam::PolyMeshF32, HasTopology};
     use std::path::PathBuf;
 
     pub(crate) fn bunny_mesh() -> PolyMeshF32 {
@@ -100,7 +100,7 @@ pub(crate) mod test {
         let mut points = mesh.points();
         let mut points = points.try_borrow_mut().expect("Cannot borrow points");
         for p in points.iter_mut() {
-            *p = *p * 10.0;
+            *p *= 10.0;
         }
         mesh
     }
@@ -122,10 +122,7 @@ pub(crate) mod test {
         assert_eq!(2503, mesh.num_vertices());
         assert_eq!(7473, mesh.num_edges());
         assert_eq!(4968, mesh.num_faces());
-        assert_eq!(
-            42,
-            mesh.edges().filter(|e| mesh.is_boundary_edge(*e)).count()
-        );
+        assert_eq!(42, mesh.edges().filter(|e| e.is_boundary(&mesh)).count());
     }
 
     #[test]

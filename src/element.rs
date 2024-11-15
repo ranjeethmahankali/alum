@@ -1,15 +1,64 @@
-use std::fmt::{Debug, Display};
+use crate::{iterator, topol::HasTopology};
+use std::{
+    fmt::{Debug, Display},
+    marker::PhantomData,
+    ops::Range,
+};
 
 /**
  * All elements of the mesh implement this trait. They are identified by their
  * index.
  */
-pub trait Handle {
+pub trait Handle: From<u32> {
     /**
      * The index of the element.
      */
     fn index(&self) -> u32;
 }
+
+pub struct HandleRange<H>
+where
+    H: Handle,
+{
+    current: u32,
+    stop: u32,
+    _phantom: PhantomData<H>,
+}
+
+impl<H> From<Range<u32>> for HandleRange<H>
+where
+    H: Handle,
+{
+    fn from(value: Range<u32>) -> Self {
+        HandleRange {
+            current: value.start,
+            stop: value.end,
+            _phantom: PhantomData,
+        }
+    }
+}
+
+impl<H> Iterator for HandleRange<H>
+where
+    H: Handle,
+{
+    type Item = H;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.current < self.stop {
+            let i = self.current;
+            self.current += 1;
+            Some(i.into())
+        } else {
+            None
+        }
+    }
+}
+
+pub type VRange = HandleRange<VH>;
+pub type HRange = HandleRange<HH>;
+pub type ERange = HandleRange<EH>;
+pub type FRange = HandleRange<FH>;
 
 /**
  * Vertex handle.
@@ -178,6 +227,163 @@ impl Debug for EH {
 impl Debug for FH {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "FH({})", self.index())
+    }
+}
+
+impl VH {
+    pub fn halfedge(self, mesh: &impl HasTopology) -> Option<HH> {
+        mesh.topology().vertex(self).halfedge
+    }
+
+    /// Check if this vertex is valid for the `mesh`.
+    ///
+    /// The index has to be less than the number of vertices in the mesh.
+    pub fn is_valid(self, mesh: &impl HasTopology) -> bool {
+        (self.idx as usize) < mesh.topology().num_vertices()
+    }
+
+    /// Check if this vertex is manifold.
+    ///
+    /// A vertex is manifold if it has at most 1 outgoing halfedge.
+    /// ```text
+    ///    .......|     .......|.......     ....\     /...
+    ///    .......|     .......|.......     .....\   /....
+    ///    .......|     .......|.......     ......\ /.....
+    ///    -------v     -------v-------     -------v------
+    ///    .......|     .......|.......     ....../ \.....
+    ///    .......|     .......|.......     ...../   \....
+    ///    .......|     .......|.......     ..../     \...
+    ///    Manifold     Manifold            Not manifold
+    /// ```
+    pub fn is_manifold(self, mesh: &impl HasTopology) -> bool {
+        iterator::voh_ccw_iter(mesh.topology(), self)
+            .skip(1)
+            .all(|h| !h.is_boundary(mesh))
+    }
+
+    /// Check if this vertex is on the boundary of the `mesh`.
+    pub fn is_boundary(self, mesh: &impl HasTopology) -> bool {
+        match self.halfedge(mesh) {
+            Some(h) => h.is_boundary(mesh),
+            None => true,
+        }
+    }
+
+    /// The number of edges incident on this vertex.
+    pub fn valence(self, mesh: &impl HasTopology) -> usize {
+        iterator::voh_ccw_iter(mesh.topology(), self).count()
+    }
+}
+
+impl HH {
+    /// Get the vertex the halfedge points to.
+    pub fn head(self, mesh: &impl HasTopology) -> VH {
+        mesh.topology().halfedge(self).vertex
+    }
+
+    /// Get the vertex the halfedge is pointing away from.
+    pub fn tail(self, mesh: &impl HasTopology) -> VH {
+        mesh.topology().halfedge(self.opposite()).vertex
+    }
+
+    /// Get the opposite halfedge.
+    pub fn opposite(self) -> HH {
+        (self.idx ^ 1).into()
+    }
+
+    /// Get the previous halfedge in the loop.
+    pub fn prev(self, mesh: &impl HasTopology) -> HH {
+        mesh.topology().halfedge(self).prev
+    }
+
+    /// Get the next halfedge in the loop.
+    pub fn next(self, mesh: &impl HasTopology) -> HH {
+        mesh.topology().halfedge(self).next
+    }
+
+    /// Get the face incident on the halfedge.
+    pub fn face(self, mesh: &impl HasTopology) -> Option<FH> {
+        mesh.topology().halfedge(self).face
+    }
+
+    /// Get the edge corresponding to the halfedge.
+    pub fn edge(self) -> EH {
+        (self.idx >> 1).into()
+    }
+
+    /// Check if this halfedge is valid for the `mesh`.
+    ///
+    /// The index has to be less than the number of halfedges in the mesh.
+    pub fn is_valid(self, mesh: &impl HasTopology) -> bool {
+        (self.idx as usize) < mesh.topology().num_halfedges()
+    }
+
+    /// Check if this halfedge is on the boundary of `mesh`.
+    ///
+    /// A halfedge is considered interior if it has a face incident on it.
+    pub fn is_boundary(self, mesh: &impl HasTopology) -> bool {
+        self.face(mesh).is_none()
+    }
+
+    /// Get the clockwise rotated halfedge around the vertex at the base of the
+    /// given halfedge.
+    pub fn rotate_cw(self, mesh: &impl HasTopology) -> HH {
+        self.opposite().next(mesh)
+    }
+
+    /// Get the counter-clockwise rotated hafedge around teh vertex at the base
+    /// of the given halfedge.
+    pub fn rotate_ccw(self, mesh: &impl HasTopology) -> HH {
+        self.prev(mesh).opposite()
+    }
+}
+
+impl EH {
+    /// Get the pair of halfedges associated with the given edge.
+    pub fn halfedges(self) -> (HH, HH) {
+        let hi = self.idx << 1;
+        (hi.into(), (hi | 1).into())
+    }
+
+    /// Get a halfedge from the edge.
+    ///
+    /// The Boolean flag indicates one of the two possible orientations.
+    pub fn halfedge(self, flag: bool) -> HH {
+        ((self.idx << 1) | if flag { 1 } else { 0 }).into()
+    }
+
+    /// Check if this edge is valid for the `mesh`.
+    ///
+    /// The index has to be less than the number of halfedges in the mesh.
+    pub fn is_valid(self, mesh: &impl HasTopology) -> bool {
+        (self.idx as usize) < mesh.topology().num_edges()
+    }
+
+    /// Check if the edge is a boundary edge.
+    ///
+    /// An edge is considered interior if it has two faces incident on both of it's halfedges.
+    pub fn is_boundary(self, mesh: &impl HasTopology) -> bool {
+        let (h, oh) = self.halfedges();
+        h.is_boundary(mesh) || oh.is_boundary(mesh)
+    }
+}
+
+impl FH {
+    /// Get the halfedge corresponding to the face.
+    pub fn halfedge(self, mesh: &impl HasTopology) -> HH {
+        mesh.topology().face(self).halfedge
+    }
+
+    /// Check if this face is valid for the `mesh`.
+    ///
+    /// The index has to be less than the number of halffaces in the mesh.
+    pub fn is_valid(self, mesh: &impl HasTopology) -> bool {
+        (self.idx as usize) < mesh.topology().num_faces()
+    }
+
+    /// The number of vertices incident on a face.
+    pub fn valence(self, mesh: &impl HasTopology) -> usize {
+        iterator::fh_ccw_iter(mesh.topology(), self).count()
     }
 }
 

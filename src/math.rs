@@ -7,6 +7,7 @@ use crate::{
         VectorAngleAdaptor, VectorLengthAdaptor, VectorNormalizeAdaptor,
     },
     property::{FProperty, VProperty},
+    HasTopology,
 };
 use std::ops::{Add, AddAssign, Div, Mul, Neg, Sub};
 
@@ -45,8 +46,8 @@ where
                 ),
                 |(nverts, x, y, z): (usize, A::Scalar, A::Scalar, A::Scalar), h| {
                     let (a, b) = {
-                        let pc = points[self.tail_vertex(h).index() as usize];
-                        let pn = points[self.head_vertex(h).index() as usize];
+                        let pc = points[h.tail(self).index() as usize];
+                        let pn = points[h.head(self).index() as usize];
                         (pc - pn, pc + pn)
                     };
                     (
@@ -99,9 +100,9 @@ where
     pub fn calc_vertex_normal_accurate(&self, v: VH, points: &[A::Vector]) -> A::Vector {
         let topol = &self.topol;
         A::normalized_vec(
-            match topol.vertex_halfedge(v) {
+            match v.halfedge(topol) {
                 Some(h) => {
-                    let h2 = topol.ccw_rotated_halfedge(h);
+                    let h2 = h.rotate_ccw(topol);
                     if h2 == h {
                         // Isolated vertex.
                         return A::zero_vector();
@@ -244,7 +245,7 @@ where
     /// Compute the vector spanning from the start of the halfedge to the head
     /// of the halfedge.
     pub fn calc_halfedge_vector(&self, h: HH, points: &[A::Vector]) -> A::Vector {
-        points[self.head_vertex(h).index() as usize] - points[self.tail_vertex(h).index() as usize]
+        points[h.head(self).index() as usize] - points[h.tail(self).index() as usize]
     }
 }
 
@@ -263,7 +264,7 @@ where
     /// repeated borrows.
     pub fn calc_sector_normal(&self, h: HH, points: &[A::Vector]) -> A::Vector {
         A::cross_product(
-            self.calc_halfedge_vector(self.topol.prev_halfedge(h), points),
+            self.calc_halfedge_vector(h.prev(&self.topol), points),
             self.calc_halfedge_vector(h, points),
         )
     }
@@ -362,7 +363,7 @@ where
 {
     /// Compute the length of a mesh edge. `points` must be the positions of the vertices.
     pub fn calc_edge_length(&self, e: EH, points: &[A::Vector]) -> A::Scalar {
-        A::vector_length(self.calc_halfedge_vector(self.edge_halfedge(e, false), points))
+        A::vector_length(self.calc_halfedge_vector(e.halfedge(false), points))
     }
 
     /// Similar to [`Self::calc_edge_length`], except this function tries to
@@ -370,7 +371,7 @@ where
     /// fails.
     ///
     /// ```rust
-    /// use alum::alum_glam::PolyMeshF32;
+    /// use alum::{alum_glam::PolyMeshF32, HasTopology};
     ///
     /// let qbox = PolyMeshF32::quad_box(glam::vec3(0.0, 0.0, 0.0), glam::vec3(1.0, 1.0, 1.0))
     ///     .expect("Cannot create a box primitive");
@@ -403,7 +404,7 @@ where
     /// Calling this function with borrowed `points` property avoids an internal
     /// borrow of properties.
     pub fn calc_volume(&self, points: &[A::Vector]) -> A::Scalar {
-        if self.halfedges().any(|h| self.topol.is_boundary_halfedge(h)) {
+        if self.halfedges().any(|h| h.is_boundary(&self.topol)) {
             // Not closed.
             return A::scalarf64(0.0);
         }
@@ -465,11 +466,11 @@ where
     /// angle. This can be more accurate than
     /// [`Self::calc_dihedral_angle_fast`].
     pub fn calc_dihedral_angle(&self, e: EH, points: &[A::Vector]) -> A::Scalar {
-        if self.is_boundary_edge(e) {
+        if e.is_boundary(self) {
             return A::scalarf64(0.0);
         }
-        let h0 = self.edge_halfedge(e, false);
-        let h1 = self.edge_halfedge(e, true);
+        let h0 = e.halfedge(false);
+        let h1 = e.halfedge(true);
         Self::aligned_angle(
             self.calc_sector_normal(h0, points),
             self.calc_sector_normal(h1, points),
@@ -499,10 +500,10 @@ where
         points: &[A::Vector],
         face_normals: &[A::Vector],
     ) -> A::Scalar {
-        let h0 = self.edge_halfedge(e, false);
-        let h1 = self.edge_halfedge(e, true);
-        let f0 = self.halfedge_face(h0);
-        let f1 = self.halfedge_face(h1);
+        let h0 = e.halfedge(false);
+        let h1 = e.halfedge(true);
+        let f0 = h0.face(self);
+        let f1 = h1.face(self);
         match (f0, f1) {
             (None, None) | (None, Some(_)) | (Some(_), None) => A::scalarf64(0.0),
             (Some(f0), Some(f1)) => Self::aligned_angle(
@@ -546,11 +547,11 @@ where
         face_normals: &[A::Vector],
     ) -> A::Scalar {
         let n0 = self.calc_halfedge_vector(h, points);
-        let h2 = self.opposite_halfedge(self.prev_halfedge(h));
+        let h2 = h.prev(self).opposite();
         let n1 = self.calc_halfedge_vector(h2, points);
         let angle = A::vector_angle(n0, n1);
-        if let Some(f) = self.halfedge_face(self.opposite_halfedge(h)) {
-            if self.is_boundary_halfedge(h)
+        if let Some(f) = h.opposite().face(self) {
+            if h.is_boundary(self)
                 && A::dot_product(A::cross_product(n0, n1), face_normals[f.index() as usize])
                     < A::scalarf64(0.0)
             {
@@ -631,7 +632,7 @@ where
 mod test {
     use core::f32;
 
-    use crate::{alum_glam::PolyMeshF32, error::Error, macros::assert_f32_eq};
+    use crate::{alum_glam::PolyMeshF32, error::Error, macros::assert_f32_eq, HasTopology};
 
     #[test]
     fn t_box_face_normals() {
@@ -952,7 +953,7 @@ mod test {
         let qbox = qbox;
         let mut convex = 0usize;
         let mut concave = 0usize;
-        for h in qbox.halfedges().filter(|h| qbox.is_boundary_halfedge(*h)) {
+        for h in qbox.halfedges().filter(|h| h.is_boundary(&qbox)) {
             let angle = qbox
                 .try_calc_sector_angle(h)
                 .expect("Cannot compute sector angle");
