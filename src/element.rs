@@ -212,7 +212,9 @@ impl VH {
     ///    Manifold     Manifold            Not manifold
     /// ```
     pub fn is_manifold(self, mesh: &impl HasTopology) -> bool {
-        mesh.topology().is_manifold_vertex(self)
+        iterator::voh_ccw_iter(mesh.topology(), self)
+            .skip(1)
+            .all(|h| !h.is_boundary(mesh))
     }
 
     /// Check if this vertex is on the boundary of the `mesh`.

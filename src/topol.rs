@@ -273,19 +273,6 @@ impl Topology {
         iterator::voh_ccw_iter(self, from).find(|h| h.head(self) == to)
     }
 
-    pub fn is_manifold_vertex(&self, v: VH) -> bool {
-        /* If just the first outgoing halfedge is on the boundary, it just means
-         * the vertex is on the boundary. If the first outgoing halfedge is not
-         * on the boundary, it implies the vertex is in the interior. In both
-         * cases the vertex is manifold. If any outgoing halfedge apart from the
-         * first is on the boundary, it implies there are more than one gaps
-         * when circulating around the vertex, making it non-manifold. For this
-         * reason, we skip the first halfedge and check the rest. */
-        iterator::voh_ccw_iter(self, v)
-            .skip(1)
-            .all(|h| !h.is_boundary(self))
-    }
-
     pub(crate) fn adjust_outgoing_halfedge(&mut self, v: VH) {
         let h = iterator::voh_ccw_iter(self, v).find(|h| h.is_boundary(self));
         if let Some(h) = h {
@@ -1106,13 +1093,9 @@ pub(crate) mod test {
             [10, v0.index(), v1.index(), 5, 2, 7]
         );
         assert_eq!(iterator::ve_ccw_iter(&mesh, 6.into()).count(), 6);
-        assert_eq!(
-            mesh.vertices()
-                .filter(|v| mesh.is_manifold_vertex(*v))
-                .count(),
-            17
-        );
-        assert!(!mesh.is_manifold_vertex(6.into()));
+        assert_eq!(mesh.vertices().filter(|v| v.is_manifold(&mesh)).count(), 17);
+        let v: VH = 6.into();
+        assert!(!v.is_manifold(&mesh));
         // Check halfedge connectivity at v6.
         {
             let h = mesh
@@ -1170,8 +1153,9 @@ pub(crate) mod test {
                 .collect::<Vec<_>>(),
             [v1.index(), 9, 4, 1, 6]
         );
-        assert!(mesh.is_manifold_vertex(6.into()));
-        assert!(mesh.is_manifold_vertex(5.into()));
+        let (v0, v1): (VH, VH) = (6.into(), 5.into());
+        assert!(v0.is_manifold(&mesh));
+        assert!(v1.is_manifold(&mesh));
     }
 
     #[test]
