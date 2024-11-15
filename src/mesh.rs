@@ -1,5 +1,5 @@
 use crate::{
-    element::{EH, FH, HH, VH},
+    element::{EH, FH, VH},
     error::Error,
     property::{FProperty, VProperty},
     topol::{HasTopology, TopolCache, Topology},
@@ -244,11 +244,6 @@ where
         self.fnormals
             .get_or_insert_with(|| self.topol.create_face_prop(A::zero_vector()))
             .clone()
-    }
-
-    /// Find a halfedge spanning the vertices `from` and `to`, if one exists
-    pub fn find_halfedge(&self, from: VH, to: VH) -> Option<HH> {
-        self.topol.find_halfedge(from, to)
     }
 
     /// Iterator over the vertex triplets that represent a triangulation of this

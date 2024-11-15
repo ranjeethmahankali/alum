@@ -245,6 +245,11 @@ pub trait HasTopology {
     fn face_status_mut(&mut self, f: FH) -> Result<RefMut<'_, Status>, Error> {
         self.topology_mut().fstatus.get_mut(f)
     }
+
+    /// Find a halfedge spanning the vertices `from` and `to`, if one exists
+    fn find_halfedge(&self, from: VH, to: VH) -> Option<HH> {
+        iterator::voh_ccw_iter(self.topology(), from).find(|h| h.head(self.topology()) == to)
+    }
 }
 
 pub struct Topology {
@@ -340,10 +345,6 @@ impl Topology {
 
     pub(crate) fn face_mut(&mut self, f: FH) -> &mut Face {
         &mut self.faces[f.index() as usize]
-    }
-
-    pub fn find_halfedge(&self, from: VH, to: VH) -> Option<HH> {
-        iterator::voh_ccw_iter(self, from).find(|h| h.head(self) == to)
     }
 
     pub(crate) fn adjust_outgoing_halfedge(&mut self, v: VH) {

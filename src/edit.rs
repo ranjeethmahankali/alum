@@ -679,7 +679,7 @@ where
     /// encountered, then mesh is unmodified and a `false` is
     /// returned. Otherwise a `true` is returned.
     /// ```rust
-    /// use alum::{alum_glam::PolyMeshF32, Handle};
+    /// use alum::{alum_glam::PolyMeshF32, HasTopology, Handle};
     ///
     /// let mut mesh = PolyMeshF32::new();
     /// let verts = [glam::vec3(0.0, 0.0, 0.0), glam::vec3(1.0, 0.0, 0.0),
@@ -705,8 +705,7 @@ where
     /// encountered, then mesh is unmodified and a `false` is
     /// returned. Otherwise a `true` is returned.
     /// ```rust
-    /// use alum::{alum_glam::PolyMeshF32, Handle};
-    ///
+    /// use alum::{alum_glam::PolyMeshF32, HasTopology, Handle};
     /// let mut mesh = PolyMeshF32::new();
     /// let verts = [glam::vec3(0.0, 0.0, 0.0), glam::vec3(1.0, 0.0, 0.0),
     ///              glam::vec3(1.0, 1.0, 0.0), glam::vec3(0.0, 1.0, 0.0)];
