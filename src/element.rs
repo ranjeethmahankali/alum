@@ -280,6 +280,18 @@ impl HH {
     pub fn is_boundary(self, mesh: &impl HasTopology) -> bool {
         self.face(mesh).is_none()
     }
+
+    /// Get the clockwise rotated halfedge around the vertex at the base of the
+    /// given halfedge.
+    pub fn rotate_cw(self, mesh: &impl HasTopology) -> HH {
+        self.opposite().next(mesh)
+    }
+
+    /// Get the counter-clockwise rotated hafedge around teh vertex at the base
+    /// of the given halfedge.
+    pub fn rotate_ccw(self, mesh: &impl HasTopology) -> HH {
+        self.prev(mesh).opposite()
+    }
 }
 
 impl EH {

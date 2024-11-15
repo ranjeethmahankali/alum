@@ -403,18 +403,6 @@ where
             .clone()
     }
 
-    /// Get the clockwise rotated halfedge around the vertex at the base of the
-    /// given halfedge.
-    pub fn cw_rotated_halfedge(&self, h: HH) -> HH {
-        self.topol.cw_rotated_halfedge(h)
-    }
-
-    /// Get the counter-clockwise rotated hafedge around teh vertex at the base
-    /// of the given halfedge.
-    pub fn ccw_rotated_halfedge(&self, h: HH) -> HH {
-        self.topol.ccw_rotated_halfedge(h)
-    }
-
     /// Find a halfedge spanning the vertices `from` and `to`, if one exists
     pub fn find_halfedge(&self, from: VH, to: VH) -> Option<HH> {
         self.topol.find_halfedge(from, to)

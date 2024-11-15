@@ -229,14 +229,6 @@ impl Topology {
         &mut self.faces[f.index() as usize]
     }
 
-    pub fn cw_rotated_halfedge(&self, h: HH) -> HH {
-        h.opposite().next(self)
-    }
-
-    pub fn ccw_rotated_halfedge(&self, h: HH) -> HH {
-        h.prev(self).opposite()
-    }
-
     pub fn num_vertices(&self) -> usize {
         self.vertices.len()
     }

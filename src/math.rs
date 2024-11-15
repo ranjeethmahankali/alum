@@ -101,7 +101,7 @@ where
         A::normalized_vec(
             match v.halfedge(topol) {
                 Some(h) => {
-                    let h2 = topol.ccw_rotated_halfedge(h);
+                    let h2 = h.rotate_ccw(topol);
                     if h2 == h {
                         // Isolated vertex.
                         return A::zero_vector();
