@@ -1,5 +1,5 @@
 use crate::{
-    iterator,
+    iterator::HasIterators,
     topol::{HasTopology, Topology},
     Adaptor, Error, FloatScalarAdaptor, Handle, PolyMeshT, FH, HH,
 };
@@ -158,10 +158,10 @@ where
             .find(|&h| h.head(mesh).index() < num_old_verts)
             .ok_or(Error::CannotSplitFace(f))?;
         hloop.clear();
-        hloop.extend(iterator::loop_ccw_iter(&mesh.topol, hstart));
+        hloop.extend(mesh.loop_ccw_iter(hstart));
         let hloop: &[HH] = hloop; // Immutable.
         debug_assert!(hloop.len() % 2 == 0);
-        let valence = iterator::loop_ccw_iter(&mesh.topol, hstart).count() / 2;
+        let valence = mesh.loop_ccw_iter(hstart).count() / 2;
         debug_assert_eq!(valence * 2, hloop.len());
         let ne = mesh.num_edges();
         // New vertex in the middle.

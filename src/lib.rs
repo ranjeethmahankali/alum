@@ -67,7 +67,7 @@ example code that iterates over the vertices of face with index 2, and modifies
 their positions.
 
 ```rust
-use alum::{alum_glam::PolyMeshF32, FH};
+use alum::{alum_glam::PolyMeshF32, FH, HasIterators};
 
 let mut boxmesh = PolyMeshF32::unit_box().expect("Cannot create a box");
 assert_eq!(1.0, boxmesh.try_calc_volume().expect("Cannot compute volume"));
@@ -114,8 +114,10 @@ mod topol;
 #[cfg(feature = "use_glam")]
 pub mod alum_glam;
 
+pub use edit::HasTriangulation;
 pub use element::{Handle, EH, FH, HH, VH};
 pub use error::Error;
+pub use iterator::HasIterators;
 pub use mesh::{
     Adaptor, CrossProductAdaptor, DotProductAdaptor, FloatScalarAdaptor, PolyMeshT,
     VectorAngleAdaptor, VectorLengthAdaptor, VectorNormalizeAdaptor,

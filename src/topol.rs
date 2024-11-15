@@ -1,10 +1,12 @@
+use crate::edit::HasTriangulation;
+use crate::iterator::HasIterators;
+use crate::property::EProperty;
 use crate::{
     element::{
         ERange, Edge, FRange, Face, HRange, Halfedge, Handle, VRange, Vertex, EH, FH, HH, VH,
     },
     error::Error,
-    iterator,
-    property::{EProperty, FProperty, HProperty, PropertyContainer, VProperty},
+    property::{FProperty, HProperty, PropertyContainer, VProperty},
     status::Status,
 };
 use std::{cell::RefMut, ops::Range};
@@ -47,7 +49,7 @@ impl TopolCache {
     }
 }
 
-pub trait HasTopology {
+pub trait HasTopology: Sized {
     fn topology(&self) -> &Topology;
 
     fn topology_mut(&mut self) -> &mut Topology;
@@ -245,214 +247,6 @@ pub trait HasTopology {
     fn face_status_mut(&mut self, f: FH) -> Result<RefMut<'_, Status>, Error> {
         self.topology_mut().fstatus.get_mut(f)
     }
-
-    /// Find a halfedge spanning the vertices `from` and `to`, if one exists
-    fn find_halfedge(&self, from: VH, to: VH) -> Option<HH> {
-        iterator::voh_ccw_iter(self.topology(), from).find(|h| h.head(self.topology()) == to)
-    }
-
-    /// Iterator over the vertex triplets that represent a triangulation of the
-    /// given face.
-    ///
-    /// The triangulation does not take the shape of the face into account. It
-    /// only accounts for the topology of the face.
-    /// ```rust
-    /// use alum::{alum_glam::PolyMeshF32, Handle, HasTopology};
-    ///
-    /// let mut mesh = PolyMeshF32::new();
-    /// let verts = [glam::vec3(0.0, 0.0, 0.0), glam::vec3(1.0, 0.0, 0.0),
-    ///              glam::vec3(1.0, 1.0, 0.0), glam::vec3(0.0, 1.0, 0.0)];
-    /// mesh.add_vertices(&verts).expect("Cannot add vertices");
-    /// mesh.add_quad_face(0.into(), 1.into(), 2.into(), 3.into());
-    /// assert_eq!(mesh.triangulated_face_vertices(0.into())
-    ///                .flatten()
-    ///                .map(|v| v.index())
-    ///                .collect::<Vec<u32>>(), [3, 0, 1, 3, 1, 2]);
-    /// ```
-    fn triangulated_face_vertices(&self, f: FH) -> impl Iterator<Item = [VH; 3]> {
-        let topol = self.topology();
-        let hstart = f.halfedge(topol);
-        let vstart = hstart.tail(topol);
-        iterator::loop_ccw_iter(topol, hstart.next(topol))
-            .take_while(move |h| h.head(topol) != vstart)
-            .map(move |h| [vstart, h.tail(topol), h.head(topol)])
-    }
-
-    /// Iterator over the vertex triplets that represent a triangulation of this
-    /// mesh. The triangulation of a face does not take it's shape into
-    /// account. It only accounts for the topology.
-    ///
-    /// ```rust
-    /// use alum::{alum_glam::PolyMeshF32, Handle, HasTopology};
-    ///
-    /// let mut mesh = PolyMeshF32::new();
-    /// let verts = [glam::vec3(0.0, 0.0, 0.0), glam::vec3(1.0, 0.0, 0.0),
-    ///              glam::vec3(1.0, 1.0, 0.0), glam::vec3(0.0, 1.0, 0.0)];
-    /// mesh.add_vertices(&verts).expect("Cannot add vertices");
-    /// mesh.add_quad_face(0.into(), 1.into(), 2.into(), 3.into());
-    /// assert_eq!(mesh.triangulated_vertices()
-    ///                .flatten()
-    ///                .map(|v| v.index())
-    ///                .collect::<Vec<u32>>(), [3, 0, 1, 3, 1, 2]);
-    /// ```
-    fn triangulated_vertices(&self) -> impl Iterator<Item = [VH; 3]> {
-        self.faces()
-            .flat_map(move |f| self.triangulated_face_vertices(f))
-    }
-
-    /// Iterator over the outgoing halfedges around a vertex, going counter-clockwise.
-    fn voh_ccw_iter(&self, v: VH) -> impl Iterator<Item = HH> {
-        iterator::voh_ccw_iter(self.topology(), v)
-    }
-
-    /// Iterator over the outgoing halfedges around a vertex, going clockwise
-    fn voh_cw_iter(&self, v: VH) -> impl Iterator<Item = HH> {
-        iterator::voh_cw_iter(self.topology(), v)
-    }
-
-    /// Iterator over the incoming halfedges around a vertex, going
-    /// counter-clockwise
-    fn vih_ccw_iter(&self, v: VH) -> impl Iterator<Item = HH> {
-        iterator::vih_ccw_iter(self.topology(), v)
-    }
-
-    /// Iterator over the incoming halfedges around a vertex, going clockwise
-    fn vih_cw_iter(&self, v: VH) -> impl Iterator<Item = HH> {
-        iterator::vih_cw_iter(self.topology(), v)
-    }
-
-    /// Iterator over the faces incident on a vertex, going counter-clockwise.
-    fn vf_ccw_iter(&self, v: VH) -> impl Iterator<Item = FH> {
-        iterator::vf_ccw_iter(self.topology(), v)
-    }
-
-    /// Iterator over the faces incident on a vertex, going clockwise.
-    fn vf_cw_iter(&self, v: VH) -> impl Iterator<Item = FH> {
-        iterator::vf_cw_iter(self.topology(), v)
-    }
-
-    /// Iterator over the neighboring vertices around the given vertex, going
-    /// counter-clockwise.
-    fn vv_ccw_iter(&self, v: VH) -> impl Iterator<Item = VH> {
-        iterator::vv_ccw_iter(self.topology(), v)
-    }
-
-    /// Iterator over the neighboring vertices around the given vertex, going
-    /// clockwise.
-    fn vv_cw_iter(&self, v: VH) -> impl Iterator<Item = VH> {
-        iterator::vv_cw_iter(self.topology(), v)
-    }
-
-    /// Iterator over the incident edges around an vertex, going counter-clockwise.
-    fn ve_ccw_iter(&self, v: VH) -> impl Iterator<Item = EH> {
-        iterator::ve_ccw_iter(self.topology(), v)
-    }
-
-    /// Iterator over the incident edges around a vertex, going clockwise.
-    fn ve_cw_iter(&self, v: VH) -> impl Iterator<Item = EH> {
-        iterator::ve_cw_iter(self.topology(), v)
-    }
-
-    /// Iterator over the two vertices incident on the given edge.
-    fn ev_iter(&self, e: EH) -> impl Iterator<Item = VH> {
-        iterator::ev_iter(self.topology(), e)
-    }
-
-    /// Iterator over the two halfedges corresponding to an edge.
-    fn eh_iter(&self, e: EH) -> impl Iterator<Item = HH> {
-        iterator::eh_iter(e)
-    }
-
-    /// Iterator over the faces incident on an edge.
-    fn ef_iter(&self, e: EH) -> impl Iterator<Item = FH> {
-        iterator::ef_iter(self.topology(), e)
-    }
-
-    /// Iterator over the halfedges of a face loop, going counter-clockwise.
-    fn fh_ccw_iter(&self, f: FH) -> impl Iterator<Item = HH> {
-        iterator::fh_ccw_iter(self.topology(), f)
-    }
-
-    /// Iterator over the halfedges of a face loop, going clockwise.
-    fn fh_cw_iter(&self, f: FH) -> impl Iterator<Item = HH> {
-        iterator::fh_cw_iter(self.topology(), f)
-    }
-
-    /// Iterator over the vertices incident on a face, going counter-clockwise.
-    fn fv_ccw_iter(&self, f: FH) -> impl Iterator<Item = VH> {
-        iterator::fv_ccw_iter(self.topology(), f)
-    }
-
-    /// Iterator over the vertices incident on a face, going clockwise.
-    fn fv_cw_iter(&self, f: FH) -> impl Iterator<Item = VH> {
-        iterator::fv_cw_iter(self.topology(), f)
-    }
-
-    /// Iterator over the edges incident on a face, going counter-clockwise.
-    fn fe_ccw_iter(&self, f: FH) -> impl Iterator<Item = EH> {
-        iterator::fe_ccw_iter(self.topology(), f)
-    }
-
-    /// Iterator over the edges incident on a face, going clockwise.
-    fn fe_cw_iter(&self, f: FH) -> impl Iterator<Item = EH> {
-        iterator::fe_cw_iter(self.topology(), f)
-    }
-
-    /// Iterator over the neighboring faces arouund the given face, going
-    /// counter-clockwise.
-    ///
-    /// This includes the faces connected via a shared edge, but not those
-    /// connected via a shared vertex.
-    fn ff_ccw_iter(&self, f: FH) -> impl Iterator<Item = FH> {
-        iterator::ff_ccw_iter(self.topology(), f)
-    }
-
-    /// Iterator over the neighboring faces around the given face, going
-    /// clockwise.
-    ///
-    /// This includes the faces connected via a shared edge, but not those
-    /// connected via a shared vertex.
-    fn ff_cw_iter(&self, f: FH) -> impl Iterator<Item = FH> {
-        iterator::ff_cw_iter(self.topology(), f)
-    }
-
-    /// This is similar to [`Self::voh_ccw_iter`] around the tail of the given
-    /// halfedge, except this iterator starts at the provided halfedge.
-    ///
-    /// This is equivalent to a circular shifted [`Self::voh_ccw_iter`] of the
-    /// vertex at the tail of this halfedge.
-    fn ccw_rotate_iter(&self, h: HH) -> impl Iterator<Item = HH> {
-        iterator::ccw_rotate_iter(self.topology(), h)
-    }
-
-    /// This is similar to [`Self::voh_cw_iter`] around the tail of the given
-    /// halfedge, except this iterator starts at the provided halfedge.
-    ///
-    /// This is equivalent to a circular shifted [`Self::voh_cw_iter`] of the
-    /// vertex at the tail of this halfedge.
-    fn cw_rotate_iter(&self, h: HH) -> impl Iterator<Item = HH> {
-        iterator::cw_rotate_iter(self.topology(), h)
-    }
-
-    /// Counter-clockwise iterator over the halfedges in a loop.
-    ///
-    /// The iterator will start at the given halfedge. If the halfedge has an
-    /// incident face, this iterator is equivalent to a circular shifted
-    /// [`Self::fh_ccw_iter`] of the incident face. If the halfedge is on the
-    /// boundary, this iterator goes over the boundary loop counter-clockwise.
-    fn loop_ccw_iter(&self, h: HH) -> impl Iterator<Item = HH> {
-        iterator::loop_ccw_iter(self.topology(), h)
-    }
-
-    /// Counter-clockwise iterator over the halfedges in a loop.
-    ///
-    /// The iterator will start at the given halfedge. If the halfedge has an
-    /// incident face, this iterator is equivalent to a circular shifted
-    /// [`Self::fh_cw_iter`] of the incident face. If the halfedge is on the
-    /// boundary, this iterator goes over the boundary loop clockwise.
-    fn loop_cw_iter(&self, h: HH) -> impl Iterator<Item = HH> {
-        iterator::loop_cw_iter(self.topology(), h)
-    }
 }
 
 pub struct Topology {
@@ -551,7 +345,7 @@ impl Topology {
     }
 
     pub(crate) fn adjust_outgoing_halfedge(&mut self, v: VH) {
-        let h = iterator::voh_ccw_iter(self, v).find(|h| h.is_boundary(self));
+        let h = self.voh_ccw_iter(v).find(|h| h.is_boundary(self));
         if let Some(h) = h {
             self.vertex_mut(v).halfedge = Some(h);
         }
@@ -845,7 +639,7 @@ impl Topology {
          * as we iterate over them. Instead we collect them into cache and then
          * delete them. */
         cache.faces.clear();
-        cache.faces.extend(iterator::vf_ccw_iter(self, v));
+        cache.faces.extend(self.vf_ccw_iter(v));
         for f in &cache.faces {
             self.delete_face(
                 *f,
@@ -906,7 +700,7 @@ impl Topology {
         // Collect neighborhood topology.
         ecache.clear();
         vcache.clear();
-        for (mesh, h) in iterator::fh_ccw_iter_mut(self, f) {
+        for (mesh, h) in self.fh_ccw_iter_mut(f) {
             mesh.halfedge_mut(h).face = None; // Disconnect from face.
             if h.opposite().is_boundary(mesh) {
                 ecache.push(h.edge());
@@ -1104,6 +898,10 @@ impl HasTopology for Topology {
     }
 }
 
+impl HasIterators for Topology {}
+
+impl HasTriangulation for Topology {}
+
 impl Default for Topology {
     fn default() -> Self {
         Self::new()
@@ -1116,7 +914,7 @@ pub(crate) mod test {
 
     use crate::{
         alum_glam::PolyMeshF32,
-        iterator,
+        iterator::HasIterators,
         macros::assert_f32_eq,
         topol::{Handle, HasTopology, VH},
     };
@@ -1368,18 +1166,18 @@ pub(crate) mod test {
             .expect("Unable to add a face");
         assert_eq!(f0.index(), 8);
         assert_eq!(
-            iterator::vf_ccw_iter(&mesh, 6.into())
+            mesh.vf_ccw_iter(6.into())
                 .map(|i| i.index())
                 .collect::<Vec<_>>(),
             [8, 1, 2, 4]
         );
         assert_eq!(
-            iterator::vv_ccw_iter(&mesh, 6.into())
+            mesh.vv_ccw_iter(6.into())
                 .map(|v| v.index())
                 .collect::<Vec<_>>(),
             [10, v0.index(), v1.index(), 5, 2, 7]
         );
-        assert_eq!(iterator::ve_ccw_iter(&mesh, 6.into()).count(), 6);
+        assert_eq!(mesh.ve_ccw_iter(6.into()).count(), 6);
         assert_eq!(mesh.vertices().filter(|v| v.is_manifold(&mesh)).count(), 17);
         let v: VH = 6.into();
         assert!(!v.is_manifold(&mesh));
@@ -1417,25 +1215,25 @@ pub(crate) mod test {
         assert_eq!(mesh.num_edges(), 28);
         assert_eq!(mesh.edges().filter(|e| e.is_boundary(&mesh)).count(), 18);
         assert_eq!(
-            iterator::vf_ccw_iter(&mesh, 6.into())
+            mesh.vf_ccw_iter(6.into())
                 .map(|f| f.index())
                 .collect::<Vec<_>>(),
             [8, 9, 1, 2, 4]
         );
         assert_eq!(
-            iterator::vf_ccw_iter(&mesh, 5.into())
+            mesh.vf_ccw_iter(5.into())
                 .map(|f| f.index())
                 .collect::<Vec<_>>(),
             [3, 0, 1, 9]
         );
         assert_eq!(
-            iterator::vv_ccw_iter(&mesh, 6.into())
+            mesh.vv_ccw_iter(6.into())
                 .map(|v| v.index())
                 .collect::<Vec<_>>(),
             [10, v0.index(), v1.index(), 5, 2, 7]
         );
         assert_eq!(
-            iterator::vv_ccw_iter(&mesh, 5.into())
+            mesh.vv_ccw_iter(5.into())
                 .map(|v| v.index())
                 .collect::<Vec<_>>(),
             [v1.index(), 9, 4, 1, 6]

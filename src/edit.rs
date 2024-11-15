@@ -1,12 +1,62 @@
 use crate::{
     element::{Handle, EH, FH, HH, VH},
     error::Error,
-    iterator,
+    iterator::HasIterators,
     mesh::{Adaptor, PolyMeshT},
     status::Status,
     topol::{TopolCache, Topology},
     HasTopology,
 };
+
+pub trait HasTriangulation: HasIterators {
+    /// Iterator over the vertex triplets that represent a triangulation of the
+    /// given face.
+    ///
+    /// The triangulation does not take the shape of the face into account. It
+    /// only accounts for the topology of the face.
+    /// ```rust
+    /// use alum::{alum_glam::PolyMeshF32, Handle, HasTopology, HasTriangulation};
+    ///
+    /// let mut mesh = PolyMeshF32::new();
+    /// let verts = [glam::vec3(0.0, 0.0, 0.0), glam::vec3(1.0, 0.0, 0.0),
+    ///              glam::vec3(1.0, 1.0, 0.0), glam::vec3(0.0, 1.0, 0.0)];
+    /// mesh.add_vertices(&verts).expect("Cannot add vertices");
+    /// mesh.add_quad_face(0.into(), 1.into(), 2.into(), 3.into());
+    /// assert_eq!(mesh.triangulated_face_vertices(0.into())
+    ///                .flatten()
+    ///                .map(|v| v.index())
+    ///                .collect::<Vec<u32>>(), [3, 0, 1, 3, 1, 2]);
+    /// ```
+    fn triangulated_face_vertices(&self, f: FH) -> impl Iterator<Item = [VH; 3]> {
+        let hstart = f.halfedge(self);
+        let vstart = hstart.tail(self);
+        self.loop_ccw_iter(hstart.next(self))
+            .take_while(move |h| h.head(self) != vstart)
+            .map(move |h| [vstart, h.tail(self), h.head(self)])
+    }
+
+    /// Iterator over the vertex triplets that represent a triangulation of this
+    /// mesh. The triangulation of a face does not take it's shape into
+    /// account. It only accounts for the topology.
+    ///
+    /// ```rust
+    /// use alum::{alum_glam::PolyMeshF32, Handle, HasTopology, HasTriangulation};
+    ///
+    /// let mut mesh = PolyMeshF32::new();
+    /// let verts = [glam::vec3(0.0, 0.0, 0.0), glam::vec3(1.0, 0.0, 0.0),
+    ///              glam::vec3(1.0, 1.0, 0.0), glam::vec3(0.0, 1.0, 0.0)];
+    /// mesh.add_vertices(&verts).expect("Cannot add vertices");
+    /// mesh.add_quad_face(0.into(), 1.into(), 2.into(), 3.into());
+    /// assert_eq!(mesh.triangulated_vertices()
+    ///                .flatten()
+    ///                .map(|v| v.index())
+    ///                .collect::<Vec<u32>>(), [3, 0, 1, 3, 1, 2]);
+    /// ```
+    fn triangulated_vertices(&self) -> impl Iterator<Item = [VH; 3]> {
+        self.faces()
+            .flat_map(move |f| self.triangulated_face_vertices(f))
+    }
+}
 
 impl Topology {
     /// Check if it is safe to collapse an edge.
@@ -81,13 +131,13 @@ impl Topology {
         // vertices, and only if the corresponding faces are triangles.
         let vl = h.next(self).head(self);
         let vr = oh.next(self).head(self);
-        for v in iterator::vv_ccw_iter(self, v0) {
+        for v in self.vv_ccw_iter(v0) {
             vertex_status[v.index() as usize].set_tagged(false);
         }
-        for v in iterator::vv_ccw_iter(self, v1) {
+        for v in self.vv_ccw_iter(v1) {
             vertex_status[v.index() as usize].set_tagged(true);
         }
-        for v in iterator::vv_ccw_iter(self, v0) {
+        for v in self.vv_ccw_iter(v0) {
             if vertex_status[v.index() as usize].tagged()
                 && !(v == vl && htriangle)
                 && !(v == vr && ohtriangle)
@@ -217,7 +267,7 @@ impl Topology {
         let hcache: &mut Vec<HH> = &mut cache.halfedges;
         // Rewire halfedge -> vertex
         hcache.clear();
-        hcache.extend(iterator::vih_ccw_iter(self, vo));
+        hcache.extend(self.vih_ccw_iter(vo));
         for ih in hcache.drain(..) {
             self.halfedge_mut(ih).vertex = vh;
         }
@@ -461,7 +511,7 @@ impl Topology {
     fn edge_is_unique_link(&self, e: EH) -> bool {
         let h = e.halfedge(false);
         let fo = h.opposite().face(self);
-        iterator::loop_ccw_iter(self, h)
+        self.loop_ccw_iter(h)
             .skip(1)
             .all(|h| h.opposite().face(self) != fo)
     }
@@ -511,7 +561,7 @@ impl Topology {
             self.face_mut(f0).halfedge = p0;
         }
         // Rewire halfedge -> face for the loop of f1.
-        for (mesh, h) in iterator::loop_ccw_iter_mut(self, n1).take_while(|(_, h)| *h != n0) {
+        for (mesh, h) in self.loop_ccw_iter_mut(n1).take_while(|(_, h)| *h != n0) {
             mesh.halfedge_mut(h).face = Some(f0);
         }
         estatus[e.index() as usize].set_deleted(true);
@@ -544,8 +594,9 @@ impl Topology {
             // simultaenously starting from both prev and next halfedges, and
             // see if you arrive at the other halfedge. Marching from both
             // ensures we'll detect the loop as soon as possible.
-            if !iterator::loop_ccw_iter(self, prev)
-                .zip(iterator::loop_cw_iter(self, next))
+            if !self
+                .loop_ccw_iter(prev)
+                .zip(self.loop_cw_iter(next))
                 .any(|(n, p)| n == prev || p == next)
             {
                 return Err(Error::HalfedgesNotInTheSameLoop(prev, next));
@@ -565,7 +616,7 @@ impl Topology {
             let fnew = self.new_face(oh)?;
             let hf = f.halfedge(self);
             self.halfedge_mut(h).face = Some(f);
-            for (mesh, h) in iterator::loop_ccw_iter_mut(self, oh) {
+            for (mesh, h) in self.loop_ccw_iter_mut(oh) {
                 if hf == h {
                     mesh.face_mut(f).halfedge = h;
                 }
@@ -573,7 +624,7 @@ impl Topology {
             }
         } else {
             let fnew = self.new_face(h)?;
-            for (mesh, h) in iterator::loop_ccw_iter_mut(self, h) {
+            for (mesh, h) in self.loop_ccw_iter_mut(h) {
                 mesh.halfedge_mut(h).face = Some(fnew);
             }
         };
@@ -670,7 +721,7 @@ where
     /// encountered, then mesh is unmodified and a `false` is
     /// returned. Otherwise a `true` is returned.
     /// ```rust
-    /// use alum::{alum_glam::PolyMeshF32, HasTopology, Handle};
+    /// use alum::{alum_glam::PolyMeshF32, HasTopology, Handle, HasTriangulation, HasIterators};
     ///
     /// let mut mesh = PolyMeshF32::new();
     /// let verts = [glam::vec3(0.0, 0.0, 0.0), glam::vec3(1.0, 0.0, 0.0),
@@ -696,7 +747,7 @@ where
     /// encountered, then mesh is unmodified and a `false` is
     /// returned. Otherwise a `true` is returned.
     /// ```rust
-    /// use alum::{alum_glam::PolyMeshF32, HasTopology, Handle};
+    /// use alum::{alum_glam::PolyMeshF32, HasTopology, Handle, HasTriangulation, HasIterators};
     /// let mut mesh = PolyMeshF32::new();
     /// let verts = [glam::vec3(0.0, 0.0, 0.0), glam::vec3(1.0, 0.0, 0.0),
     ///              glam::vec3(1.0, 1.0, 0.0), glam::vec3(0.0, 1.0, 0.0)];
@@ -759,8 +810,9 @@ where
 #[cfg(test)]
 mod test {
     use crate::{
+        edit::HasTriangulation,
         element::Handle,
-        iterator,
+        iterator::HasIterators,
         topol::{
             test::{loop_mesh, quad_box},
             HasTopology, TopolCache,
@@ -975,13 +1027,13 @@ mod test {
         assert_eq!(13, qbox.num_edges());
         assert_eq!(26, qbox.num_halfedges());
         assert_eq!(
-            iterator::fv_ccw_iter(&qbox, 5.into())
+            qbox.fv_ccw_iter(5.into())
                 .map(|v| v.index())
                 .collect::<Vec<_>>(),
             &[5, 6, 7]
         );
         assert_eq!(
-            iterator::fv_ccw_iter(&qbox, 6.into())
+            qbox.fv_ccw_iter(6.into())
                 .map(|v| v.index())
                 .collect::<Vec<_>>(),
             &[4, 5, 7]
@@ -1001,7 +1053,7 @@ mod test {
         assert_eq!(8, qbox.num_vertices());
         assert_eq!(
             qbox.faces()
-                .flat_map(|f| iterator::fv_ccw_iter(&qbox, f))
+                .flat_map(|f| qbox.fv_ccw_iter(f))
                 .map(|v| v.index())
                 .collect::<Vec<_>>(),
             &[
@@ -1121,7 +1173,7 @@ mod test {
         assert!(qbox.swap_edge_ccw(e), "Cannot swap edge");
         assert_eq!(
             qbox.faces()
-                .flat_map(|f| iterator::fv_ccw_iter(&qbox, f))
+                .flat_map(|f| qbox.fv_ccw_iter(f))
                 .map(|v| v.index())
                 .collect::<Vec<_>>(),
             &[
@@ -1143,7 +1195,7 @@ mod test {
         assert!(qbox.swap_edge_cw(e), "Cannot swap edge");
         assert_eq!(
             qbox.faces()
-                .flat_map(|f| iterator::fv_ccw_iter(&qbox, f))
+                .flat_map(|f| qbox.fv_ccw_iter(f))
                 .map(|v| v.index())
                 .collect::<Vec<_>>(),
             &[
@@ -1220,8 +1272,8 @@ mod test {
         mesh.check().expect("Topological errors found");
         assert!(oh.is_boundary(&mesh));
         assert!(!h.is_boundary(&mesh));
-        assert_eq!(3, iterator::loop_ccw_iter(&mesh, h).count());
-        assert_eq!(3, iterator::loop_ccw_iter(&mesh, oh).count());
+        assert_eq!(3, mesh.loop_ccw_iter(h).count());
+        assert_eq!(3, mesh.loop_ccw_iter(oh).count());
         assert_eq!(
             (1, 8),
             mesh.faces().fold((0usize, 0usize), |(tris, quads), f| {
@@ -1249,7 +1301,7 @@ mod test {
         mesh.check().expect("Topological errors found");
         assert!(!h.is_boundary(&mesh));
         assert!(!oh.is_boundary(&mesh));
-        assert_eq!(3, iterator::loop_ccw_iter(&mesh, h).count());
-        assert_eq!(3, iterator::loop_ccw_iter(&mesh, oh).count());
+        assert_eq!(3, mesh.loop_ccw_iter(h).count());
+        assert_eq!(3, mesh.loop_ccw_iter(oh).count());
     }
 }

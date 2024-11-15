@@ -1,6 +1,6 @@
 use crate::{
     element::Handle,
-    iterator,
+    iterator::HasIterators,
     topol::{HasTopology, Topology},
     Adaptor, Error, PolyMeshT, Status,
 };
@@ -26,8 +26,7 @@ fn check_vertices(
             }
             // The outgoing halfedge must be a boundary halfedge, or none of the
             // halfedges are boundary.
-            if !h.is_boundary(mesh) && iterator::voh_ccw_iter(mesh, v).any(|h| h.is_boundary(mesh))
-            {
+            if !h.is_boundary(mesh) && mesh.voh_ccw_iter(v).any(|h| h.is_boundary(mesh)) {
                 return Err(Error::OutgoingHalfedgeNotBoundary(v));
             }
             // Outgoing halfedge must point back to this vertex.
@@ -36,13 +35,13 @@ fn check_vertices(
             }
         }
         // Check ccw iterator.
-        for h in iterator::voh_ccw_iter(mesh, v) {
+        for h in mesh.voh_ccw_iter(v) {
             if std::mem::replace(&mut hvisited[h.index() as usize], true) {
                 return Err(Error::InvalidOutgoingHalfedges(v));
             }
         }
         // Check cw iterator.
-        for h in iterator::voh_cw_iter(mesh, v) {
+        for h in mesh.voh_cw_iter(v) {
             if !std::mem::replace(&mut hvisited[h.index() as usize], false) {
                 return Err(Error::InvalidOutgoingHalfedges(v));
             }
@@ -98,8 +97,7 @@ fn check_edges(
             return Err(Error::InvalidHalfedgeLink(h));
         }
         // Halfedge must be found in the circulators around head and tail.
-        if !iterator::voh_ccw_iter(mesh, tail).any(|hh| hh == h)
-            || !iterator::vih_ccw_iter(mesh, head).any(|hh| hh == h)
+        if !mesh.voh_ccw_iter(tail).any(|hh| hh == h) || !mesh.vih_ccw_iter(head).any(|hh| hh == h)
         {
             return Err(Error::InvalidHalfedgeVertexLink(h));
         }
@@ -113,7 +111,7 @@ fn check_edges(
             continue;
         }
         let f = h.face(mesh);
-        for h in iterator::loop_ccw_iter(mesh, h) {
+        for h in mesh.loop_ccw_iter(h) {
             if std::mem::replace(&mut hflags[h.index() as usize], true) {
                 return Err(Error::InvalidLoopTopology(h));
             }
@@ -130,7 +128,7 @@ fn check_edges(
             continue;
         }
         let f = h.face(mesh);
-        for h in iterator::loop_ccw_iter(mesh, h) {
+        for h in mesh.loop_ccw_iter(h) {
             if !std::mem::replace(&mut hflags[h.index() as usize], false) {
                 return Err(Error::InvalidLoopTopology(h));
             }

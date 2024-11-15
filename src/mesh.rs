@@ -1,6 +1,8 @@
 use crate::{
+    edit::HasTriangulation,
     element::{EH, FH, VH},
     error::Error,
+    iterator::HasIterators,
     property::{FProperty, VProperty},
     topol::{HasTopology, TopolCache, Topology},
 };
@@ -361,3 +363,7 @@ where
         &mut self.topol
     }
 }
+
+impl<const DIM: usize, A> HasIterators for PolyMeshT<DIM, A> where A: Adaptor<DIM> {}
+
+impl<const DIM: usize, A> HasTriangulation for PolyMeshT<DIM, A> where A: Adaptor<DIM> {}

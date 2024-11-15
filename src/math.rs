@@ -1,7 +1,8 @@
 use crate::{
+    edit::HasTriangulation,
     element::{Handle, EH, FH, HH, VH},
     error::Error,
-    iterator,
+    iterator::HasIterators,
     mesh::{
         Adaptor, CrossProductAdaptor, DotProductAdaptor, FloatScalarAdaptor, PolyMeshT,
         VectorAngleAdaptor, VectorLengthAdaptor, VectorNormalizeAdaptor,
@@ -98,17 +99,16 @@ where
     /// loop can be faster than [`Self::try_calc_vertex_normal_accurate`] by
     /// avoiding repeated borrows.
     pub fn calc_vertex_normal_accurate(&self, v: VH, points: &[A::Vector]) -> A::Vector {
-        let topol = &self.topol;
         A::normalized_vec(
-            match v.halfedge(topol) {
+            match v.halfedge(self) {
                 Some(h) => {
-                    let h2 = h.rotate_ccw(topol);
+                    let h2 = h.rotate_ccw(self);
                     if h2 == h {
                         // Isolated vertex.
                         return A::zero_vector();
                     }
                     // Iterate over adjacent pairs of outgoing halfedges.
-                    iterator::ccw_rotate_iter(topol, h).zip(iterator::ccw_rotate_iter(topol, h2))
+                    self.ccw_rotate_iter(h).zip(self.ccw_rotate_iter(h2))
                 }
                 None => return A::zero_vector(),
             }
@@ -632,7 +632,10 @@ where
 mod test {
     use core::f32;
 
-    use crate::{alum_glam::PolyMeshF32, error::Error, macros::assert_f32_eq, HasTopology};
+    use crate::{
+        alum_glam::PolyMeshF32, error::Error, iterator::HasIterators, macros::assert_f32_eq,
+        HasTopology,
+    };
 
     #[test]
     fn t_box_face_normals() {
