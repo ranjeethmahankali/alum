@@ -249,7 +249,7 @@ impl HH {
 
     /// Get the next halfedge in the loop.
     pub fn next(self, mesh: &impl HasTopology) -> HH {
-        mesh.topology().next_halfedge(self)
+        mesh.topology().halfedge(self).next
     }
 
     /// Get the face incident on the halfedge.

@@ -43,8 +43,8 @@ impl Topology {
         // Check if the faces are triangles and the vertices opposite the edge
         // on those triangles are actually the same vertex.
         let vl = if htriangle {
-            let h1 = self.next_halfedge(h);
-            let h2 = self.next_halfedge(h1);
+            let h1 = h.next(self);
+            let h2 = h1.next(self);
             if self.is_boundary_halfedge(h1.opposite()) && self.is_boundary_halfedge(h2.opposite())
             {
                 return false;
@@ -54,8 +54,8 @@ impl Topology {
             None
         };
         let vr = if ohtriangle {
-            let h1 = self.next_halfedge(oh);
-            let h2 = self.next_halfedge(h1);
+            let h1 = oh.next(self);
+            let h2 = h1.next(self);
             if self.is_boundary_halfedge(h1.opposite()) && self.is_boundary_halfedge(h2.opposite())
             {
                 return false;
@@ -80,8 +80,8 @@ impl Topology {
         // Check the 'Link condition' Edelsbrunner [2006]. The intersection of
         // the one rings of from and to vertices must be the left and right
         // vertices, and only if the corresponding faces are triangles.
-        let vl = self.next_halfedge(h).head(self);
-        let vr = self.next_halfedge(oh).head(self);
+        let vl = h.next(self).head(self);
+        let vr = oh.next(self).head(self);
         for v in iterator::vv_ccw_iter(self, v0) {
             vertex_status[v.index() as usize].set_tagged(false);
         }
@@ -98,7 +98,7 @@ impl Topology {
         }
         // Check for folded faces that might degenerate.
         if htriangle {
-            let h1 = self.next_halfedge(h).opposite();
+            let h1 = h.next(self).opposite();
             let h2 = h.prev(self).opposite();
             match (self.halfedge_face(h1), self.halfedge_face(h2)) {
                 (None, None) => return false, // This is redundant but just in case.
@@ -107,7 +107,7 @@ impl Topology {
             }
         }
         if ohtriangle {
-            let h1 = self.next_halfedge(oh).opposite();
+            let h1 = oh.next(self).opposite();
             let h2 = oh.prev(self).opposite();
             match (self.halfedge_face(h1), self.halfedge_face(h2)) {
                 (None, None) => return false, // This is redundant but just in case.
@@ -150,7 +150,7 @@ impl Topology {
         estatus: &mut [Status],
         fstatus: &mut [Status],
     ) {
-        let h1 = self.next_halfedge(h);
+        let h1 = h.next(self);
         let o = h.opposite();
         let o1 = h1.opposite();
         let v0 = h.head(self);
@@ -160,10 +160,10 @@ impl Topology {
         // Ensure the loop represents a collapsed triangle. Because this is a
         // private function, all callers inside the implementation, so we can be
         // confident and assert to catch and weed out any bugs in debug builds.
-        debug_assert_eq!(self.next_halfedge(h1), h);
+        debug_assert_eq!(h1.next(self), h);
         debug_assert_ne!(h1, o);
         // Rewire halfedge -> halfedge.
-        self.link_halfedges(h1, self.next_halfedge(o));
+        self.link_halfedges(h1, o.next(self));
         self.link_halfedges(o.prev(self), h1);
         // Rewire halfedge -> face.
         self.halfedge_mut(h1).face = fo;
@@ -205,10 +205,10 @@ impl Topology {
         cache: &mut TopolCache,
     ) {
         // Collect neighboring topology.
-        let hn = self.next_halfedge(h);
+        let hn = h.next(self);
         let hp = h.prev(self);
         let o = h.opposite();
-        let on = self.next_halfedge(o);
+        let on = o.next(self);
         let op = o.prev(self);
         let fh = self.halfedge_face(h);
         let fo = self.halfedge_face(o);
@@ -246,10 +246,10 @@ impl Topology {
         // If the loops that used to contain the halfedges that were collapsed
         // and deleted had a valance of 3, they are now degenerate. So we need
         // to collapse those loops.
-        if self.next_halfedge(hn) == hp {
+        if hn.next(self) == hp {
             self.collapse_degenerate_triangle(hn, hstatus, estatus, fstatus);
         }
-        if self.next_halfedge(on) == op {
+        if on.next(self) == op {
             self.collapse_degenerate_triangle(on, hstatus, estatus, fstatus);
         }
     }
@@ -281,7 +281,7 @@ impl Topology {
     pub fn triangulated_face_vertices(&self, f: FH) -> impl Iterator<Item = [VH; 3]> + use<'_> {
         let hstart = self.face_halfedge(f);
         let vstart = hstart.tail(self);
-        iterator::loop_ccw_iter(self, self.next_halfedge(hstart))
+        iterator::loop_ccw_iter(self, hstart.next(self))
             .take_while(move |h| h.head(self) != vstart)
             .map(move |h| [vstart, h.tail(self), h.head(self)])
     }
@@ -290,9 +290,9 @@ impl Topology {
         let mut base = self.face_halfedge(f);
         let vstart = base.tail(self);
         let prev = base.prev(self);
-        let mut next = self.next_halfedge(base);
-        while self.next_halfedge(next).head(self) != vstart {
-            let next2 = self.next_halfedge(next);
+        let mut next = base.next(self);
+        while next.next(self).head(self) != vstart {
+            let next2 = next.next(self);
             let fnew = self.new_face(base)?;
             let enew = self.new_edge(vstart, next.head(self), prev, next2, next, base)?;
             let hnew = self.edge_halfedge(enew, false);
@@ -316,7 +316,7 @@ impl Topology {
         // Last face takes the original face handle.
         self.face_mut(f).halfedge = base;
         self.link_halfedges(base, next);
-        self.link_halfedges(self.next_halfedge(next), base);
+        self.link_halfedges(next.next(self), base);
         self.halfedge_mut(base).face = Some(f);
         Ok(())
     }
@@ -331,7 +331,7 @@ impl Topology {
     pub fn split_edge(&mut self, e: EH, v: VH, copy_props: bool) -> Result<EH, Error> {
         let (h0, h1) = self.halfedge_pair(e);
         let vfrom = h0.tail(self);
-        let (ph0, nh1) = (h0.prev(self), self.next_halfedge(h1));
+        let (ph0, nh1) = (h0.prev(self), h1.next(self));
         let (f0, f1) = (self.halfedge_face(h0), self.halfedge_face(h1));
         // Create a new edge and rewire topology.
         let enew = self.new_edge(vfrom, v, ph0, h0, h1, nh1)?;
@@ -368,8 +368,8 @@ impl Topology {
             (Some(f), Some(of)) => (f, of),
             _ => return false, // Cannot swap boundary edge.
         };
-        let hn = self.next_halfedge(h);
-        let on = self.next_halfedge(oh);
+        let hn = h.next(self);
+        let on = oh.next(self);
         let v0 = h.tail(self);
         let v1 = h.head(self);
         // Check for degeneracy.
@@ -378,8 +378,8 @@ impl Topology {
         }
         let hp = h.prev(self);
         let op = oh.prev(self);
-        let hnn = self.next_halfedge(hn);
-        let onn = self.next_halfedge(on);
+        let hnn = hn.next(self);
+        let onn = on.next(self);
         let hnv = hn.head(self);
         let onv = on.head(self);
         // Rewire vertex -> halfedge.
@@ -419,8 +419,8 @@ impl Topology {
             (Some(f), Some(of)) => (f, of),
             _ => return false, // Cannot swap boundary edge.
         };
-        let hn = self.next_halfedge(h);
-        let on = self.next_halfedge(oh);
+        let hn = h.next(self);
+        let on = oh.next(self);
         let v0 = h.tail(self);
         let v1 = h.head(self);
         // Check for degeneracy.
@@ -504,7 +504,7 @@ impl Topology {
             _ => return Err(Error::CannotRemoveBoundaryEdge(e)),
         };
         let (p0, p1) = (h0.prev(self), h1.prev(self));
-        let (n0, n1) = (self.next_halfedge(h0), self.next_halfedge(h1));
+        let (n0, n1) = (h0.next(self), h1.next(self));
         let (v0, v1) = (h0.head(self), h1.head(self));
         // Rewire vertex -> halfedge.
         if v0.halfedge(self) == Some(h1) {
@@ -541,7 +541,7 @@ impl Topology {
         //   |                      ||                       |
         //   v                prev  |v     p1                |
         //    ---------> ---------->v0----------> ---------->
-        let (p1, n0) = (self.next_halfedge(prev), next.prev(self));
+        let (p1, n0) = (prev.next(self), next.prev(self));
         if p1 == next || prev == next {
             return Err(Error::CannotInsertEdge(prev, next));
         }
@@ -1040,7 +1040,7 @@ mod test {
         assert_eq!(hnew.head(&qbox), h.tail(&qbox));
         assert_eq!(hnew.head(&qbox), v);
         assert_eq!(
-            qbox.next_halfedge(ohnew),
+            ohnew.next(&qbox),
             qbox.find_halfedge(5.into(), 6.into())
                 .expect("Cannot find halfedge")
         );
@@ -1050,7 +1050,7 @@ mod test {
                 .expect("Cannot find halfedge")
         );
         assert_eq!(h.prev(&qbox), hnew);
-        assert_eq!(qbox.next_halfedge(oh), ohnew);
+        assert_eq!(oh.next(&qbox), ohnew);
         assert_eq!(qbox.halfedge_face(h), qbox.halfedge_face(hnew));
         assert_eq!(qbox.halfedge_face(oh), qbox.halfedge_face(ohnew));
         qbox.check().expect("Topological errors found");
@@ -1097,7 +1097,7 @@ mod test {
         assert_eq!(hnew.head(&qbox), h.tail(&qbox));
         assert_eq!(hnew.head(&qbox), v);
         assert_eq!(h.prev(&qbox), hnew);
-        assert_eq!(qbox.next_halfedge(oh), ohnew);
+        assert_eq!(oh.next(&qbox), ohnew);
         assert_eq!(qbox.halfedge_face(h), qbox.halfedge_face(hnew));
         assert_eq!(qbox.halfedge_face(oh), qbox.halfedge_face(ohnew));
         // Check properties.

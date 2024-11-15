@@ -93,7 +93,7 @@ impl<'a> Iterator for LoopHalfedgeIter<'a, true> {
     fn next(&mut self) -> Option<Self::Item> {
         match self.hcurrent {
             Some(current) => {
-                let next = self.topol.next_halfedge(current);
+                let next = current.next(self.topol);
                 self.hcurrent = if next == self.hstart {
                     None
                 } else {
@@ -183,7 +183,7 @@ impl<'a, T> Iterator for LoopHalfedgeIterMut<'a, true, T> {
     fn next(&mut self) -> Option<Self::Item> {
         match self.hcurrent {
             Some(current) => {
-                let next = self.topol.next_halfedge(current);
+                let next = current.next(self.topol);
                 self.hcurrent = if next == self.hstart {
                     None
                 } else {
