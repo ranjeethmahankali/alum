@@ -514,8 +514,8 @@ mod test {
     fn t_deleted_elements() {
         let mut qbox = quad_box();
         let (fis, vis) = {
-            let mut vis = qbox.new_vprop(0u32);
-            let mut fis = qbox.new_fprop(0u32);
+            let mut vis = qbox.create_vertex_prop(0u32);
+            let mut fis = qbox.create_face_prop(0u32);
             {
                 let mut vis = vis.try_borrow_mut().expect("Cannot borrow property");
                 for (i, v) in vis.iter_mut().enumerate() {

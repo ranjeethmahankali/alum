@@ -142,6 +142,9 @@ impl Topology {
         Ok(self.check_edge_collapse(h, &estatus, &mut vstatus))
     }
 
+    /// Sometimes after collapsing an edge, if the neighboring faces are
+    /// triangles, we end up with degenerate loops / faces. This cleans up such
+    /// loops.
     fn collapse_degenerate_triangle(
         &mut self,
         h: HH,
@@ -1073,9 +1076,9 @@ mod test {
                 .expect("Cannot find halfedge"),
         );
         // Set properties.
-        let mut eprop = qbox.new_eprop::<usize>(0);
+        let mut eprop = qbox.create_edge_prop::<usize>(0);
         eprop.set(e, 123).expect("Cannot set property");
-        let mut hprop = qbox.new_hprop::<usize>(0);
+        let mut hprop = qbox.create_halfedge_prop::<usize>(0);
         hprop
             .set(qbox.edge_halfedge(e, true), 234)
             .expect("Cannot set property");

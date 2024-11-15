@@ -1,10 +1,9 @@
-use std::ops::{Add, Div, Mul, Neg};
-
 use crate::{
     element::{Handle, VH},
     error::Error,
     mesh::{Adaptor, FloatScalarAdaptor, PolyMeshT},
 };
+use std::ops::{Add, Div, Mul, Neg};
 
 impl<A> PolyMeshT<3, A>
 where
@@ -101,7 +100,7 @@ where
         let fstatus = self.topol.fstatus.try_borrow()?;
         for f in self.faces() {
             if fstatus[f.index() as usize].deleted() {
-                return Err(Error::GarbageCollectionRequired);
+                return Err(Error::DeletedFace(f));
             }
             outmesh.add_vertex(self.calc_face_centroid(f, &points))?;
         }

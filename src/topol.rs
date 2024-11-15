@@ -170,28 +170,28 @@ impl Topology {
         self.fstatus.get_mut(f)
     }
 
-    pub fn new_vprop<T>(&mut self, default: T) -> VProperty<T>
+    pub fn create_vertex_prop<T>(&mut self, default: T) -> VProperty<T>
     where
         T: Clone + Copy + 'static,
     {
         VProperty::<T>::new(&mut self.vprops, default)
     }
 
-    pub fn new_hprop<T>(&mut self, default: T) -> HProperty<T>
+    pub fn create_halfedge_prop<T>(&mut self, default: T) -> HProperty<T>
     where
         T: Clone + Copy + 'static,
     {
         HProperty::<T>::new(&mut self.hprops, default)
     }
 
-    pub fn new_eprop<T>(&mut self, default: T) -> EProperty<T>
+    pub fn create_edge_prop<T>(&mut self, default: T) -> EProperty<T>
     where
         T: Clone + Copy + 'static,
     {
         EProperty::<T>::new(&mut self.eprops, default)
     }
 
-    pub fn new_fprop<T>(&mut self, default: T) -> FProperty<T>
+    pub fn create_face_prop<T>(&mut self, default: T) -> FProperty<T>
     where
         T: Clone + Copy + 'static,
     {
@@ -229,7 +229,7 @@ impl Topology {
         &mut self.vertices[v.index() as usize]
     }
 
-    fn halfedge(&self, h: HH) -> &Halfedge {
+    pub(crate) fn halfedge(&self, h: HH) -> &Halfedge {
         &self.edges[(h.index() >> 1) as usize].halfedges[(h.index() & 1) as usize]
     }
 
@@ -909,102 +909,6 @@ impl Topology {
         self.hprops.garbage_collection();
         self.eprops.garbage_collection();
         self.fprops.garbage_collection();
-        Ok(())
-    }
-
-    pub fn check(&self) -> Result<(), Error> {
-        let mut visited = vec![false; self.num_halfedges()].into_boxed_slice();
-        let vstatus = self.vstatus.try_borrow()?;
-        let vstatus: &[Status] = &vstatus;
-        let hstatus = self.hstatus.try_borrow()?;
-        let hstatus: &[Status] = &hstatus;
-        let fstatus = self.fstatus.try_borrow()?;
-        let fstatus: &[Status] = &fstatus;
-        let estatus = self.estatus.try_borrow()?;
-        let estatus: &[Status] = &estatus;
-        // Ensure no cycles in outgoing halfedges around a vertex.
-        for v in self
-            .vertices()
-            .filter(|v| !vstatus[v.index() as usize].deleted())
-        {
-            for h in iterator::voh_ccw_iter(self, v) {
-                let hi = h.index() as usize;
-                if hstatus[hi].deleted() {
-                    return Err(Error::DeletedHalfedge(h));
-                }
-                if visited[hi] || self.tail_vertex(h) != v {
-                    return Err(Error::InvalidOutgoingHalfedges(v));
-                }
-                visited[hi] = true;
-            }
-        }
-        // Unvisit all halfedges for the next chec.
-        visited.fill(false);
-        // Ensure valid loops.
-        for h in self
-            .halfedges()
-            .filter(|h| !hstatus[h.index() as usize].deleted())
-        {
-            let i1 = h.index() as usize;
-            if visited[i1] {
-                continue;
-            }
-            let hedge = self.halfedge(h);
-            // Check face.
-            if let Some(f) = hedge.face {
-                if fstatus[f.index() as usize].deleted() {
-                    return Err(Error::DeletedFace(f));
-                }
-            }
-            if hstatus[hedge.prev.index() as usize].deleted() {
-                return Err(Error::DeletedHalfedge(hedge.prev));
-            }
-            if hstatus[hedge.next.index() as usize].deleted() {
-                return Err(Error::DeletedHalfedge(hedge.next));
-            }
-            if vstatus[hedge.vertex.index() as usize].deleted() {
-                return Err(Error::DeletedVertex(hedge.vertex));
-            }
-            let e = self.halfedge_edge(h);
-            if estatus[e.index() as usize].deleted() {
-                return Err(Error::DeletedEdge(e));
-            }
-            // Check connectivity with other halfedges.
-            if self.head_vertex(hedge.prev) != self.tail_vertex(h)
-                || self.tail_vertex(h) != self.head_vertex(hedge.prev)
-                || self.next_halfedge(hedge.prev) != h
-                || self.prev_halfedge(hedge.next) != h
-            {
-                return Err(Error::InvalidHalfedgeLink(hedge.prev, h));
-            }
-            // Check for errors in loop.
-            for h2 in iterator::loop_ccw_iter(self, h).filter(|h2| *h2 != h) {
-                let i2 = h2.index() as usize;
-                if hstatus[i2].deleted() {
-                    return Err(Error::DeletedHalfedge(h2));
-                }
-                if self.halfedge_face(h2) != hedge.face {
-                    return Err(Error::InconsistentFaceInLoop(h));
-                }
-                // Check for an weird cycle.
-                if std::mem::replace(&mut visited[i2], true) {
-                    return Err(Error::InvalidLoopTopology(h));
-                }
-            }
-        }
-        // Check faces.
-        for f in self
-            .faces()
-            .filter(|f| !fstatus[f.index() as usize].deleted())
-        {
-            let h = self.face_halfedge(f);
-            if hstatus[h.index() as usize].deleted() {
-                return Err(Error::DeletedHalfedge(h));
-            }
-            if self.halfedge_face(h) != Some(f) {
-                return Err(Error::InvalidFaceHalfedgeLink(f, h));
-            }
-        }
         Ok(())
     }
 }

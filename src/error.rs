@@ -40,19 +40,28 @@ pub enum Error {
     /// Two arrays whose lengths are expected to be the same, have different
     /// lengths.
     MismatchedArrayLengths(usize, usize),
-    /// The mesh has deleted elements, which create problems for further
-    /// operations. Garbage collection needs to be performed before proceeding.
-    GarbageCollectionRequired,
+
+    // Topological checks.
+    /// The outgoing halfedge of a boundary vertex must be a boundary halfedge.
+    OutgoingHalfedgeNotBoundary(VH),
+    /// Invalid halfedge.
+    InvalidHalfedge(HH),
     /// Broken topology found among the outgoing halfedges around a vertex.
     InvalidOutgoingHalfedges(VH),
+    /// Halfedge has the same tail and head vertex.
+    DegenerateHalfedge(HH),
+
     /// Cycle found when iterating over halfedges in a face loop.
     InvalidLoopTopology(HH),
     /// Halfedges in a loop are not linked to the same face / boundary.
     InconsistentFaceInLoop(HH),
     /// The next-previous link between a halfedge pair doesn't commute.
-    InvalidHalfedgeLink(HH, HH),
+    InvalidHalfedgeLink(HH),
+    /// The link between halfedge and vertex is inconsistent.
+    InvalidHalfedgeVertexLink(HH),
     /// Invalid face-halfedge link.
     InvalidFaceHalfedgeLink(FH, HH),
+
     /// Edge is not a unique link between its incident faces. Removing it will
     /// produce dangling / invalid topology.
     EdgeIsNotAUniqueLink(EH),
@@ -63,4 +72,7 @@ pub enum Error {
     HalfedgesNotInTheSameLoop(HH, HH),
     /// Cannot insert an edge spanning the two halfedges.
     CannotInsertEdge(HH, HH),
+
+    /// Something went wrong when trying to split a face.
+    CannotSplitFace(FH),
 }
