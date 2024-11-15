@@ -278,11 +278,11 @@ pub(crate) fn fv_cw_iter(topol: &Topology, f: FH) -> impl Iterator<Item = VH> + 
 }
 
 pub(crate) fn fh_ccw_iter(topol: &Topology, f: FH) -> impl Iterator<Item = HH> + use<'_> {
-    LoopHalfedgeIter::<true>::new(topol, topol.face_halfedge(f))
+    LoopHalfedgeIter::<true>::new(topol, f.halfedge(topol))
 }
 
 pub(crate) fn fh_cw_iter(topol: &Topology, f: FH) -> impl Iterator<Item = HH> + use<'_> {
-    LoopHalfedgeIter::<false>::new(topol, topol.face_halfedge(f))
+    LoopHalfedgeIter::<false>::new(topol, f.halfedge(topol))
 }
 
 pub(crate) fn fe_ccw_iter(topol: &Topology, f: FH) -> impl Iterator<Item = EH> + use<'_> {
@@ -336,7 +336,7 @@ pub(crate) fn fh_ccw_iter_mut(
     topol: &mut Topology,
     f: FH,
 ) -> impl Iterator<Item = (&mut Topology, HH)> + use<'_> {
-    let h = topol.face_halfedge(f);
+    let h = f.halfedge(topol);
     LoopHalfedgeIterMut::<true, Topology> {
         reference: topol.into(),
         topol,
@@ -755,7 +755,7 @@ where
         &mut self,
         f: FH,
     ) -> impl Iterator<Item = (&mut Self, HH)> + use<'_, A, DIM> {
-        let h = self.face_halfedge(f);
+        let h = f.halfedge(self);
         LoopHalfedgeIterMut::<true, Self> {
             reference: self.into(),
             topol: &mut self.topol,
@@ -774,7 +774,7 @@ where
         &mut self,
         f: FH,
     ) -> impl Iterator<Item = (&mut Self, HH)> + use<'_, A, DIM> {
-        let h = self.face_halfedge(f);
+        let h = f.halfedge(self);
         LoopHalfedgeIterMut::<false, Self> {
             reference: self.into(),
             topol: &mut self.topol,

@@ -144,7 +144,7 @@ fn check_faces(mesh: &Topology, hstatus: &[Status], fstatus: &[Status]) -> Resul
         .faces()
         .filter(|f| !fstatus[f.index() as usize].deleted())
     {
-        let h = mesh.face_halfedge(f);
+        let h = f.halfedge(mesh);
         if hstatus[h.index() as usize].deleted() {
             return Err(Error::DeletedHalfedge(h));
         }

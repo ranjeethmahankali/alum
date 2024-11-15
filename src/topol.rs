@@ -225,8 +225,8 @@ impl Topology {
         &mut self.faces[f.index() as usize]
     }
 
-    pub fn face_halfedge(&self, f: FH) -> HH {
-        self.faces[f.index() as usize].halfedge
+    pub(crate) fn face(&self, f: FH) -> &Face {
+        &self.faces[f.index() as usize]
     }
 
     pub fn is_boundary_halfedge(&self, h: HH) -> bool {

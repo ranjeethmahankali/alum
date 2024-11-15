@@ -403,11 +403,6 @@ where
             .clone()
     }
 
-    /// Get the halfedge corresponding to the face.
-    pub fn face_halfedge(&self, f: FH) -> HH {
-        self.topol.face_halfedge(f)
-    }
-
     /// Get the clockwise rotated halfedge around the vertex at the base of the
     /// given halfedge.
     pub fn cw_rotated_halfedge(&self, h: HH) -> HH {

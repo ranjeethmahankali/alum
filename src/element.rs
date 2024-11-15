@@ -308,8 +308,9 @@ impl EH {
 }
 
 impl FH {
+    /// Get the halfedge corresponding to the face.
     pub fn halfedge(self, mesh: &impl HasTopology) -> HH {
-        mesh.topology().face_halfedge(self)
+        mesh.topology().face(self).halfedge
     }
 
     /// Check if this face is valid for the `mesh`.

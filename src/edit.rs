@@ -174,7 +174,7 @@ impl Topology {
         self.adjust_outgoing_halfedge(v1);
         // Rewire face -> halfedge.
         if let Some(fo) = fo {
-            if self.face_halfedge(fo) == o {
+            if fo.halfedge(self) == o {
                 self.face_mut(fo).halfedge = h1;
             }
         }
@@ -279,7 +279,7 @@ impl Topology {
 
     /// Get an iterator over triplets of vertices, that represent the triangulation of a face.
     pub fn triangulated_face_vertices(&self, f: FH) -> impl Iterator<Item = [VH; 3]> + use<'_> {
-        let hstart = self.face_halfedge(f);
+        let hstart = f.halfedge(self);
         let vstart = hstart.tail(self);
         iterator::loop_ccw_iter(self, hstart.next(self))
             .take_while(move |h| h.head(self) != vstart)
@@ -287,7 +287,7 @@ impl Topology {
     }
 
     pub fn triangulate_face(&mut self, f: FH) -> Result<(), Error> {
-        let mut base = self.face_halfedge(f);
+        let mut base = f.halfedge(self);
         let vstart = base.tail(self);
         let prev = base.prev(self);
         let mut next = base.next(self);
@@ -403,10 +403,10 @@ impl Topology {
         self.halfedge_mut(hn).face = Some(of);
         self.halfedge_mut(on).face = Some(f);
         // Rewire face -> halfedge.
-        if self.face_halfedge(f) == hn {
+        if f.halfedge(self) == hn {
             self.face_mut(f).halfedge = h;
         }
-        if self.face_halfedge(of) == on {
+        if of.halfedge(self) == on {
             self.face_mut(of).halfedge = oh;
         }
         true
@@ -454,10 +454,10 @@ impl Topology {
         self.halfedge_mut(op).face = Some(f);
         self.halfedge_mut(hp).face = Some(of);
         // Rewire face -> halfedge.
-        if self.face_halfedge(f) == hp {
+        if f.halfedge(self) == hp {
             self.face_mut(f).halfedge = h;
         }
-        if self.face_halfedge(of) == op {
+        if of.halfedge(self) == op {
             self.face_mut(of).halfedge = oh;
         }
         true
@@ -517,7 +517,7 @@ impl Topology {
         self.link_halfedges(p0, n1);
         self.link_halfedges(p1, n0);
         // Rewire face -> halfedge. Keep f0 and delete f1.
-        if self.face_halfedge(f0) == h0 {
+        if f0.halfedge(self) == h0 {
             self.face_mut(f0).halfedge = p0;
         }
         // Rewire halfedge -> face for the loop of f1.
@@ -573,7 +573,7 @@ impl Topology {
         // Rewire face -> halfedge and halfedge -> face.
         if let Some(f) = f {
             let fnew = self.new_face(oh)?;
-            let hf = self.face_halfedge(f);
+            let hf = f.halfedge(self);
             self.halfedge_mut(h).face = Some(f);
             for (mesh, h) in iterator::loop_ccw_iter_mut(self, oh) {
                 if hf == h {
