@@ -249,10 +249,6 @@ impl Topology {
         self.halfedge(h).face
     }
 
-    pub fn halfedge_edge(&self, h: HH) -> EH {
-        (h.index() >> 1).into()
-    }
-
     pub fn halfedge_pair(&self, e: EH) -> (HH, HH) {
         e.halfedges()
     }
@@ -702,7 +698,7 @@ impl Topology {
         for (mesh, h) in iterator::fh_ccw_iter_mut(self, f) {
             mesh.halfedge_mut(h).face = None; // Disconnect from face.
             if mesh.is_boundary_halfedge(mesh.opposite_halfedge(h)) {
-                ecache.push(mesh.halfedge_edge(h));
+                ecache.push(h.edge());
             }
             vcache.push(mesh.head_vertex(h));
         }
@@ -1307,10 +1303,9 @@ pub(crate) mod test {
         let mut qbox = quad_box();
         let mut cache = TopolCache::default();
         qbox.delete_edge(
-            qbox.halfedge_edge(
-                qbox.find_halfedge(5.into(), 6.into())
-                    .expect("Cannot find halfedge"),
-            ),
+            qbox.find_halfedge(5.into(), 6.into())
+                .expect("Cannot find halfedge")
+                .edge(),
             true,
             &mut cache.edges,
             &mut cache.vertices,
@@ -1437,7 +1432,7 @@ pub(crate) mod test {
             // loop to `mesh`, the borrow checker should complain and the code
             // should not compile.
             for (m, h) in mesh.voh_ccw_iter_mut(v) {
-                if let Some(f) = m.halfedge_face(h) {
+                if let Some(f) = h.face(m) {
                     if (f.index() + h.index()) % 2 != 0 {
                         m.delete_face(f, true).expect("Cannot delete face");
                     }

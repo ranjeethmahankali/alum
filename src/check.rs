@@ -79,7 +79,7 @@ fn check_edges(
                 return Err(Error::DeletedFace(f));
             }
         }
-        let e = mesh.halfedge_edge(h);
+        let e = h.edge();
         if estatus[e.index() as usize].deleted() {
             return Err(Error::DeletedEdge(e));
         }

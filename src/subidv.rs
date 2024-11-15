@@ -78,17 +78,16 @@ where
         edge_points.clear();
         edge_points.extend(mesh.edges().map(|e| {
             let (h, oh) = mesh.halfedge_pair(e);
-            match (mesh.halfedge_face(h), mesh.halfedge_face(oh)) {
+            match (h.face(mesh), oh.face(mesh)) {
                 (Some(fa), Some(fb)) if update_points => {
-                    (points[mesh.head_vertex(h).index() as usize]
-                        + points[mesh.head_vertex(oh).index() as usize]
+                    (points[h.head(mesh).index() as usize]
+                        + points[oh.head(mesh).index() as usize]
                         + face_points[fa.index() as usize]
                         + face_points[fb.index() as usize])
                         * A::scalarf64(0.25)
                 }
                 _ => {
-                    (points[mesh.head_vertex(h).index() as usize]
-                        + points[mesh.head_vertex(oh).index() as usize])
+                    (points[h.head(mesh).index() as usize] + points[oh.head(mesh).index() as usize])
                         * A::scalarf64(0.5)
                 }
             }
@@ -154,7 +153,7 @@ where
         // loop of halfedges starting from there.
         let hstart = mesh
             .fh_ccw_iter(f)
-            .find(|&h| mesh.head_vertex(h).index() < num_old_verts)
+            .find(|&h| h.head(mesh).index() < num_old_verts)
             .ok_or(Error::CannotSplitFace(f))?;
         hloop.clear();
         hloop.extend(iterator::loop_ccw_iter(&mesh.topol, hstart));
@@ -175,9 +174,9 @@ where
             let pei = (ne + ((lei + valence - 1) % valence)) as u32;
             let nei = (ne + ((lei + 1) % valence)) as u32;
             let enew = mesh.topol.new_edge(
-                mesh.tail_vertex(h1),
+                h1.tail(mesh),
                 fv,
-                mesh.prev_halfedge(h1),
+                h1.prev(mesh),
                 (2 * pei + 1).into(),
                 (2 * nei).into(),
                 h1,
@@ -193,7 +192,7 @@ where
         }
         for (i, hpair) in fhs.chunks_exact(2).enumerate() {
             let rh = spliths[i];
-            let orh = mesh.opposite_halfedge(rh);
+            let orh = rh.opposite(mesh);
             let flocal = subfaces[i];
             let pflocal = subfaces[(i + valence - 1) % valence];
             let h1 = hpair[0];
@@ -205,11 +204,11 @@ where
             mesh.topol.halfedge_mut(h1).face = Some(flocal);
             mesh.topol.halfedge_mut(h2).face = Some(flocal);
             // Link halfedges.
-            mesh.topol.link_halfedges(mesh.prev_halfedge(rh), rh);
+            mesh.topol.link_halfedges(rh.prev(mesh), rh);
             mesh.topol.link_halfedges(orh, h1);
             mesh.topol.link_halfedges(h1, h2);
         }
-        mesh.topol.vertex_mut(fv).halfedge = Some(mesh.opposite_halfedge(spliths[0]));
+        mesh.topol.vertex_mut(fv).halfedge = Some(spliths[0].opposite(mesh));
         Ok(())
     }
 }

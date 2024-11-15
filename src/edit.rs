@@ -21,7 +21,7 @@ impl Topology {
         vertex_status: &mut [Status],
     ) -> bool {
         // Check if already deleted.
-        if edge_status[self.halfedge_edge(h).index() as usize].deleted() {
+        if edge_status[h.edge().index() as usize].deleted() {
             return false;
         }
         let oh = self.opposite_halfedge(h);
@@ -184,7 +184,7 @@ impl Topology {
         if let Some(fh) = fh {
             fstatus[fh.index() as usize].set_deleted(true);
         }
-        estatus[self.halfedge_edge(h).index() as usize].set_deleted(true);
+        estatus[h.edge().index() as usize].set_deleted(true);
         hstatus[h.index() as usize].set_deleted(true);
         hstatus[o.index() as usize].set_deleted(true);
     }
@@ -241,7 +241,7 @@ impl Topology {
         self.adjust_outgoing_halfedge(vh);
         self.vertex_mut(vo).halfedge = None;
         // Delete stuff
-        estatus[self.halfedge_edge(h).index() as usize].set_deleted(true);
+        estatus[h.edge().index() as usize].set_deleted(true);
         vstatus[vo.index() as usize].set_deleted(true);
         hstatus[h.index() as usize].set_deleted(true);
         hstatus[o.index() as usize].set_deleted(true);
@@ -702,8 +702,8 @@ where
     /// mesh.add_tri_face(0.into(), 2.into(), 3.into()).expect("Cannot add face");
     /// assert_eq!(mesh.triangulated_vertices().flatten().map(|v| v.index())
     ///                .collect::<Vec<u32>>(), [2, 0, 1, 3, 0, 2]);
-    /// let e = mesh.halfedge_edge(mesh.find_halfedge(0.into(), 2.into())
-    ///                                .expect("Cannot find halfedge"));
+    /// let e = mesh.find_halfedge(0.into(), 2.into())
+    ///             .expect("Cannot find halfedge").edge();
     /// mesh.swap_edge_ccw(e);
     /// assert_eq!(mesh.triangulated_vertices().flatten().map(|v| v.index())
     ///                .collect::<Vec<u32>>(), [3, 1, 2, 3, 0, 1]);
@@ -728,8 +728,8 @@ where
     /// mesh.add_tri_face(0.into(), 2.into(), 3.into()).expect("Cannot add face");
     /// assert_eq!(mesh.triangulated_vertices().flatten().map(|v| v.index())
     ///                .collect::<Vec<u32>>(), [2, 0, 1, 3, 0, 2]);
-    /// let e = mesh.halfedge_edge(mesh.find_halfedge(0.into(), 2.into())
-    ///                                .expect("Cannot find halfedge"));
+    /// let e = mesh.find_halfedge(0.into(), 2.into())
+    ///             .expect("Cannot find halfedge").edge();
     /// mesh.swap_edge_cw(e);
     /// assert_eq!(mesh.triangulated_vertices().flatten().map(|v| v.index())
     ///                .collect::<Vec<u32>>(), [1, 3, 0, 3, 1, 2]);
@@ -1037,10 +1037,10 @@ mod test {
     #[test]
     fn t_box_split_edge() {
         let mut qbox = quad_box();
-        let e = qbox.halfedge_edge(
-            qbox.find_halfedge(4.into(), 5.into())
-                .expect("Cannot find halfedge"),
-        );
+        let e = qbox
+            .find_halfedge(4.into(), 5.into())
+            .expect("Cannot find halfedge")
+            .edge();
         let h = qbox.edge_halfedge(e, false);
         let oh = qbox.edge_halfedge(e, true);
         let v = qbox.add_vertex().expect("Cannotr add vertex");
@@ -1071,10 +1071,10 @@ mod test {
     #[test]
     fn t_box_split_edge_copy_props() {
         let mut qbox = quad_box();
-        let e = qbox.halfedge_edge(
-            qbox.find_halfedge(5.into(), 6.into())
-                .expect("Cannot find halfedge"),
-        );
+        let e = qbox
+            .find_halfedge(5.into(), 6.into())
+            .expect("Cannot find halfedge")
+            .edge();
         // Set properties.
         let mut eprop = qbox.create_edge_prop::<usize>(0);
         eprop.set(e, 123).expect("Cannot set property");
@@ -1140,7 +1140,7 @@ mod test {
         let h = qbox
             .find_halfedge(5.into(), 7.into())
             .expect("Cannot find halfedge");
-        let e = qbox.halfedge_edge(h);
+        let e = h.edge();
         assert!(qbox.swap_edge_ccw(e), "Cannot swap edge");
         assert_eq!(
             qbox.faces()
@@ -1162,7 +1162,7 @@ mod test {
         let h = qbox
             .find_halfedge(5.into(), 7.into())
             .expect("Cannot find halfedge");
-        let e = qbox.halfedge_edge(h);
+        let e = h.edge();
         assert!(qbox.swap_edge_cw(e), "Cannot swap edge");
         assert_eq!(
             qbox.faces()
@@ -1183,10 +1183,9 @@ mod test {
         let mut qbox = quad_box();
         qbox.triangulate().expect("Cannot triangulate the mesh");
         qbox.remove_edge(
-            qbox.halfedge_edge(
-                qbox.find_halfedge(5.into(), 7.into())
-                    .expect("Cannot find halfedge"),
-            ),
+            qbox.find_halfedge(5.into(), 7.into())
+                .expect("Cannot find halfedge")
+                .edge(),
         )
         .expect("Cannot remove edge");
         qbox.garbage_collection(&mut cache)
@@ -1206,10 +1205,9 @@ mod test {
             })
         );
         qbox.remove_edge(
-            qbox.halfedge_edge(
-                qbox.find_halfedge(1.into(), 4.into())
-                    .expect("Cannot find halfedge"),
-            ),
+            qbox.find_halfedge(1.into(), 4.into())
+                .expect("Cannot find halfedge")
+                .edge(),
         )
         .expect("Cannot remove edge");
         qbox.garbage_collection(&mut cache)

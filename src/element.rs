@@ -227,28 +227,39 @@ impl VH {
 }
 
 impl HH {
+    /// Get the vertex the halfedge points to.
     pub fn head(self, mesh: &impl HasTopology) -> VH {
         mesh.topology().head_vertex(self)
     }
 
+    /// Get the vertex the halfedge is pointing away from.
     pub fn tail(self, mesh: &impl HasTopology) -> VH {
         mesh.topology().tail_vertex(self)
     }
 
+    /// Get the opposite halfedge.
     pub fn opposite(self, mesh: &impl HasTopology) -> HH {
         mesh.topology().opposite_halfedge(self)
     }
 
+    /// Get the previous halfedge in the loop.
     pub fn prev(self, mesh: &impl HasTopology) -> HH {
         mesh.topology().prev_halfedge(self)
     }
 
+    /// Get the next halfedge in the loop.
     pub fn next(self, mesh: &impl HasTopology) -> HH {
         mesh.topology().next_halfedge(self)
     }
 
+    /// Get the face incident on the halfedge.
     pub fn face(self, mesh: &impl HasTopology) -> Option<FH> {
         mesh.topology().halfedge_face(self)
+    }
+
+    /// Get the edge corresponding to the halfedge.
+    pub fn edge(self) -> EH {
+        (self.idx >> 1).into()
     }
 
     /// Check if this halfedge is valid for the `mesh`.

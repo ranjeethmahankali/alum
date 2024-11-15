@@ -45,8 +45,8 @@ where
                 ),
                 |(nverts, x, y, z): (usize, A::Scalar, A::Scalar, A::Scalar), h| {
                     let (a, b) = {
-                        let pc = points[self.tail_vertex(h).index() as usize];
-                        let pn = points[self.head_vertex(h).index() as usize];
+                        let pc = points[h.tail(self).index() as usize];
+                        let pn = points[h.head(self).index() as usize];
                         (pc - pn, pc + pn)
                     };
                     (
@@ -244,7 +244,7 @@ where
     /// Compute the vector spanning from the start of the halfedge to the head
     /// of the halfedge.
     pub fn calc_halfedge_vector(&self, h: HH, points: &[A::Vector]) -> A::Vector {
-        points[self.head_vertex(h).index() as usize] - points[self.tail_vertex(h).index() as usize]
+        points[h.head(self).index() as usize] - points[h.tail(self).index() as usize]
     }
 }
 
@@ -501,8 +501,8 @@ where
     ) -> A::Scalar {
         let h0 = self.edge_halfedge(e, false);
         let h1 = self.edge_halfedge(e, true);
-        let f0 = self.halfedge_face(h0);
-        let f1 = self.halfedge_face(h1);
+        let f0 = h0.face(self);
+        let f1 = h1.face(self);
         match (f0, f1) {
             (None, None) | (None, Some(_)) | (Some(_), None) => A::scalarf64(0.0),
             (Some(f0), Some(f1)) => Self::aligned_angle(
@@ -546,10 +546,10 @@ where
         face_normals: &[A::Vector],
     ) -> A::Scalar {
         let n0 = self.calc_halfedge_vector(h, points);
-        let h2 = self.opposite_halfedge(self.prev_halfedge(h));
+        let h2 = h.prev(self).opposite(self);
         let n1 = self.calc_halfedge_vector(h2, points);
         let angle = A::vector_angle(n0, n1);
-        if let Some(f) = self.halfedge_face(self.opposite_halfedge(h)) {
+        if let Some(f) = h.opposite(self).face(self) {
             if h.is_boundary(self)
                 && A::dot_product(A::cross_product(n0, n1), face_normals[f.index() as usize])
                     < A::scalarf64(0.0)

@@ -403,41 +403,6 @@ where
             .clone()
     }
 
-    /// Get the vertex the halfedge points to.
-    pub fn head_vertex(&self, h: HH) -> VH {
-        self.topol.head_vertex(h)
-    }
-
-    /// Get the vertex the halfedge is pointing away from.
-    pub fn tail_vertex(&self, h: HH) -> VH {
-        self.topol.tail_vertex(h)
-    }
-
-    /// Get the next halfedge in the loop.
-    pub fn next_halfedge(&self, h: HH) -> HH {
-        self.topol.next_halfedge(h)
-    }
-
-    /// Get the previous halfedge in the loop.
-    pub fn prev_halfedge(&self, h: HH) -> HH {
-        self.topol.prev_halfedge(h)
-    }
-
-    /// Get the opposite halfedge.
-    pub fn opposite_halfedge(&self, h: HH) -> HH {
-        self.topol.opposite_halfedge(h)
-    }
-
-    /// Get the face incident on the halfedge.
-    pub fn halfedge_face(&self, h: HH) -> Option<FH> {
-        self.topol.halfedge_face(h)
-    }
-
-    /// Get the edge corresponding to the halfedge.
-    pub fn halfedge_edge(&self, h: HH) -> EH {
-        self.topol.halfedge_edge(h)
-    }
-
     /// Get the halfedge corresponding to the face.
     pub fn face_halfedge(&self, f: FH) -> HH {
         self.topol.face_halfedge(f)
