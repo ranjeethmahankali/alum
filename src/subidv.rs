@@ -18,22 +18,39 @@ where
         + Div<A::Scalar, Output = A::Vector>
         + Mul<A::Scalar, Output = A::Vector>,
 {
-    fn count_topol(mesh: &Topology, niter: usize) -> (usize, usize, usize) {
+    fn reserve(
+        niter: usize,
+        mesh: &mut Topology,
+        vpos: &mut Option<Vec<A::Vector>>,
+        epos: &mut Vec<A::Vector>,
+        fpos: &mut Vec<A::Vector>,
+    ) -> Result<(), Error> {
         debug_assert!(niter > 0);
         let mut nv = mesh.num_vertices();
         let mut ne = mesh.num_edges();
         let mut nf = mesh.num_faces();
-        for i in 1..niter {
+        for i in 0..niter {
+            if i == niter - 1 {
+                // Reserve the pos arrays.
+                if let Some(vpos) = vpos {
+                    vpos.reserve(nv);
+                }
+                epos.reserve(ne);
+                fpos.reserve(nf);
+            }
             let v = nv + ne + nf;
-            let f = if i == 1 {
+            let f = if i == 0 {
                 mesh.faces().map(|f| mesh.face_valence(f)).sum::<usize>()
             } else {
                 nf * 4
             };
             let e = 2 * ne + f;
             (nv, ne, nf) = (v, e, f);
+            if i == niter - 1 {
+                mesh.reserve(nv, ne, nf)?;
+            }
         }
-        (nv, ne, nf)
+        Ok(())
     }
 
     fn calc_face_edge_points(
@@ -142,17 +159,16 @@ where
                 return Err(Error::DeletedVertex(v));
             }
         }
-        // Use vectors instead of properties because we don't want these to
-        // change when we add new topology.
-        let (nverts, nedges, nfaces) = CatmullClark::<DIM, A>::count_topol(&self.topol, iters);
-        self.reserve(nverts, nedges, nfaces)?;
-        let mut fpos = Vec::with_capacity(nfaces);
-        let mut epos = Vec::with_capacity(nedges);
+        let mut fpos = Vec::new();
+        let mut epos = Vec::new();
         let mut vpos = if update_points {
-            Some(Vec::with_capacity(nverts))
+            Some(Vec::new())
         } else {
             None
         };
+        // Use vectors instead of properties because we don't want these to
+        // change when we add new topology.
+        CatmullClark::<DIM, A>::reserve(iters, &mut self.topol, &mut vpos, &mut epos, &mut fpos)?;
         // Temporary storage to use inside the loop.
         let mut fhs = Vec::new();
         let mut hhs = Vec::new();
