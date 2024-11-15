@@ -19,7 +19,7 @@ where
         + Mul<A::Scalar, Output = A::Vector>,
 {
     fn count_topol(mesh: &Topology, niter: usize) -> (usize, usize, usize) {
-        assert!(niter > 0);
+        debug_assert!(niter > 0);
         let mut nv = mesh.num_vertices();
         let mut ne = mesh.num_edges();
         let mut nf = mesh.num_faces();
@@ -76,32 +76,33 @@ where
         vpos: &mut Vec<A::Vector>,
     ) -> Result<(), Error> {
         // Compute vertex positions.
-        let points = mesh.points();
-        let points = points.try_borrow()?;
-        vpos.clear();
-        vpos.extend(mesh.vertices().map(|v| {
-            if mesh.is_boundary_vertex(v) {
-                let (count, sum) = mesh
-                    .ve_ccw_iter(v)
-                    .filter(|e| mesh.is_boundary_edge(*e))
-                    .fold((1usize, points[v.index() as usize]), |(count, total), e| {
-                        (count + 1, total + epos[e.index() as usize])
-                    });
-                sum / A::scalarf64(count as f64)
-            } else {
-                let valence = mesh.vertex_valence(v) as f64;
-                (((mesh.vf_ccw_iter(v).fold(A::zero_vector(), |total, f| {
-                    total + fpos[f.index() as usize]
-                }) + mesh.vv_ccw_iter(v).fold(A::zero_vector(), |total, v| {
-                    total + points[v.index() as usize]
-                })) / A::scalarf64(valence))
-                    + (points[v.index() as usize] * A::scalarf64(valence - 2.0)))
-                    / A::scalarf64(valence)
-            }
-        }));
-        // Update the vertex positions.
         let mut points = mesh.points();
         let mut points = points.try_borrow_mut()?;
+        vpos.clear();
+        {
+            let points: &[A::Vector] = &points;
+            vpos.extend(mesh.vertices().map(|v| {
+                if mesh.is_boundary_vertex(v) {
+                    let (count, sum) = mesh
+                        .ve_ccw_iter(v)
+                        .filter(|e| mesh.is_boundary_edge(*e))
+                        .fold((1usize, points[v.index() as usize]), |(count, total), e| {
+                            (count + 1, total + epos[e.index() as usize])
+                        });
+                    sum / A::scalarf64(count as f64)
+                } else {
+                    let valence = mesh.vertex_valence(v) as f64;
+                    (((mesh.vf_ccw_iter(v).fold(A::zero_vector(), |total, f| {
+                        total + fpos[f.index() as usize]
+                    }) + mesh.vv_ccw_iter(v).fold(A::zero_vector(), |total, v| {
+                        total + points[v.index() as usize]
+                    })) / A::scalarf64(valence))
+                        + (points[v.index() as usize] * A::scalarf64(valence - 2.0)))
+                        / A::scalarf64(valence)
+                }
+            }));
+        }
+        // Update the vertex positions.
         points.copy_from_slice(vpos);
         Ok(())
     }
@@ -147,12 +148,15 @@ where
         self.reserve(nverts, nedges, nfaces)?;
         let mut fpos = Vec::with_capacity(nfaces);
         let mut epos = Vec::with_capacity(nedges);
-        let vpos = if update_points {
+        let mut vpos = if update_points {
             Some(Vec::with_capacity(nverts))
         } else {
             None
         };
+        // Temporary storage to use inside the loop.
         let mut fhs = Vec::new();
+        let mut hhs = Vec::new();
+        let mut ffs = Vec::new();
         for _ in 0..iters {
             CatmullClark::<DIM, A>::calc_face_edge_points(
                 self,
@@ -163,16 +167,14 @@ where
             // Make them immutable from here.
             let fpos: &[A::Vector] = &fpos;
             let epos: &[A::Vector] = &epos;
-            if let Some(mut vpos) = vpos {
-                CatmullClark::<DIM, A>::update_vertex_positions(self, &fpos, &epos, &mut vpos)?;
+            if let Some(vpos) = &mut vpos {
+                CatmullClark::<DIM, A>::update_vertex_positions(self, fpos, epos, vpos)?;
             }
             let num_old_verts = self.num_vertices() as u32;
-            for ei in 0..self.num_edges() {
-                self.split_edge((ei as u32).into(), epos[ei], true)?;
+            for (ei, pos) in epos.iter().enumerate() {
+                self.split_edge((ei as u32).into(), *pos, true)?;
             }
             for f in self.faces() {
-                // New vertex in the middle.
-                let fv = self.add_vertex(fpos[f.index() as usize])?;
                 // Find a halfedge that points to an old vertex, and collect the
                 // loop of halfedges starting from there.
                 let hstart = self
@@ -182,19 +184,73 @@ where
                 fhs.clear();
                 fhs.extend(iterator::loop_ccw_iter(&self.topol, hstart));
                 let fhs: &[HH] = &fhs; // Immutable.
-                assert!(fhs.len() % 2 == 0);
-                for hpair in fhs.chunks_exact(2) {
+                debug_assert!(fhs.len() % 2 == 0);
+                let valence = iterator::loop_ccw_iter(&self.topol, hstart).count() / 2;
+                debug_assert_eq!(valence * 2, fhs.len());
+                let ne = self.num_edges();
+                // New vertex in the middle.
+                let fv = self.add_vertex(fpos[f.index() as usize])?;
+                // Create new edges and faces, with some math to get the indices
+                // of edges we haven't added yet. This is a bit sketchy, but
+                // should be safe with ample testing.
+                hhs.clear();
+                ffs.clear();
+                for (lei, hpair) in fhs.chunks_exact(2).enumerate() {
                     let h1 = hpair[0];
-                    let h2 = hpair[2];
+                    let pei = (ne + ((lei + valence - 1) % valence)) as u32;
+                    let nei = ((lei + 1) % valence) as u32;
+                    let enew = self.topol.new_edge(
+                        self.tail_vertex(h1),
+                        fv,
+                        self.prev_halfedge(h1),
+                        (2 * pei + 1).into(),
+                        (2 * nei).into(),
+                        h1,
+                    )?;
+                    debug_assert_eq!(enew.index(), (lei + ne) as u32);
+                    hhs.push(self.edge_halfedge(enew, false));
                     let flocal = if h1 == hstart {
                         f
                     } else {
                         self.topol.new_face(h1)?
                     };
+                    ffs.push(flocal);
+                }
+                for (i, hpair) in fhs.chunks_exact(2).enumerate() {
+                    let rh = hhs[i];
+                    let orh = self.opposite_halfedge(rh);
+                    let flocal = ffs[i];
+                    let pflocal = ffs[(i + valence - 1) % valence];
+                    let h1 = hpair[0];
+                    let h2 = hpair[1];
+                    // Link halfedges and faces.
+                    self.topol.face_mut(flocal).halfedge = h1;
+                    self.topol.halfedge_mut(rh).face = Some(pflocal);
+                    self.topol.halfedge_mut(orh).face = Some(flocal);
+                    self.topol.halfedge_mut(h1).face = Some(flocal);
+                    self.topol.halfedge_mut(h2).face = Some(flocal);
+                    // Link halfedges.
+                    self.topol.link_halfedges(self.prev_halfedge(rh), rh);
+                    self.topol.link_halfedges(orh, h1);
+                    self.topol.link_halfedges(h1, h2);
                 }
             }
-            todo!("Split the faces");
         }
-        todo!()
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::alum_glam::PolyMeshF32;
+
+    #[test]
+    fn t_box_catmull_clark() {
+        let mut mesh = PolyMeshF32::unit_box().expect("Cannot create box");
+        mesh.subidivide_catmull_clark(1, true)
+            .expect("Subdivision failed");
+        assert_eq!(26, mesh.num_vertices());
+        assert_eq!(48, mesh.num_edges());
+        assert_eq!(24, mesh.num_faces());
     }
 }
