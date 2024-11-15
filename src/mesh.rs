@@ -408,11 +408,6 @@ where
         self.topol.face_halfedge(f)
     }
 
-    /// Get the pair of halfedges associated with the given edge.
-    pub fn halfedge_pair(&self, e: EH) -> (HH, HH) {
-        self.topol.halfedge_pair(e)
-    }
-
     /// Get a halfedge from the edge.
     ///
     /// The Boolean flag indicates one of the two possible orientations.

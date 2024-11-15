@@ -278,6 +278,7 @@ impl HH {
 }
 
 impl EH {
+    /// Get the pair of halfedges associated with the given edge.
     pub fn halfedges(self) -> (HH, HH) {
         let hi = self.idx << 1;
         (hi.into(), (hi | 1).into())

@@ -77,7 +77,7 @@ where
         // Compute edge points.
         edge_points.clear();
         edge_points.extend(mesh.edges().map(|e| {
-            let (h, oh) = mesh.halfedge_pair(e);
+            let (h, oh) = e.halfedges();
             match (h.face(mesh), oh.face(mesh)) {
                 (Some(fa), Some(fb)) if update_points => {
                     (points[h.head(mesh).index() as usize]

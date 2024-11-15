@@ -225,10 +225,6 @@ impl Topology {
         &mut self.faces[f.index() as usize]
     }
 
-    pub fn halfedge_pair(&self, e: EH) -> (HH, HH) {
-        e.halfedges()
-    }
-
     pub fn edge_halfedge(&self, e: EH, flag: bool) -> HH {
         e.halfedge(flag)
     }

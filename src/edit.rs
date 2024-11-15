@@ -329,7 +329,7 @@ impl Topology {
     }
 
     pub fn split_edge(&mut self, e: EH, v: VH, copy_props: bool) -> Result<EH, Error> {
-        let (h0, h1) = self.halfedge_pair(e);
+        let (h0, h1) = e.halfedges();
         let vfrom = h0.tail(self);
         let (ph0, nh1) = (h0.prev(self), h1.next(self));
         let (f0, f1) = (h0.face(self), h1.face(self));
@@ -498,7 +498,7 @@ impl Topology {
         if !self.edge_is_unique_link(e) {
             return Err(Error::EdgeIsNotAUniqueLink(e));
         }
-        let (h0, h1) = self.halfedge_pair(e);
+        let (h0, h1) = e.halfedges();
         let (f0, f1) = match (h0.face(self), h1.face(self)) {
             (Some(f0), Some(f1)) => (f0, f1),
             _ => return Err(Error::CannotRemoveBoundaryEdge(e)),
@@ -564,7 +564,7 @@ impl Topology {
         let v0 = prev.head(self);
         let v1 = next.tail(self);
         let enew = self.new_edge(v0, v1, prev, next, n0, p1)?;
-        let (h, oh) = self.halfedge_pair(enew);
+        let (h, oh) = enew.halfedges();
         // Rewire halfedge -> halfedge.
         self.link_halfedges(prev, h);
         self.link_halfedges(h, next);
@@ -1227,7 +1227,7 @@ mod test {
                     .expect("Cannot find halfedge"),
             )
             .expect("Cannot insert halfedge");
-        let (h, oh) = mesh.halfedge_pair(e);
+        let (h, oh) = e.halfedges();
         mesh.check().expect("Topological errors found");
         assert!(mesh.is_boundary_halfedge(oh));
         assert!(!mesh.is_boundary_halfedge(h));
@@ -1256,7 +1256,7 @@ mod test {
                     .expect("Cannot find halfedge"),
             )
             .expect("Cannot insert edge");
-        let (h, oh) = mesh.halfedge_pair(e);
+        let (h, oh) = e.halfedges();
         mesh.check().expect("Topological errors found");
         assert!(!mesh.is_boundary_halfedge(h));
         assert!(!mesh.is_boundary_halfedge(oh));
