@@ -49,7 +49,7 @@ where
             }
             let v = nv + ne + nf;
             let f = if i == 0 {
-                mesh.faces().map(|f| mesh.face_valence(f)).sum::<usize>()
+                mesh.faces().map(|f| f.valence(mesh)).sum::<usize>()
             } else {
                 nf * 4
             };

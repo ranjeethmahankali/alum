@@ -306,11 +306,6 @@ where
         self.topol.faces()
     }
 
-    /// The number of vertices incident on a face.
-    pub fn face_valence(&self, f: FH) -> usize {
-        self.topol.face_valence(f)
-    }
-
     /// The position of a vertex.
     pub fn point(&self, vi: VH) -> Result<A::Vector, Error> {
         self.points.get(vi)

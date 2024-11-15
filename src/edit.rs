@@ -33,11 +33,11 @@ impl Topology {
             return false;
         }
         let htriangle = match self.halfedge_face(h) {
-            Some(f) => self.face_valence(f) == 3,
+            Some(f) => f.valence(self) == 3,
             None => false,
         };
         let ohtriangle = match self.halfedge_face(oh) {
-            Some(f) => self.face_valence(f) == 3,
+            Some(f) => f.valence(self) == 3,
             None => false,
         };
         // Check if the faces are triangles and the vertices opposite the edge
@@ -104,7 +104,7 @@ impl Topology {
             let h2 = self.opposite_halfedge(self.prev_halfedge(h));
             match (self.halfedge_face(h1), self.halfedge_face(h2)) {
                 (None, None) => return false, // This is redundant but just in case.
-                (Some(fa), Some(fb)) if fa == fb && self.face_valence(fa) != 3 => return false,
+                (Some(fa), Some(fb)) if fa == fb && fa.valence(self) != 3 => return false,
                 _ => {} // Do nothing.
             }
         }
@@ -113,7 +113,7 @@ impl Topology {
             let h2 = self.opposite_halfedge(self.prev_halfedge(oh));
             match (self.halfedge_face(h1), self.halfedge_face(h2)) {
                 (None, None) => return false, // This is redundant but just in case.
-                (Some(fa), Some(fb)) if fa == fb && self.face_valence(fa) != 3 => return false,
+                (Some(fa), Some(fb)) if fa == fb && fa.valence(self) != 3 => return false,
                 _ => {} // Do nothing.
             }
         }
@@ -835,7 +835,7 @@ mod test {
         assert_eq!(
             (2, 4),
             qbox.faces()
-                .fold((0usize, 0usize), |(t, q), f| match qbox.face_valence(f) {
+                .fold((0usize, 0usize), |(t, q), f| match f.valence(&qbox) {
                     3 => (t + 1, q),
                     4 => (t, q + 1),
                     _ => (t, q),
@@ -943,7 +943,7 @@ mod test {
                     if fstatus[f.index() as usize].deleted() {
                         (t, q)
                     } else {
-                        match qbox.face_valence(f) {
+                        match f.valence(&qbox) {
                             3 => (t + 1, q),
                             4 => (t, q + 1),
                             _ => (t, q),
@@ -988,7 +988,7 @@ mod test {
         assert_eq!(
             (2, 5),
             qbox.faces().fold((0usize, 0usize), |(t, q), f| {
-                match qbox.face_valence(f) {
+                match f.valence(&qbox) {
                     3 => (t + 1, q),
                     4 => (t, 1 + q),
                     _ => (t, q),
@@ -1198,7 +1198,7 @@ mod test {
         assert_eq!(
             (10, 1),
             qbox.faces().fold((0usize, 0usize), |(tris, quads), f| {
-                match qbox.face_valence(f) {
+                match f.valence(&qbox) {
                     3 => (tris + 1, quads),
                     4 => (tris, quads + 1),
                     _ => (tris, quads),
@@ -1221,7 +1221,7 @@ mod test {
         assert_eq!(
             (8, 2),
             qbox.faces().fold((0usize, 0usize), |(tris, quads), f| {
-                match qbox.face_valence(f) {
+                match f.valence(&qbox) {
                     3 => (tris + 1, quads),
                     4 => (tris, quads + 1),
                     _ => (tris, quads),
@@ -1250,7 +1250,7 @@ mod test {
         assert_eq!(
             (1, 8),
             mesh.faces().fold((0usize, 0usize), |(tris, quads), f| {
-                match mesh.face_valence(f) {
+                match f.valence(&mesh) {
                     3 => (tris + 1, quads),
                     4 => (tris, quads + 1),
                     _ => (tris, quads),

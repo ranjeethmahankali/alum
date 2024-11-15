@@ -644,10 +644,6 @@ impl Topology {
         Ok(fnew)
     }
 
-    pub fn face_valence(&self, f: FH) -> usize {
-        iterator::fv_ccw_iter(self, f).count()
-    }
-
     pub fn delete_vertex(
         &mut self,
         v: VH,
@@ -1158,7 +1154,7 @@ pub(crate) mod test {
     fn t_box_face_valence() {
         let qbox = quad_box();
         for f in qbox.faces() {
-            assert_eq!(qbox.face_valence(f), 4);
+            assert_eq!(f.valence(&qbox), 4);
         }
     }
 

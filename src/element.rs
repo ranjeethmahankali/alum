@@ -303,6 +303,11 @@ impl FH {
     pub fn is_valid(self, mesh: &impl HasTopology) -> bool {
         mesh.topology().is_valid_face(self)
     }
+
+    /// The number of vertices incident on a face.
+    pub fn valence(self, mesh: &impl HasTopology) -> usize {
+        iterator::fh_ccw_iter(mesh.topology(), self).count()
+    }
 }
 
 impl HasTopology for Topology {
