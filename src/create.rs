@@ -105,7 +105,7 @@ where
             outmesh.add_vertex(self.calc_face_centroid(f, &points))?;
         }
         let mut fverts: Vec<VH> = Vec::new();
-        for v in self.vertices().filter(|v| !self.is_boundary_vertex(*v)) {
+        for v in self.vertices().filter(|v| !v.is_boundary(self)) {
             fverts.clear();
             fverts.extend(self.vf_ccw_iter(v).map(|f| -> VH { f.index().into() }));
             outmesh.add_face(&fverts)?;

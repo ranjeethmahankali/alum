@@ -112,7 +112,7 @@ where
         {
             let points: &[A::Vector] = &points;
             vertex_points.extend(mesh.vertices().map(|v| {
-                if mesh.is_boundary_vertex(v) {
+                if v.is_boundary(mesh) {
                     let (count, sum) = mesh
                         .ve_ccw_iter(v)
                         .filter(|e| mesh.is_boundary_edge(*e))

@@ -1,4 +1,4 @@
-use crate::{mesh, topol::Topology, Adaptor, PolyMeshT};
+use crate::{topol::Topology, Adaptor, PolyMeshT};
 use std::fmt::{Debug, Display};
 
 /**
