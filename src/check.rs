@@ -2,7 +2,7 @@ use crate::{
     element::Handle,
     iterator::HasIterators,
     topol::{HasTopology, Topology},
-    Adaptor, Error, PolyMeshT, Status,
+    Error, Status,
 };
 
 fn check_vertices(
@@ -173,17 +173,5 @@ impl Topology {
         check_edges(self, vstatus, hstatus, estatus, fstatus, &mut hvisited)?;
         check_faces(self, hstatus, fstatus)?;
         Ok(())
-    }
-}
-
-impl<const DIM: usize, A> PolyMeshT<DIM, A>
-where
-    A: Adaptor<DIM>,
-{
-    /// Check the topology of the mesh.
-    ///
-    /// This function will return an error if any errors are found in the topolgy.
-    pub fn check_topology(&self) -> Result<(), Error> {
-        self.topol.check()
     }
 }

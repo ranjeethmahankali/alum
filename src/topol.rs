@@ -247,6 +247,13 @@ pub trait HasTopology: Sized {
     fn face_status_mut(&mut self, f: FH) -> Result<RefMut<'_, Status>, Error> {
         self.topology_mut().fstatus.get_mut(f)
     }
+
+    /// Check the topology of the mesh.
+    ///
+    /// This function will return an error if any errors are found in the topolgy.
+    fn check_topology(&self) -> Result<(), Error> {
+        self.topology().check()
+    }
 }
 
 pub struct Topology {
