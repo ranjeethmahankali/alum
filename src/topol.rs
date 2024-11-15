@@ -205,7 +205,7 @@ impl Topology {
         VProperty::<T>::with_capacity(n, &mut self.vprops, default)
     }
 
-    fn vertex(&self, v: VH) -> &Vertex {
+    pub(crate) fn vertex(&self, v: VH) -> &Vertex {
         &self.vertices[v.index() as usize]
     }
 
@@ -223,10 +223,6 @@ impl Topology {
 
     pub(crate) fn face_mut(&mut self, f: FH) -> &mut Face {
         &mut self.faces[f.index() as usize]
-    }
-
-    pub fn vertex_halfedge(&self, v: VH) -> Option<HH> {
-        self.vertex(v).halfedge
     }
 
     pub fn prev_halfedge(&self, h: HH) -> HH {
@@ -485,7 +481,7 @@ impl Topology {
             let v = verts[j];
             match (e0, e1) {
                 (TentativeEdge::Old(_), TentativeEdge::Old(innernext)) => {
-                    cache.needs_adjust[j] = self.vertex_halfedge(v) == Some(*innernext);
+                    cache.needs_adjust[j] = v.halfedge(self) == Some(*innernext);
                 }
                 (
                     TentativeEdge::New {
@@ -543,7 +539,7 @@ impl Topology {
                     let innernext: HH = innernext.into();
                     let outernext = innerprev.opposite();
                     let outerprev = innernext.opposite();
-                    if let Some(boundnext) = self.vertex_halfedge(v) {
+                    if let Some(boundnext) = v.halfedge(self) {
                         let boundprev = self.prev_halfedge(boundnext);
                         cache
                             .next_cache
@@ -710,7 +706,7 @@ impl Topology {
                 hstatus[h1.index() as usize].set_deleted(true);
             }
             // Update vertices.
-            if self.vertex_halfedge(v0) == Some(h1) {
+            if v0.halfedge(self) == Some(h1) {
                 // Isolated?
                 if next0 == h1 {
                     if delete_isolated_vertices {
@@ -721,7 +717,7 @@ impl Topology {
                     self.vertex_mut(v0).halfedge = Some(next0);
                 }
             }
-            if self.vertex_halfedge(v1) == Some(h0) {
+            if v1.halfedge(self) == Some(h0) {
                 // Isolated?
                 if next1 == h0 {
                     if delete_isolated_vertices {
@@ -989,8 +985,8 @@ pub(crate) mod test {
         assert_eq!(topol.num_vertices(), 3);
         assert_eq!(face.index(), 0);
         for v in topol.vertices() {
-            let h = topol
-                .vertex_halfedge(v)
+            let h = v
+                .halfedge(&topol)
                 .expect("Vertex must have an incident halfedge");
             assert!(topol.is_boundary_halfedge(h));
             let oh = h.opposite();
@@ -1072,8 +1068,8 @@ pub(crate) mod test {
         assert_eq!(topol.num_vertices(), 4);
         assert_eq!(face, 0.into());
         for v in topol.vertices() {
-            let h = topol
-                .vertex_halfedge(v)
+            let h = v
+                .halfedge(&topol)
                 .expect("Vertex must have an incident halfedge");
             assert!(topol.is_boundary_halfedge(h));
             let oh = h.opposite();

@@ -234,11 +234,11 @@ pub(crate) fn vih_cw_iter(topol: &Topology, v: VH) -> impl Iterator<Item = HH> +
 }
 
 pub(crate) fn voh_ccw_iter(topol: &Topology, v: VH) -> impl Iterator<Item = HH> + use<'_> {
-    RadialHalfedgeIter::<true>::new(topol, topol.vertex_halfedge(v))
+    RadialHalfedgeIter::<true>::new(topol, v.halfedge(topol))
 }
 
 pub(crate) fn voh_cw_iter(topol: &Topology, v: VH) -> impl Iterator<Item = HH> + use<'_> {
-    RadialHalfedgeIter::<false>::new(topol, topol.vertex_halfedge(v))
+    RadialHalfedgeIter::<false>::new(topol, v.halfedge(topol))
 }
 
 pub(crate) fn ve_ccw_iter(topol: &Topology, v: VH) -> impl Iterator<Item = EH> + use<'_> {
@@ -637,7 +637,7 @@ where
         &mut self,
         v: VH,
     ) -> impl Iterator<Item = (&mut Self, HH)> + use<'_, A, DIM> {
-        let h = self.topol.vertex_halfedge(v);
+        let h = v.halfedge(&self.topol);
         RadialHalfedgeIterMut::<true, Self> {
             reference: self.into(),
             topol: &mut self.topol,
@@ -656,7 +656,7 @@ where
         &mut self,
         v: VH,
     ) -> impl Iterator<Item = (&mut Self, HH)> + use<'_, A, DIM> {
-        let h = self.topol.vertex_halfedge(v);
+        let h = v.halfedge(&self.topol);
         RadialHalfedgeIterMut::<false, Self> {
             reference: self.into(),
             topol: &mut self.topol,

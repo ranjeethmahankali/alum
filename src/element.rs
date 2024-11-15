@@ -188,7 +188,7 @@ pub trait HasTopology {
 
 impl VH {
     pub fn halfedge(self, mesh: &impl HasTopology) -> Option<HH> {
-        mesh.topology().vertex_halfedge(self)
+        mesh.topology().vertex(self).halfedge
     }
 
     /// Check if this vertex is valid for the `mesh`.

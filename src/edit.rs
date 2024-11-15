@@ -116,7 +116,7 @@ impl Topology {
             }
         }
         // Check again if left and right are the same vertex.
-        if let Some(h) = self.vertex_halfedge(v0) {
+        if let Some(h) = v0.halfedge(self) {
             if vertex_status[h.head(self).index() as usize].tagged()
                 && vl == vr
                 && htriangle
@@ -233,7 +233,7 @@ impl Topology {
             self.face_mut(fo).halfedge = on;
         }
         // Rewire vertex -> halfedge
-        if self.vertex_halfedge(vh) == Some(o) {
+        if vh.halfedge(self) == Some(o) {
             self.vertex_mut(vh).halfedge = Some(hn);
         }
         self.adjust_outgoing_halfedge(vh);
@@ -350,7 +350,7 @@ impl Topology {
         // Rewire vertex -> halfedge.
         self.vertex_mut(v).halfedge = Some(h0);
         self.adjust_outgoing_halfedge(v);
-        if self.vertex_halfedge(vfrom) == Some(h0) {
+        if vfrom.halfedge(self) == Some(h0) {
             self.vertex_mut(vfrom).halfedge = Some(hnew);
             self.adjust_outgoing_halfedge(vfrom);
         }
@@ -383,10 +383,10 @@ impl Topology {
         let hnv = hn.head(self);
         let onv = on.head(self);
         // Rewire vertex -> halfedge.
-        if self.vertex_halfedge(v0) == Some(h) {
+        if v0.halfedge(self) == Some(h) {
             self.vertex_mut(v0).halfedge = Some(on);
         }
-        if self.vertex_halfedge(v1) == Some(oh) {
+        if v1.halfedge(self) == Some(oh) {
             self.vertex_mut(v1).halfedge = Some(hn);
         }
         // Rewire halfedge -> vertex.
@@ -434,10 +434,10 @@ impl Topology {
         let hpv = hp.tail(self);
         let opv = op.tail(self);
         // Rewire vertex -> halfedge.
-        if self.vertex_halfedge(v0) == Some(h) {
+        if v0.halfedge(self) == Some(h) {
             self.vertex_mut(v0).halfedge = Some(on);
         }
-        if self.vertex_halfedge(v1) == Some(oh) {
+        if v1.halfedge(self) == Some(oh) {
             self.vertex_mut(v1).halfedge = Some(hn);
         }
         // Rewire halfedge -> vertex.
@@ -507,10 +507,10 @@ impl Topology {
         let (n0, n1) = (self.next_halfedge(h0), self.next_halfedge(h1));
         let (v0, v1) = (h0.head(self), h1.head(self));
         // Rewire vertex -> halfedge.
-        if self.vertex_halfedge(v0) == Some(h1) {
+        if v0.halfedge(self) == Some(h1) {
             self.vertex_mut(v0).halfedge = Some(n0);
         }
-        if self.vertex_halfedge(v1) == Some(h0) {
+        if v1.halfedge(self) == Some(h0) {
             self.vertex_mut(v1).halfedge = Some(n1);
         }
         // Rewire halfedge -> halfedge.

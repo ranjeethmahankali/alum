@@ -99,7 +99,7 @@ where
     pub fn calc_vertex_normal_accurate(&self, v: VH, points: &[A::Vector]) -> A::Vector {
         let topol = &self.topol;
         A::normalized_vec(
-            match topol.vertex_halfedge(v) {
+            match v.halfedge(topol) {
                 Some(h) => {
                     let h2 = topol.ccw_rotated_halfedge(h);
                     if h2 == h {
