@@ -45,7 +45,7 @@ impl TopolCache {
     }
 }
 
-pub(crate) struct Topology {
+pub struct Topology {
     vertices: Vec<Vertex>,
     edges: Vec<Edge>,
     faces: Vec<Face>,
@@ -270,12 +270,11 @@ impl Topology {
     }
 
     pub fn halfedge_pair(&self, e: EH) -> (HH, HH) {
-        let hi = e.index() << 1;
-        (hi.into(), (hi | 1).into())
+        e.halfedges()
     }
 
     pub fn edge_halfedge(&self, e: EH, flag: bool) -> HH {
-        ((e.index() << 1) | if flag { 1 } else { 0 }).into()
+        e.halfedge(flag)
     }
 
     pub fn face_halfedge(&self, f: FH) -> HH {

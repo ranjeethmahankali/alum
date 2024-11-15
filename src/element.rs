@@ -1,3 +1,4 @@
+use crate::{topol::Topology, Adaptor, PolyMeshT};
 use std::fmt::{Debug, Display};
 
 /**
@@ -178,6 +179,74 @@ impl Debug for EH {
 impl Debug for FH {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "FH({})", self.index())
+    }
+}
+
+pub trait HasTopology {
+    fn topology(&self) -> &Topology;
+}
+
+impl VH {
+    pub fn halfedge(&self, mesh: &impl HasTopology) -> Option<HH> {
+        mesh.topology().vertex_halfedge(*self)
+    }
+}
+
+impl HH {
+    pub fn head(self, mesh: &impl HasTopology) -> VH {
+        mesh.topology().head_vertex(self)
+    }
+
+    pub fn tail(self, mesh: &impl HasTopology) -> VH {
+        mesh.topology().tail_vertex(self)
+    }
+
+    pub fn opposite(self, mesh: &impl HasTopology) -> HH {
+        mesh.topology().opposite_halfedge(self)
+    }
+
+    pub fn prev(self, mesh: &impl HasTopology) -> HH {
+        mesh.topology().prev_halfedge(self)
+    }
+
+    pub fn next(self, mesh: &impl HasTopology) -> HH {
+        mesh.topology().next_halfedge(self)
+    }
+
+    pub fn face(self, mesh: &impl HasTopology) -> Option<FH> {
+        mesh.topology().halfedge_face(self)
+    }
+}
+
+impl EH {
+    pub fn halfedges(self) -> (HH, HH) {
+        let hi = self.idx << 1;
+        (hi.into(), (hi | 1).into())
+    }
+
+    pub fn halfedge(self, flag: bool) -> HH {
+        ((self.idx << 1) | if flag { 1 } else { 0 }).into()
+    }
+}
+
+impl FH {
+    pub fn halfedge(self, mesh: &impl HasTopology) -> HH {
+        mesh.topology().face_halfedge(self)
+    }
+}
+
+impl HasTopology for Topology {
+    fn topology(&self) -> &Topology {
+        self
+    }
+}
+
+impl<const DIM: usize, A> HasTopology for PolyMeshT<DIM, A>
+where
+    A: Adaptor<DIM>,
+{
+    fn topology(&self) -> &Topology {
+        &self.topol
     }
 }
 
