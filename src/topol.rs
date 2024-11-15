@@ -229,14 +229,6 @@ impl Topology {
         self.vertex(v).halfedge
     }
 
-    pub fn head_vertex(&self, h: HH) -> VH {
-        self.halfedge(h).vertex
-    }
-
-    pub fn tail_vertex(&self, h: HH) -> VH {
-        self.halfedge(self.opposite_halfedge(h)).vertex
-    }
-
     pub fn prev_halfedge(&self, h: HH) -> HH {
         self.halfedge(h).prev
     }
@@ -276,16 +268,12 @@ impl Topology {
         }
     }
 
-    pub fn opposite_halfedge(&self, h: HH) -> HH {
-        (h.index() ^ 1).into()
-    }
-
     pub fn cw_rotated_halfedge(&self, h: HH) -> HH {
-        self.halfedge(self.opposite_halfedge(h)).next
+        h.opposite().next(self)
     }
 
     pub fn ccw_rotated_halfedge(&self, h: HH) -> HH {
-        self.opposite_halfedge(self.halfedge(h).prev)
+        h.prev(self).opposite()
     }
 
     pub fn num_vertices(&self) -> usize {
@@ -321,7 +309,7 @@ impl Topology {
     }
 
     pub fn find_halfedge(&self, from: VH, to: VH) -> Option<HH> {
-        iterator::voh_ccw_iter(self, from).find(|h| self.head_vertex(*h) == to)
+        iterator::voh_ccw_iter(self, from).find(|h| h.head(self) == to)
     }
 
     pub fn is_manifold_vertex(&self, v: VH) -> bool {
@@ -434,9 +422,9 @@ impl Topology {
         }) {
             // Relink the patch.
             let boundprev = {
-                let mut out = self.opposite_halfedge(next);
+                let mut out = next.opposite();
                 loop {
-                    out = self.opposite_halfedge(self.next_halfedge(out));
+                    out = out.next(self).opposite();
                     if self.is_boundary_halfedge(out) {
                         break;
                     }
@@ -509,8 +497,8 @@ impl Topology {
                     TentativeEdge::Old(innernext),
                 ) => {
                     let innernext = *innernext;
-                    let innerprev = innerprev.into();
-                    let outernext = self.opposite_halfedge(innerprev);
+                    let innerprev: HH = innerprev.into();
+                    let outernext = innerprev.opposite();
                     let boundprev = self.prev_halfedge(innernext);
                     cache.next_cache.push((boundprev, outernext));
                     *opp_prev = Some(boundprev);
@@ -528,8 +516,8 @@ impl Topology {
                     },
                 ) => {
                     let innerprev = *innerprev;
-                    let innernext = innernext.into();
-                    let outerprev = self.opposite_halfedge(innernext);
+                    let innernext: HH = innernext.into();
+                    let outerprev = innernext.opposite();
                     let boundnext = self.next_halfedge(innerprev);
                     cache.next_cache.push((outerprev, boundnext));
                     *opp_next = Some(boundnext);
@@ -551,10 +539,10 @@ impl Topology {
                         ..
                     },
                 ) => {
-                    let innerprev = innerprev.into();
-                    let innernext = innernext.into();
-                    let outernext = self.opposite_halfedge(innerprev);
-                    let outerprev = self.opposite_halfedge(innernext);
+                    let innerprev: HH = innerprev.into();
+                    let innernext: HH = innernext.into();
+                    let outernext = innerprev.opposite();
+                    let outerprev = innernext.opposite();
                     if let Some(boundnext) = self.vertex_halfedge(v) {
                         let boundprev = self.prev_halfedge(boundnext);
                         cache
@@ -697,19 +685,19 @@ impl Topology {
         vcache.clear();
         for (mesh, h) in iterator::fh_ccw_iter_mut(self, f) {
             mesh.halfedge_mut(h).face = None; // Disconnect from face.
-            if mesh.is_boundary_halfedge(mesh.opposite_halfedge(h)) {
+            if mesh.is_boundary_halfedge(h.opposite()) {
                 ecache.push(h.edge());
             }
-            vcache.push(mesh.head_vertex(h));
+            vcache.push(h.head(mesh));
         }
         // Delete collected topology.
         for e in ecache.drain(..) {
             let h0 = self.edge_halfedge(e, false);
-            let v0 = self.head_vertex(h0);
+            let v0 = h0.head(self);
             let next0 = self.next_halfedge(h0);
             let prev0 = self.prev_halfedge(h0);
             let h1 = self.edge_halfedge(e, true);
-            let v1 = self.head_vertex(h1);
+            let v1 = h1.head(self);
             let next1 = self.next_halfedge(h1);
             let prev1 = self.prev_halfedge(h1);
             // Adjust halfedge links and mark edge and halfedges deleted.
@@ -1005,7 +993,7 @@ pub(crate) mod test {
                 .vertex_halfedge(v)
                 .expect("Vertex must have an incident halfedge");
             assert!(topol.is_boundary_halfedge(h));
-            let oh = topol.opposite_halfedge(h);
+            let oh = h.opposite();
             assert!(!topol.is_boundary_halfedge(oh));
             assert_eq!(
                 topol
@@ -1088,7 +1076,7 @@ pub(crate) mod test {
                 .vertex_halfedge(v)
                 .expect("Vertex must have an incident halfedge");
             assert!(topol.is_boundary_halfedge(h));
-            let oh = topol.opposite_halfedge(h);
+            let oh = h.opposite();
             assert!(!topol.is_boundary_halfedge(oh));
             assert_eq!(
                 topol
@@ -1197,8 +1185,8 @@ pub(crate) mod test {
             let h = mesh
                 .find_halfedge(5.into(), 6.into())
                 .expect("Cannot find halfedge");
-            assert_eq!(mesh.tail_vertex(h), 5.into());
-            assert_eq!(mesh.head_vertex(h), 6.into());
+            assert_eq!(h.tail(&mesh), 5.into());
+            assert_eq!(h.head(&mesh), 6.into());
             let h1 = mesh.next_halfedge(h);
             assert_eq!(
                 h1,
@@ -1208,8 +1196,8 @@ pub(crate) mod test {
             let h = mesh
                 .find_halfedge(6.into(), 10.into())
                 .expect("Cannot find halfedge");
-            assert_eq!(mesh.tail_vertex(h), 6.into());
-            assert_eq!(mesh.head_vertex(h), 10.into());
+            assert_eq!(h.tail(&mesh), 6.into());
+            assert_eq!(h.head(&mesh), 10.into());
             let h = mesh.prev_halfedge(h);
             assert_eq!(
                 h,

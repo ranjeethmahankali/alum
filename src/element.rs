@@ -229,17 +229,17 @@ impl VH {
 impl HH {
     /// Get the vertex the halfedge points to.
     pub fn head(self, mesh: &impl HasTopology) -> VH {
-        mesh.topology().head_vertex(self)
+        mesh.topology().halfedge(self).vertex
     }
 
     /// Get the vertex the halfedge is pointing away from.
     pub fn tail(self, mesh: &impl HasTopology) -> VH {
-        mesh.topology().tail_vertex(self)
+        mesh.topology().halfedge(self.opposite()).vertex
     }
 
     /// Get the opposite halfedge.
-    pub fn opposite(self, mesh: &impl HasTopology) -> HH {
-        mesh.topology().opposite_halfedge(self)
+    pub fn opposite(self) -> HH {
+        (self.idx ^ 1).into()
     }
 
     /// Get the previous halfedge in the loop.

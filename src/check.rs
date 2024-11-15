@@ -27,7 +27,7 @@ fn check_vertices(
                 return Err(Error::OutgoingHalfedgeNotBoundary(v));
             }
             // Outgoing halfedge must point back to this vertex.
-            if mesh.tail_vertex(h) != v {
+            if h.tail(mesh) != v {
                 return Err(Error::InvalidOutgoingHalfedges(v));
             }
         }
@@ -60,7 +60,7 @@ fn check_edges(
         .filter(|h| !hstatus[h.index() as usize].deleted())
     {
         // Check if degenerate.
-        if mesh.tail_vertex(h) == mesh.head_vertex(h) {
+        if h.tail(mesh) == h.head(mesh) {
             return Err(Error::DegenerateHalfedge(h));
         }
         let hedge = mesh.halfedge(h);
@@ -84,12 +84,12 @@ fn check_edges(
             return Err(Error::DeletedEdge(e));
         }
         // Check connctivity.
-        let head = mesh.head_vertex(h);
-        let tail = mesh.tail_vertex(h);
-        if mesh.next_halfedge(hedge.prev) != h
+        let head = h.head(mesh);
+        let tail = h.tail(mesh);
+        if hedge.prev.next(mesh) != h
             || mesh.prev_halfedge(hedge.next) != h
-            || head != mesh.tail_vertex(hedge.next)
-            || tail != mesh.head_vertex(hedge.prev)
+            || head != hedge.next.tail(mesh)
+            || tail != hedge.prev.head(mesh)
         {
             return Err(Error::InvalidHalfedgeLink(h));
         }

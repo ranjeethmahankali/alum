@@ -192,7 +192,7 @@ where
         }
         for (i, hpair) in fhs.chunks_exact(2).enumerate() {
             let rh = spliths[i];
-            let orh = rh.opposite(mesh);
+            let orh = rh.opposite();
             let flocal = subfaces[i];
             let pflocal = subfaces[(i + valence - 1) % valence];
             let h1 = hpair[0];
@@ -208,7 +208,7 @@ where
             mesh.topol.link_halfedges(orh, h1);
             mesh.topol.link_halfedges(h1, h2);
         }
-        mesh.topol.vertex_mut(fv).halfedge = Some(spliths[0].opposite(mesh));
+        mesh.topol.vertex_mut(fv).halfedge = Some(spliths[0].opposite());
         Ok(())
     }
 }

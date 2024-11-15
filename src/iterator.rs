@@ -40,9 +40,7 @@ impl<'a> Iterator for RadialHalfedgeIter<'a, true> {
     fn next(&mut self) -> Option<Self::Item> {
         match self.hcurrent {
             Some(current) => {
-                let next = self
-                    .topol
-                    .opposite_halfedge(self.topol.prev_halfedge(current));
+                let next = current.prev(self.topol).opposite();
                 self.hcurrent = match self.hstart {
                     Some(start) if start != next => Some(next),
                     _ => None,
@@ -60,9 +58,7 @@ impl<'a> Iterator for RadialHalfedgeIter<'a, false> {
     fn next(&mut self) -> Option<Self::Item> {
         match self.hcurrent {
             Some(current) => {
-                let next = self
-                    .topol
-                    .next_halfedge(self.topol.opposite_halfedge(current));
+                let next = current.opposite().next(self.topol);
                 self.hcurrent = match self.hstart {
                     Some(start) if start != next => Some(next),
                     _ => None,
@@ -143,9 +139,7 @@ impl<'a, T> Iterator for RadialHalfedgeIterMut<'a, true, T> {
     fn next(&mut self) -> Option<Self::Item> {
         match self.hcurrent {
             Some(current) => {
-                let next = self
-                    .topol
-                    .opposite_halfedge(self.topol.prev_halfedge(current));
+                let next = current.prev(self.topol).opposite();
                 self.hcurrent = match self.hstart {
                     Some(start) if start != next => Some(next),
                     _ => None,
@@ -163,9 +157,7 @@ impl<'a, T> Iterator for RadialHalfedgeIterMut<'a, false, T> {
     fn next(&mut self) -> Option<Self::Item> {
         match self.hcurrent {
             Some(current) => {
-                let next = self
-                    .topol
-                    .next_halfedge(self.topol.opposite_halfedge(current));
+                let next = current.opposite().next(self.topol);
                 self.hcurrent = match self.hstart {
                     Some(start) if start != next => Some(next),
                     _ => None,
@@ -226,19 +218,19 @@ impl<'a, T> Iterator for LoopHalfedgeIterMut<'a, false, T> {
 /* Immutable iterators. */
 
 pub(crate) fn vv_ccw_iter(topol: &Topology, v: VH) -> impl Iterator<Item = VH> + use<'_> {
-    voh_ccw_iter(topol, v).map(|h| topol.head_vertex(h))
+    voh_ccw_iter(topol, v).map(|h| h.head(topol))
 }
 
 pub(crate) fn vv_cw_iter(topol: &Topology, v: VH) -> impl Iterator<Item = VH> + use<'_> {
-    voh_cw_iter(topol, v).map(|h| topol.head_vertex(h))
+    voh_cw_iter(topol, v).map(|h| h.head(topol))
 }
 
 pub(crate) fn vih_ccw_iter(topol: &Topology, v: VH) -> impl Iterator<Item = HH> + use<'_> {
-    voh_ccw_iter(topol, v).map(|h| topol.opposite_halfedge(h))
+    voh_ccw_iter(topol, v).map(|h| h.opposite())
 }
 
 pub(crate) fn vih_cw_iter(topol: &Topology, v: VH) -> impl Iterator<Item = HH> + use<'_> {
-    voh_cw_iter(topol, v).map(|h| topol.opposite_halfedge(h))
+    voh_cw_iter(topol, v).map(|h| h.opposite())
 }
 
 pub(crate) fn voh_ccw_iter(topol: &Topology, v: VH) -> impl Iterator<Item = HH> + use<'_> {
@@ -266,7 +258,7 @@ pub(crate) fn vf_cw_iter(topol: &Topology, v: VH) -> impl Iterator<Item = FH> + 
 }
 
 pub(crate) fn ev_iter(topol: &Topology, e: EH) -> impl Iterator<Item = VH> + use<'_> {
-    eh_iter(topol, e).map(|h| topol.head_vertex(h))
+    eh_iter(topol, e).map(|h| h.head(topol))
 }
 
 pub(crate) fn eh_iter(topol: &Topology, e: EH) -> impl Iterator<Item = HH> + use<'_> {
@@ -280,11 +272,11 @@ pub(crate) fn ef_iter(topol: &Topology, e: EH) -> impl Iterator<Item = FH> + use
 }
 
 pub(crate) fn fv_ccw_iter(topol: &Topology, f: FH) -> impl Iterator<Item = VH> + use<'_> {
-    fh_ccw_iter(topol, f).map(|h| topol.head_vertex(h))
+    fh_ccw_iter(topol, f).map(|h| h.head(topol))
 }
 
 pub(crate) fn fv_cw_iter(topol: &Topology, f: FH) -> impl Iterator<Item = VH> + use<'_> {
-    fh_cw_iter(topol, f).map(|h| topol.head_vertex(h))
+    fh_cw_iter(topol, f).map(|h| h.head(topol))
 }
 
 pub(crate) fn fh_ccw_iter(topol: &Topology, f: FH) -> impl Iterator<Item = HH> + use<'_> {
@@ -304,11 +296,11 @@ pub(crate) fn fe_cw_iter(topol: &Topology, f: FH) -> impl Iterator<Item = EH> + 
 }
 
 pub(crate) fn ff_ccw_iter(topol: &Topology, f: FH) -> impl Iterator<Item = FH> + use<'_> {
-    fh_ccw_iter(topol, f).filter_map(|h| topol.halfedge_face(topol.opposite_halfedge(h)))
+    fh_ccw_iter(topol, f).filter_map(|h| topol.halfedge_face(h.opposite()))
 }
 
 pub(crate) fn ff_cw_iter(topol: &Topology, f: FH) -> impl Iterator<Item = FH> + use<'_> {
-    fh_cw_iter(topol, f).filter_map(|h| topol.halfedge_face(topol.opposite_halfedge(h)))
+    fh_cw_iter(topol, f).filter_map(|h| topol.halfedge_face(h.opposite()))
 }
 
 pub(crate) fn ccw_rotate_iter(topol: &Topology, h: HH) -> impl Iterator<Item = HH> + use<'_> {
@@ -618,10 +610,8 @@ where
         &mut self,
         v: VH,
     ) -> impl Iterator<Item = (&mut Self, HH)> + use<'_, A, DIM> {
-        self.voh_ccw_iter_mut(v).map(|(mesh, h)| {
-            let h = h.opposite(mesh);
-            (mesh, h)
-        })
+        self.voh_ccw_iter_mut(v)
+            .map(|(mesh, h)| (mesh, h.opposite()))
     }
 
     /// Iterator over the incoming halfedges around a vertex, going clockwise.
@@ -633,10 +623,8 @@ where
         &mut self,
         v: VH,
     ) -> impl Iterator<Item = (&mut Self, HH)> + use<'_, A, DIM> {
-        self.voh_cw_iter_mut(v).map(|(mesh, h)| {
-            let h = h.opposite(mesh);
-            (mesh, h)
-        })
+        self.voh_cw_iter_mut(v)
+            .map(|(mesh, h)| (mesh, h.opposite()))
     }
 
     /// Iterator over the outgoing halfedges around a vertex, going
@@ -836,7 +824,7 @@ where
         f: FH,
     ) -> impl Iterator<Item = (&mut Self, FH)> + use<'_, A, DIM> {
         self.fh_ccw_iter_mut(f)
-            .filter_map(|(mesh, h)| h.opposite(mesh).face(mesh).map(|f| (mesh, f)))
+            .filter_map(|(mesh, h)| h.opposite().face(mesh).map(|f| (mesh, f)))
     }
 
     /// Iterator over the neighboring faces around a given face, going
@@ -853,7 +841,7 @@ where
         f: FH,
     ) -> impl Iterator<Item = (&mut Self, FH)> + use<'_, A, DIM> {
         self.fh_cw_iter_mut(f)
-            .filter_map(|(mesh, h)| h.opposite(mesh).face(mesh).map(|f| (mesh, f)))
+            .filter_map(|(mesh, h)| h.opposite().face(mesh).map(|f| (mesh, f)))
     }
 
     /// This is similar to [`Self::voh_ccw_iter_mut`] around the tail of the
@@ -1082,11 +1070,8 @@ mod test {
     fn t_box_vih_iter() {
         let qbox = quad_box();
         for v in qbox.vertices() {
-            assert!(vih_ccw_iter(&qbox, v)
-                .all(|h| qbox.head_vertex(h) == v && qbox.tail_vertex(h) != v));
-            assert!(
-                vih_cw_iter(&qbox, v).all(|h| qbox.head_vertex(h) == v && qbox.tail_vertex(h) != v)
-            );
+            assert!(vih_ccw_iter(&qbox, v).all(|h| h.head(&qbox) == v && h.tail(&qbox) != v));
+            assert!(vih_cw_iter(&qbox, v).all(|h| h.head(&qbox) == v && h.tail(&qbox) != v));
         }
     }
 
@@ -1094,11 +1079,8 @@ mod test {
     fn t_box_voh_iter() {
         let qbox = quad_box();
         for v in qbox.vertices() {
-            assert!(voh_ccw_iter(&qbox, v)
-                .all(|h| qbox.tail_vertex(h) == v && qbox.head_vertex(h) != v));
-            assert!(
-                voh_cw_iter(&qbox, v).all(|h| qbox.tail_vertex(h) == v && qbox.head_vertex(h) != v)
-            );
+            assert!(voh_ccw_iter(&qbox, v).all(|h| h.tail(&qbox) == v && h.head(&qbox) != v));
+            assert!(voh_cw_iter(&qbox, v).all(|h| h.tail(&qbox) == v && h.head(&qbox) != v));
         }
     }
 
