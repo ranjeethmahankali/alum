@@ -299,6 +299,160 @@ pub trait HasTopology {
         self.faces()
             .flat_map(move |f| self.triangulated_face_vertices(f))
     }
+
+    /// Iterator over the outgoing halfedges around a vertex, going counter-clockwise.
+    fn voh_ccw_iter(&self, v: VH) -> impl Iterator<Item = HH> {
+        iterator::voh_ccw_iter(self.topology(), v)
+    }
+
+    /// Iterator over the outgoing halfedges around a vertex, going clockwise
+    fn voh_cw_iter(&self, v: VH) -> impl Iterator<Item = HH> {
+        iterator::voh_cw_iter(self.topology(), v)
+    }
+
+    /// Iterator over the incoming halfedges around a vertex, going
+    /// counter-clockwise
+    fn vih_ccw_iter(&self, v: VH) -> impl Iterator<Item = HH> {
+        iterator::vih_ccw_iter(self.topology(), v)
+    }
+
+    /// Iterator over the incoming halfedges around a vertex, going clockwise
+    fn vih_cw_iter(&self, v: VH) -> impl Iterator<Item = HH> {
+        iterator::vih_cw_iter(self.topology(), v)
+    }
+
+    /// Iterator over the faces incident on a vertex, going counter-clockwise.
+    fn vf_ccw_iter(&self, v: VH) -> impl Iterator<Item = FH> {
+        iterator::vf_ccw_iter(self.topology(), v)
+    }
+
+    /// Iterator over the faces incident on a vertex, going clockwise.
+    fn vf_cw_iter(&self, v: VH) -> impl Iterator<Item = FH> {
+        iterator::vf_cw_iter(self.topology(), v)
+    }
+
+    /// Iterator over the neighboring vertices around the given vertex, going
+    /// counter-clockwise.
+    fn vv_ccw_iter(&self, v: VH) -> impl Iterator<Item = VH> {
+        iterator::vv_ccw_iter(self.topology(), v)
+    }
+
+    /// Iterator over the neighboring vertices around the given vertex, going
+    /// clockwise.
+    fn vv_cw_iter(&self, v: VH) -> impl Iterator<Item = VH> {
+        iterator::vv_cw_iter(self.topology(), v)
+    }
+
+    /// Iterator over the incident edges around an vertex, going counter-clockwise.
+    fn ve_ccw_iter(&self, v: VH) -> impl Iterator<Item = EH> {
+        iterator::ve_ccw_iter(self.topology(), v)
+    }
+
+    /// Iterator over the incident edges around a vertex, going clockwise.
+    fn ve_cw_iter(&self, v: VH) -> impl Iterator<Item = EH> {
+        iterator::ve_cw_iter(self.topology(), v)
+    }
+
+    /// Iterator over the two vertices incident on the given edge.
+    fn ev_iter(&self, e: EH) -> impl Iterator<Item = VH> {
+        iterator::ev_iter(self.topology(), e)
+    }
+
+    /// Iterator over the two halfedges corresponding to an edge.
+    fn eh_iter(&self, e: EH) -> impl Iterator<Item = HH> {
+        iterator::eh_iter(e)
+    }
+
+    /// Iterator over the faces incident on an edge.
+    fn ef_iter(&self, e: EH) -> impl Iterator<Item = FH> {
+        iterator::ef_iter(self.topology(), e)
+    }
+
+    /// Iterator over the halfedges of a face loop, going counter-clockwise.
+    fn fh_ccw_iter(&self, f: FH) -> impl Iterator<Item = HH> {
+        iterator::fh_ccw_iter(self.topology(), f)
+    }
+
+    /// Iterator over the halfedges of a face loop, going clockwise.
+    fn fh_cw_iter(&self, f: FH) -> impl Iterator<Item = HH> {
+        iterator::fh_cw_iter(self.topology(), f)
+    }
+
+    /// Iterator over the vertices incident on a face, going counter-clockwise.
+    fn fv_ccw_iter(&self, f: FH) -> impl Iterator<Item = VH> {
+        iterator::fv_ccw_iter(self.topology(), f)
+    }
+
+    /// Iterator over the vertices incident on a face, going clockwise.
+    fn fv_cw_iter(&self, f: FH) -> impl Iterator<Item = VH> {
+        iterator::fv_cw_iter(self.topology(), f)
+    }
+
+    /// Iterator over the edges incident on a face, going counter-clockwise.
+    fn fe_ccw_iter(&self, f: FH) -> impl Iterator<Item = EH> {
+        iterator::fe_ccw_iter(self.topology(), f)
+    }
+
+    /// Iterator over the edges incident on a face, going clockwise.
+    fn fe_cw_iter(&self, f: FH) -> impl Iterator<Item = EH> {
+        iterator::fe_cw_iter(self.topology(), f)
+    }
+
+    /// Iterator over the neighboring faces arouund the given face, going
+    /// counter-clockwise.
+    ///
+    /// This includes the faces connected via a shared edge, but not those
+    /// connected via a shared vertex.
+    fn ff_ccw_iter(&self, f: FH) -> impl Iterator<Item = FH> {
+        iterator::ff_ccw_iter(self.topology(), f)
+    }
+
+    /// Iterator over the neighboring faces around the given face, going
+    /// clockwise.
+    ///
+    /// This includes the faces connected via a shared edge, but not those
+    /// connected via a shared vertex.
+    fn ff_cw_iter(&self, f: FH) -> impl Iterator<Item = FH> {
+        iterator::ff_cw_iter(self.topology(), f)
+    }
+
+    /// This is similar to [`Self::voh_ccw_iter`] around the tail of the given
+    /// halfedge, except this iterator starts at the provided halfedge.
+    ///
+    /// This is equivalent to a circular shifted [`Self::voh_ccw_iter`] of the
+    /// vertex at the tail of this halfedge.
+    fn ccw_rotate_iter(&self, h: HH) -> impl Iterator<Item = HH> {
+        iterator::ccw_rotate_iter(self.topology(), h)
+    }
+
+    /// This is similar to [`Self::voh_cw_iter`] around the tail of the given
+    /// halfedge, except this iterator starts at the provided halfedge.
+    ///
+    /// This is equivalent to a circular shifted [`Self::voh_cw_iter`] of the
+    /// vertex at the tail of this halfedge.
+    fn cw_rotate_iter(&self, h: HH) -> impl Iterator<Item = HH> {
+        iterator::cw_rotate_iter(self.topology(), h)
+    }
+
+    /// Counter-clockwise iterator over the halfedges in a loop.
+    ///
+    /// The iterator will start at the given halfedge. If the halfedge has an
+    /// incident face, this iterator is equivalent to a circular shifted
+    /// [`Self::fh_ccw_iter`] of the incident face. If the halfedge is on the
+    /// boundary, this iterator goes over the boundary loop counter-clockwise.
+    fn loop_ccw_iter(&self, h: HH) -> impl Iterator<Item = HH> {
+        iterator::loop_ccw_iter(self.topology(), h)
+    }
+
+    /// Counter-clockwise iterator over the halfedges in a loop.
+    ///
+    /// The iterator will start at the given halfedge. If the halfedge has an
+    /// incident face, this iterator is equivalent to a circular shifted
+    /// [`Self::fh_cw_iter`] of the incident face. If the halfedge is on the
+    /// boundary, this iterator goes over the boundary loop clockwise.
+    fn loop_cw_iter(&self, h: HH) -> impl Iterator<Item = HH> {
+        iterator::loop_cw_iter(self.topology(), h)
+    }
 }
 
 pub struct Topology {
