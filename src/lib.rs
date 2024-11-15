@@ -114,6 +114,7 @@ mod topol;
 #[cfg(feature = "use_glam")]
 pub mod alum_glam;
 
+pub use edit::EditableTopology;
 pub use element::{Handle, EH, FH, HH, VH};
 pub use error::Error;
 pub use iterator::HasIterators;
