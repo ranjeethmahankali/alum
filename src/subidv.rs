@@ -1,4 +1,6 @@
-use crate::{iterator, topol::Topology, Adaptor, Error, FloatScalarAdaptor, Handle, PolyMeshT, HH};
+use crate::{
+    iterator, topol::Topology, Adaptor, Error, FloatScalarAdaptor, Handle, PolyMeshT, FH, HH,
+};
 use std::{
     marker::PhantomData,
     ops::{Add, Div, Mul},
@@ -123,6 +125,78 @@ where
         points.copy_from_slice(vpos);
         Ok(())
     }
+
+    fn split_face(
+        mesh: &mut PolyMeshT<DIM, A>,
+        f: FH,
+        num_old_verts: u32,
+        face_points: &[A::Vector],
+        hloop: &mut Vec<HH>,
+        spliths: &mut Vec<HH>,
+        subfaces: &mut Vec<FH>,
+    ) -> Result<(), Error> {
+        // Find a halfedge that points to an old vertex, and collect the
+        // loop of halfedges starting from there.
+        let hstart = mesh
+            .fh_ccw_iter(f)
+            .find(|&h| mesh.head_vertex(h).index() < num_old_verts)
+            .ok_or(Error::CannotSplitFace(f))?;
+        hloop.clear();
+        hloop.extend(iterator::loop_ccw_iter(&mesh.topol, hstart));
+        let fhs: &[HH] = &hloop; // Immutable.
+        debug_assert!(fhs.len() % 2 == 0);
+        let valence = iterator::loop_ccw_iter(&mesh.topol, hstart).count() / 2;
+        debug_assert_eq!(valence * 2, fhs.len());
+        let ne = mesh.num_edges();
+        // New vertex in the middle.
+        let fv = mesh.add_vertex(face_points[f.index() as usize])?;
+        // Create new edges and faces, with some math to get the indices
+        // of edges we haven't added yet. This is a bit sketchy, but
+        // should be safe with ample testing.
+        spliths.clear();
+        subfaces.clear();
+        for (lei, hpair) in fhs.chunks_exact(2).enumerate() {
+            let h1 = hpair[0];
+            let pei = (ne + ((lei + valence - 1) % valence)) as u32;
+            let nei = (ne + ((lei + 1) % valence)) as u32;
+            let enew = mesh.topol.new_edge(
+                mesh.tail_vertex(h1),
+                fv,
+                mesh.prev_halfedge(h1),
+                (2 * pei + 1).into(),
+                (2 * nei).into(),
+                h1,
+            )?;
+            debug_assert_eq!(enew.index(), (lei + ne) as u32);
+            spliths.push(mesh.edge_halfedge(enew, false));
+            let flocal = if h1 == hstart {
+                f
+            } else {
+                mesh.topol.new_face(h1)?
+            };
+            subfaces.push(flocal);
+        }
+        for (i, hpair) in fhs.chunks_exact(2).enumerate() {
+            let rh = spliths[i];
+            let orh = mesh.opposite_halfedge(rh);
+            let flocal = subfaces[i];
+            let pflocal = subfaces[(i + valence - 1) % valence];
+            let h1 = hpair[0];
+            let h2 = hpair[1];
+            // Link halfedges and faces.
+            mesh.topol.face_mut(flocal).halfedge = h1;
+            mesh.topol.halfedge_mut(rh).face = Some(pflocal);
+            mesh.topol.halfedge_mut(orh).face = Some(flocal);
+            mesh.topol.halfedge_mut(h1).face = Some(flocal);
+            mesh.topol.halfedge_mut(h2).face = Some(flocal);
+            // Link halfedges.
+            mesh.topol.link_halfedges(mesh.prev_halfedge(rh), rh);
+            mesh.topol.link_halfedges(orh, h1);
+            mesh.topol.link_halfedges(h1, h2);
+        }
+        mesh.topol.vertex_mut(fv).halfedge = Some(mesh.opposite_halfedge(spliths[0]));
+        Ok(())
+    }
 }
 
 impl<const DIM: usize, A> PolyMeshT<DIM, A>
@@ -170,9 +244,9 @@ where
         // change when we add new topology.
         CatmullClark::<DIM, A>::reserve(iters, &mut self.topol, &mut vpos, &mut epos, &mut fpos)?;
         // Temporary storage to use inside the loop.
-        let mut fhs = Vec::new();
-        let mut hhs = Vec::new();
-        let mut ffs = Vec::new();
+        let mut hloop = Vec::new();
+        let mut spliths = Vec::new();
+        let mut subfaces = Vec::new();
         for _ in 0..iters {
             CatmullClark::<DIM, A>::calc_face_edge_points(
                 self,
@@ -191,66 +265,15 @@ where
                 self.split_edge((ei as u32).into(), *pos, true)?;
             }
             for f in self.faces() {
-                // Find a halfedge that points to an old vertex, and collect the
-                // loop of halfedges starting from there.
-                let hstart = self
-                    .fh_ccw_iter(f)
-                    .find(|&h| self.head_vertex(h).index() < num_old_verts)
-                    .ok_or(Error::CannotSplitFace(f))?;
-                fhs.clear();
-                fhs.extend(iterator::loop_ccw_iter(&self.topol, hstart));
-                let fhs: &[HH] = &fhs; // Immutable.
-                debug_assert!(fhs.len() % 2 == 0);
-                let valence = iterator::loop_ccw_iter(&self.topol, hstart).count() / 2;
-                debug_assert_eq!(valence * 2, fhs.len());
-                let ne = self.num_edges();
-                // New vertex in the middle.
-                let fv = self.add_vertex(fpos[f.index() as usize])?;
-                // Create new edges and faces, with some math to get the indices
-                // of edges we haven't added yet. This is a bit sketchy, but
-                // should be safe with ample testing.
-                hhs.clear();
-                ffs.clear();
-                for (lei, hpair) in fhs.chunks_exact(2).enumerate() {
-                    let h1 = hpair[0];
-                    let pei = (ne + ((lei + valence - 1) % valence)) as u32;
-                    let nei = (ne + ((lei + 1) % valence)) as u32;
-                    let enew = self.topol.new_edge(
-                        self.tail_vertex(h1),
-                        fv,
-                        self.prev_halfedge(h1),
-                        (2 * pei + 1).into(),
-                        (2 * nei).into(),
-                        h1,
-                    )?;
-                    debug_assert_eq!(enew.index(), (lei + ne) as u32);
-                    hhs.push(self.edge_halfedge(enew, false));
-                    let flocal = if h1 == hstart {
-                        f
-                    } else {
-                        self.topol.new_face(h1)?
-                    };
-                    ffs.push(flocal);
-                }
-                for (i, hpair) in fhs.chunks_exact(2).enumerate() {
-                    let rh = hhs[i];
-                    let orh = self.opposite_halfedge(rh);
-                    let flocal = ffs[i];
-                    let pflocal = ffs[(i + valence - 1) % valence];
-                    let h1 = hpair[0];
-                    let h2 = hpair[1];
-                    // Link halfedges and faces.
-                    self.topol.face_mut(flocal).halfedge = h1;
-                    self.topol.halfedge_mut(rh).face = Some(pflocal);
-                    self.topol.halfedge_mut(orh).face = Some(flocal);
-                    self.topol.halfedge_mut(h1).face = Some(flocal);
-                    self.topol.halfedge_mut(h2).face = Some(flocal);
-                    // Link halfedges.
-                    self.topol.link_halfedges(self.prev_halfedge(rh), rh);
-                    self.topol.link_halfedges(orh, h1);
-                    self.topol.link_halfedges(h1, h2);
-                }
-                self.topol.vertex_mut(fv).halfedge = Some(self.opposite_halfedge(hhs[0]));
+                CatmullClark::<DIM, A>::split_face(
+                    self,
+                    f,
+                    num_old_verts,
+                    fpos,
+                    &mut hloop,
+                    &mut spliths,
+                    &mut subfaces,
+                )?;
             }
         }
         Ok(())
