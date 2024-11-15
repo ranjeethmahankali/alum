@@ -198,7 +198,7 @@ where
                 for (lei, hpair) in fhs.chunks_exact(2).enumerate() {
                     let h1 = hpair[0];
                     let pei = (ne + ((lei + valence - 1) % valence)) as u32;
-                    let nei = ((lei + 1) % valence) as u32;
+                    let nei = (ne + ((lei + 1) % valence)) as u32;
                     let enew = self.topol.new_edge(
                         self.tail_vertex(h1),
                         fv,
@@ -252,5 +252,6 @@ mod test {
         assert_eq!(26, mesh.num_vertices());
         assert_eq!(48, mesh.num_edges());
         assert_eq!(24, mesh.num_faces());
+        mesh.check_topology().expect("Topological errors found");
     }
 }
