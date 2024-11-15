@@ -343,13 +343,6 @@ impl Topology {
         &mut self.faces[f.index() as usize]
     }
 
-    pub(crate) fn adjust_outgoing_halfedge(&mut self, v: VH) {
-        let h = self.voh_ccw_iter(v).find(|h| h.is_boundary(self));
-        if let Some(h) = h {
-            self.vertex_mut(v).halfedge = Some(h);
-        }
-    }
-
     pub fn add_vertex(&mut self) -> Result<VH, Error> {
         let vi = self.vertices.len() as u32;
         self.vprops.push_value()?;

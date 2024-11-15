@@ -723,6 +723,17 @@ pub trait HasIterators: HasTopology {
         self.voh_ccw_iter(from)
             .find(|h| h.head(self.topology()) == to)
     }
+
+    /// Adjust the outgoing halfedge of a vertex, if necessary.
+    ///
+    /// If a vertex is on the boundary, it's outgoing halfedge MUST be a
+    /// boundary halfedge.
+    fn adjust_outgoing_halfedge(&mut self, v: VH) {
+        let h = self.voh_ccw_iter(v).find(|h| h.is_boundary(self));
+        if let Some(h) = h {
+            self.topology_mut().vertex_mut(v).halfedge = Some(h);
+        }
+    }
 }
 
 #[cfg(test)]
