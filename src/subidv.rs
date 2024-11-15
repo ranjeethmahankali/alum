@@ -263,5 +263,8 @@ mod test {
             .expect("Cannot subivide");
         mesh.check_topology().expect("Topological errors found");
         assert_eq!(mesh.try_calc_area().expect("Cannot compute area"), 5.566642);
+        assert_eq!(238464, mesh.num_faces());
+        assert_eq!(477096, mesh.num_edges());
+        assert_eq!(238630, mesh.num_vertices());
     }
 }
