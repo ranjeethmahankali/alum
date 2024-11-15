@@ -205,6 +205,46 @@ pub trait HasTopology {
     fn faces(&self) -> FRange {
         (0..(self.num_faces() as u32)).into()
     }
+
+    /// The status of a vertex.
+    fn vertex_status(&self, v: VH) -> Result<Status, Error> {
+        self.topology().vstatus.get(v)
+    }
+
+    /// The status of a halfedge.
+    fn halfedge_status(&self, h: HH) -> Result<Status, Error> {
+        self.topology().hstatus.get(h)
+    }
+
+    /// The status of an edge.
+    fn edge_status(&self, e: EH) -> Result<Status, Error> {
+        self.topology().estatus.get(e)
+    }
+
+    /// The status of a face.
+    fn face_status(&self, f: FH) -> Result<Status, Error> {
+        self.topology().fstatus.get(f)
+    }
+
+    /// The status of a vertex as mutable.
+    fn vertex_status_mut(&mut self, v: VH) -> Result<RefMut<'_, Status>, Error> {
+        self.topology_mut().vstatus.get_mut(v)
+    }
+
+    /// The status of a halfedge as mutable.
+    fn halfedge_status_mut(&mut self, h: HH) -> Result<RefMut<'_, Status>, Error> {
+        self.topology_mut().hstatus.get_mut(h)
+    }
+
+    /// The status of an edge as mutable.
+    fn edge_status_mut(&mut self, e: EH) -> Result<RefMut<'_, Status>, Error> {
+        self.topology_mut().estatus.get_mut(e)
+    }
+
+    /// The status of a face as mutable.
+    fn face_status_mut(&mut self, f: FH) -> Result<RefMut<'_, Status>, Error> {
+        self.topology_mut().fstatus.get_mut(f)
+    }
 }
 
 pub struct Topology {
@@ -276,41 +316,6 @@ impl Topology {
             eprops,
             fprops,
         }
-    }
-
-    pub fn vertex_status(&self, v: VH) -> Result<Status, Error> {
-        self.vstatus.get(v)
-    }
-
-    pub fn vertex_status_mut(&mut self, v: VH) -> Result<RefMut<'_, Status>, Error> {
-        self.vstatus.get_mut(v)
-    }
-
-    pub fn halfedge_status(&self, h: HH) -> Result<Status, Error> {
-        self.hstatus.get(h)
-    }
-
-    pub fn edge_status(&self, e: EH) -> Result<Status, Error> {
-        self.estatus.get(e)
-    }
-
-    pub fn face_status(&self, f: FH) -> Result<Status, Error> {
-        self.fstatus.get(f)
-    }
-
-    pub fn edge_status_mut(&mut self, e: EH) -> Result<RefMut<'_, Status>, Error> {
-        self.estatus.get_mut(e)
-    }
-
-    pub fn face_status_mut(&mut self, f: FH) -> Result<RefMut<'_, Status>, Error> {
-        self.fstatus.get_mut(f)
-    }
-
-    pub fn new_vprop_with_capacity<T>(&mut self, n: usize, default: T) -> VProperty<T>
-    where
-        T: Clone + Copy + 'static,
-    {
-        VProperty::<T>::with_capacity(n, &mut self.vprops, default)
     }
 
     pub(crate) fn vertex(&self, v: VH) -> &Vertex {

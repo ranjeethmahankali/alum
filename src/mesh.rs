@@ -2,7 +2,6 @@ use crate::{
     element::{EH, FH, HH, VH},
     error::Error,
     property::{FProperty, VProperty},
-    status::Status,
     topol::{HasTopology, TopolCache, Topology},
 };
 use std::ops::Range;
@@ -160,7 +159,7 @@ where
     /// not computed.
     pub fn with_capacity(nverts: usize, nedges: usize, nfaces: usize) -> Self {
         let mut topol = Topology::with_capacity(nverts, nedges, nfaces);
-        let points = topol.new_vprop_with_capacity(nverts, A::zero_vector());
+        let points = VProperty::with_capacity(nverts, &mut topol.vprops, A::zero_vector());
         PolyMeshT {
             topol,
             cache: TopolCache::default(),
@@ -173,26 +172,6 @@ where
     /// The position of a vertex.
     pub fn point(&self, vi: VH) -> Result<A::Vector, Error> {
         self.points.get(vi)
-    }
-
-    /// The status of a vertex.
-    pub fn vertex_status(&self, v: VH) -> Result<Status, Error> {
-        self.topol.vertex_status(v)
-    }
-
-    /// The status of a halfedge.
-    pub fn halfedge_status(&self, h: HH) -> Result<Status, Error> {
-        self.topol.halfedge_status(h)
-    }
-
-    /// The status of an edge.
-    pub fn edge_status(&self, e: EH) -> Result<Status, Error> {
-        self.topol.edge_status(e)
-    }
-
-    /// The status of a face.
-    pub fn face_status(&self, f: FH) -> Result<Status, Error> {
-        self.topol.face_status(f)
     }
 
     /// Set the position of a vertex.
