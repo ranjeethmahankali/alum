@@ -254,7 +254,7 @@ impl HH {
 
     /// Get the face incident on the halfedge.
     pub fn face(self, mesh: &impl HasTopology) -> Option<FH> {
-        mesh.topology().halfedge_face(self)
+        mesh.topology().halfedge(self).face
     }
 
     /// Get the edge corresponding to the halfedge.

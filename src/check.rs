@@ -108,12 +108,12 @@ fn check_edges(
         if hflags[h.index() as usize] {
             continue;
         }
-        let f = mesh.halfedge_face(h);
+        let f = h.face(mesh);
         for h in iterator::loop_ccw_iter(mesh, h) {
             if std::mem::replace(&mut hflags[h.index() as usize], true) {
                 return Err(Error::InvalidLoopTopology(h));
             }
-            if mesh.halfedge_face(h) != f {
+            if h.face(mesh) != f {
                 return Err(Error::InconsistentFaceInLoop(h));
             }
         }
@@ -125,12 +125,12 @@ fn check_edges(
         if !hflags[h.index() as usize] {
             continue;
         }
-        let f = mesh.halfedge_face(h);
+        let f = h.face(mesh);
         for h in iterator::loop_ccw_iter(mesh, h) {
             if !std::mem::replace(&mut hflags[h.index() as usize], false) {
                 return Err(Error::InvalidLoopTopology(h));
             }
-            if mesh.halfedge_face(h) != f {
+            if h.face(mesh) != f {
                 return Err(Error::InconsistentFaceInLoop(h));
             }
         }
@@ -148,7 +148,7 @@ fn check_faces(mesh: &Topology, hstatus: &[Status], fstatus: &[Status]) -> Resul
         if hstatus[h.index() as usize].deleted() {
             return Err(Error::DeletedHalfedge(h));
         }
-        if mesh.halfedge_face(h) != Some(f) {
+        if h.face(mesh) != Some(f) {
             return Err(Error::InvalidFaceHalfedgeLink(f, h));
         }
     }

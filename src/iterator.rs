@@ -250,11 +250,11 @@ pub(crate) fn ve_cw_iter(topol: &Topology, v: VH) -> impl Iterator<Item = EH> + 
 }
 
 pub(crate) fn vf_ccw_iter(topol: &Topology, v: VH) -> impl Iterator<Item = FH> + use<'_> {
-    voh_ccw_iter(topol, v).filter_map(|h| topol.halfedge_face(h))
+    voh_ccw_iter(topol, v).filter_map(|h| h.face(topol))
 }
 
 pub(crate) fn vf_cw_iter(topol: &Topology, v: VH) -> impl Iterator<Item = FH> + use<'_> {
-    voh_cw_iter(topol, v).filter_map(|h| topol.halfedge_face(h))
+    voh_cw_iter(topol, v).filter_map(|h| h.face(topol))
 }
 
 pub(crate) fn ev_iter(topol: &Topology, e: EH) -> impl Iterator<Item = VH> + use<'_> {
@@ -268,7 +268,7 @@ pub(crate) fn eh_iter(topol: &Topology, e: EH) -> impl Iterator<Item = HH> + use
 }
 
 pub(crate) fn ef_iter(topol: &Topology, e: EH) -> impl Iterator<Item = FH> + use<'_> {
-    eh_iter(topol, e).filter_map(|h| topol.halfedge_face(h))
+    eh_iter(topol, e).filter_map(|h| h.face(topol))
 }
 
 pub(crate) fn fv_ccw_iter(topol: &Topology, f: FH) -> impl Iterator<Item = VH> + use<'_> {
@@ -296,11 +296,11 @@ pub(crate) fn fe_cw_iter(topol: &Topology, f: FH) -> impl Iterator<Item = EH> + 
 }
 
 pub(crate) fn ff_ccw_iter(topol: &Topology, f: FH) -> impl Iterator<Item = FH> + use<'_> {
-    fh_ccw_iter(topol, f).filter_map(|h| topol.halfedge_face(h.opposite()))
+    fh_ccw_iter(topol, f).filter_map(|h| h.opposite().face(topol))
 }
 
 pub(crate) fn ff_cw_iter(topol: &Topology, f: FH) -> impl Iterator<Item = FH> + use<'_> {
-    fh_cw_iter(topol, f).filter_map(|h| topol.halfedge_face(h.opposite()))
+    fh_cw_iter(topol, f).filter_map(|h| h.opposite().face(topol))
 }
 
 pub(crate) fn ccw_rotate_iter(topol: &Topology, h: HH) -> impl Iterator<Item = HH> + use<'_> {

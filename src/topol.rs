@@ -225,10 +225,6 @@ impl Topology {
         &mut self.faces[f.index() as usize]
     }
 
-    pub fn halfedge_face(&self, h: HH) -> Option<FH> {
-        self.halfedge(h).face
-    }
-
     pub fn halfedge_pair(&self, e: EH) -> (HH, HH) {
         e.halfedges()
     }
@@ -632,8 +628,8 @@ impl Topology {
     ) -> Result<(), Error> {
         let h0 = self.edge_halfedge(e, false);
         let h1 = self.edge_halfedge(e, true);
-        let f0 = self.halfedge_face(h0);
-        let f1 = self.halfedge_face(h1);
+        let f0 = h0.face(self);
+        let f1 = h1.face(self);
         if let Some(f) = f0 {
             self.delete_face(f, delete_isolated_vertices, ecache, vcache)?;
         }
@@ -842,7 +838,7 @@ impl Topology {
         // Update halfedge connectivity.
         for h in self.halfedges() {
             self.link_halfedges(h, hmap[h.next(self).index() as usize]);
-            if let Some(f) = self.halfedge_face(h) {
+            if let Some(f) = h.face(self) {
                 self.halfedge_mut(h).face = Some(fmap[f.index() as usize]);
             }
         }
@@ -984,8 +980,7 @@ pub(crate) mod test {
             let oh = h.opposite();
             assert!(!topol.is_boundary_halfedge(oh));
             assert_eq!(
-                topol
-                    .halfedge_face(oh)
+                oh.face(&topol)
                     .expect("Halfedge must have an incident face"),
                 face
             );
@@ -1067,8 +1062,7 @@ pub(crate) mod test {
             let oh = h.opposite();
             assert!(!topol.is_boundary_halfedge(oh));
             assert_eq!(
-                topol
-                    .halfedge_face(oh)
+                oh.face(&topol)
                     .expect("Halfedge must have an incident face"),
                 face
             );

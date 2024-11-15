@@ -32,11 +32,11 @@ impl Topology {
         {
             return false;
         }
-        let htriangle = match self.halfedge_face(h) {
+        let htriangle = match h.face(self) {
             Some(f) => f.valence(self) == 3,
             None => false,
         };
-        let ohtriangle = match self.halfedge_face(oh) {
+        let ohtriangle = match oh.face(self) {
             Some(f) => f.valence(self) == 3,
             None => false,
         };
@@ -100,7 +100,7 @@ impl Topology {
         if htriangle {
             let h1 = h.next(self).opposite();
             let h2 = h.prev(self).opposite();
-            match (self.halfedge_face(h1), self.halfedge_face(h2)) {
+            match (h1.face(self), h2.face(self)) {
                 (None, None) => return false, // This is redundant but just in case.
                 (Some(fa), Some(fb)) if fa == fb && fa.valence(self) != 3 => return false,
                 _ => {} // Do nothing.
@@ -109,7 +109,7 @@ impl Topology {
         if ohtriangle {
             let h1 = oh.next(self).opposite();
             let h2 = oh.prev(self).opposite();
-            match (self.halfedge_face(h1), self.halfedge_face(h2)) {
+            match (h1.face(self), h2.face(self)) {
                 (None, None) => return false, // This is redundant but just in case.
                 (Some(fa), Some(fb)) if fa == fb && fa.valence(self) != 3 => return false,
                 _ => {} // Do nothing.
@@ -155,8 +155,8 @@ impl Topology {
         let o1 = h1.opposite();
         let v0 = h.head(self);
         let v1 = h1.head(self);
-        let fh = self.halfedge_face(h);
-        let fo = self.halfedge_face(o);
+        let fh = h.face(self);
+        let fo = o.face(self);
         // Ensure the loop represents a collapsed triangle. Because this is a
         // private function, all callers inside the implementation, so we can be
         // confident and assert to catch and weed out any bugs in debug builds.
@@ -210,8 +210,8 @@ impl Topology {
         let o = h.opposite();
         let on = o.next(self);
         let op = o.prev(self);
-        let fh = self.halfedge_face(h);
-        let fo = self.halfedge_face(o);
+        let fh = h.face(self);
+        let fo = o.face(self);
         let vh = h.head(self);
         let vo = o.head(self);
         // Setup cache.
@@ -332,7 +332,7 @@ impl Topology {
         let (h0, h1) = self.halfedge_pair(e);
         let vfrom = h0.tail(self);
         let (ph0, nh1) = (h0.prev(self), h1.next(self));
-        let (f0, f1) = (self.halfedge_face(h0), self.halfedge_face(h1));
+        let (f0, f1) = (h0.face(self), h1.face(self));
         // Create a new edge and rewire topology.
         let enew = self.new_edge(vfrom, v, ph0, h0, h1, nh1)?;
         let hnew = self.edge_halfedge(enew, false);
@@ -364,7 +364,7 @@ impl Topology {
     pub fn swap_edge_ccw(&mut self, e: EH) -> bool {
         let h = self.edge_halfedge(e, false);
         let oh = self.edge_halfedge(e, true);
-        let (f, of) = match (self.halfedge_face(h), self.halfedge_face(oh)) {
+        let (f, of) = match (h.face(self), oh.face(self)) {
             (Some(f), Some(of)) => (f, of),
             _ => return false, // Cannot swap boundary edge.
         };
@@ -415,7 +415,7 @@ impl Topology {
     pub fn swap_edge_cw(&mut self, e: EH) -> bool {
         let h = self.edge_halfedge(e, false);
         let oh = self.edge_halfedge(e, true);
-        let (f, of) = match (self.halfedge_face(h), self.halfedge_face(oh)) {
+        let (f, of) = match (h.face(self), oh.face(self)) {
             (Some(f), Some(of)) => (f, of),
             _ => return false, // Cannot swap boundary edge.
         };
@@ -470,10 +470,10 @@ impl Topology {
     /// simple links if
     fn edge_is_unique_link(&self, e: EH) -> bool {
         let h = self.edge_halfedge(e, false);
-        let fo = self.halfedge_face(h.opposite());
+        let fo = h.opposite().face(self);
         iterator::loop_ccw_iter(self, h)
             .skip(1)
-            .all(|h| self.halfedge_face(h.opposite()) != fo)
+            .all(|h| h.opposite().face(self) != fo)
     }
 
     pub fn remove_edge(&mut self, e: EH) -> Result<FH, Error> {
@@ -499,7 +499,7 @@ impl Topology {
             return Err(Error::EdgeIsNotAUniqueLink(e));
         }
         let (h0, h1) = self.halfedge_pair(e);
-        let (f0, f1) = match (self.halfedge_face(h0), self.halfedge_face(h1)) {
+        let (f0, f1) = match (h0.face(self), h1.face(self)) {
             (Some(f0), Some(f1)) => (f0, f1),
             _ => return Err(Error::CannotRemoveBoundaryEdge(e)),
         };
@@ -545,8 +545,8 @@ impl Topology {
         if p1 == next || prev == next {
             return Err(Error::CannotInsertEdge(prev, next));
         }
-        let f = self.halfedge_face(prev);
-        if f != self.halfedge_face(next) {
+        let f = prev.face(self);
+        if f != next.face(self) {
             return Err(Error::HalfedgesNotInTheSameLoop(prev, next));
         }
         if f.is_none() {
@@ -1051,8 +1051,8 @@ mod test {
         );
         assert_eq!(h.prev(&qbox), hnew);
         assert_eq!(oh.next(&qbox), ohnew);
-        assert_eq!(qbox.halfedge_face(h), qbox.halfedge_face(hnew));
-        assert_eq!(qbox.halfedge_face(oh), qbox.halfedge_face(ohnew));
+        assert_eq!(h.face(&qbox), hnew.face(&qbox));
+        assert_eq!(oh.face(&qbox), ohnew.face(&qbox));
         qbox.check().expect("Topological errors found");
     }
 
@@ -1098,8 +1098,8 @@ mod test {
         assert_eq!(hnew.head(&qbox), v);
         assert_eq!(h.prev(&qbox), hnew);
         assert_eq!(oh.next(&qbox), ohnew);
-        assert_eq!(qbox.halfedge_face(h), qbox.halfedge_face(hnew));
-        assert_eq!(qbox.halfedge_face(oh), qbox.halfedge_face(ohnew));
+        assert_eq!(h.face(&qbox), hnew.face(&qbox));
+        assert_eq!(oh.face(&qbox), ohnew.face(&qbox));
         // Check properties.
         assert_eq!(
             2,
