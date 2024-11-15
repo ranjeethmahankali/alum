@@ -115,7 +115,7 @@ where
                 if v.is_boundary(mesh) {
                     let (count, sum) = mesh
                         .ve_ccw_iter(v)
-                        .filter(|e| mesh.is_boundary_edge(*e))
+                        .filter(|e| e.is_boundary(mesh))
                         .fold((1usize, points[v.index() as usize]), |(count, total), e| {
                             (count + 1, total + edge_points[e.index() as usize])
                         });

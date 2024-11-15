@@ -252,6 +252,13 @@ impl HH {
     pub fn is_valid(self, mesh: &impl HasTopology) -> bool {
         mesh.topology().is_valid_halfedge(self)
     }
+
+    /// Check if this halfedge is on the boundary of `mesh`.
+    ///
+    /// A halfedge is considered interior if it has a face incident on it.
+    pub fn is_boundary(self, mesh: &impl HasTopology) -> bool {
+        mesh.topology().is_boundary_halfedge(self)
+    }
 }
 
 impl EH {
@@ -269,6 +276,14 @@ impl EH {
     /// The index has to be less than the number of halfedges in the mesh.
     pub fn is_valid(self, mesh: &impl HasTopology) -> bool {
         mesh.topology().is_valid_edge(self)
+    }
+
+    /// Check if the edge is a boundary edge.
+    ///
+    /// An edge is considered interior if it has two faces incident on both of it's halfedges.
+    pub fn is_boundary(self, mesh: &impl HasTopology) -> bool {
+        let (h, oh) = self.halfedges();
+        h.is_boundary(mesh) || oh.is_boundary(mesh)
     }
 }
 

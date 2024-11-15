@@ -306,20 +306,6 @@ where
         self.topol.faces()
     }
 
-    /// Check if the halfedge is on the boundary.
-    ///
-    /// A halfedge is considered interior if it has a face incident on it.
-    pub fn is_boundary_halfedge(&self, h: HH) -> bool {
-        self.topol.is_boundary_halfedge(h)
-    }
-
-    /// Check if the edge is a boundary edge.
-    ///
-    /// An edge is considered interior if it has two faces incident on both of it's halfedges.
-    pub fn is_boundary_edge(&self, e: EH) -> bool {
-        self.topol.is_boundary_edge(e)
-    }
-
     /// The number of edges incident on a vertex.
     pub fn vertex_valence(&self, v: VH) -> usize {
         self.topol.vertex_valence(v)

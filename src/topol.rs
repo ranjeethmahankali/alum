@@ -286,8 +286,7 @@ impl Topology {
     }
 
     pub fn is_boundary_edge(&self, e: EH) -> bool {
-        let (h, oh) = self.halfedge_pair(e);
-        self.is_boundary_halfedge(h) || self.is_boundary_halfedge(oh)
+        e.is_boundary(self)
     }
 
     pub fn is_boundary_vertex(&self, v: VH) -> bool {
@@ -1488,7 +1487,7 @@ pub(crate) mod test {
         assert_eq!(
             (6, 1),
             mesh.edges()
-                .fold((0usize, 0usize), |(b, nb), e| if mesh.is_boundary_edge(e) {
+                .fold((0usize, 0usize), |(b, nb), e| if e.is_boundary(&mesh) {
                     (b + 1, nb)
                 } else {
                     (b, nb + 1)

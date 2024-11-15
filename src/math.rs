@@ -465,7 +465,7 @@ where
     /// angle. This can be more accurate than
     /// [`Self::calc_dihedral_angle_fast`].
     pub fn calc_dihedral_angle(&self, e: EH, points: &[A::Vector]) -> A::Scalar {
-        if self.is_boundary_edge(e) {
+        if e.is_boundary(self) {
             return A::scalarf64(0.0);
         }
         let h0 = self.edge_halfedge(e, false);
@@ -550,7 +550,7 @@ where
         let n1 = self.calc_halfedge_vector(h2, points);
         let angle = A::vector_angle(n0, n1);
         if let Some(f) = self.halfedge_face(self.opposite_halfedge(h)) {
-            if self.is_boundary_halfedge(h)
+            if h.is_boundary(self)
                 && A::dot_product(A::cross_product(n0, n1), face_normals[f.index() as usize])
                     < A::scalarf64(0.0)
             {
@@ -952,7 +952,7 @@ mod test {
         let qbox = qbox;
         let mut convex = 0usize;
         let mut concave = 0usize;
-        for h in qbox.halfedges().filter(|h| qbox.is_boundary_halfedge(*h)) {
+        for h in qbox.halfedges().filter(|h| h.is_boundary(&qbox)) {
             let angle = qbox
                 .try_calc_sector_angle(h)
                 .expect("Cannot compute sector angle");
