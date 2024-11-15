@@ -159,10 +159,10 @@ where
             .ok_or(Error::CannotSplitFace(f))?;
         hloop.clear();
         hloop.extend(iterator::loop_ccw_iter(&mesh.topol, hstart));
-        let fhs: &[HH] = &hloop; // Immutable.
-        debug_assert!(fhs.len() % 2 == 0);
+        let hloop: &[HH] = hloop; // Immutable.
+        debug_assert!(hloop.len() % 2 == 0);
         let valence = iterator::loop_ccw_iter(&mesh.topol, hstart).count() / 2;
-        debug_assert_eq!(valence * 2, fhs.len());
+        debug_assert_eq!(valence * 2, hloop.len());
         let ne = mesh.num_edges();
         // New vertex in the middle.
         let fv = mesh.add_vertex(face_points[f.index() as usize])?;
@@ -171,7 +171,7 @@ where
         // should be safe with ample testing.
         spliths.clear();
         subfaces.clear();
-        for (lei, hpair) in fhs.chunks_exact(2).enumerate() {
+        for (lei, hpair) in hloop.chunks_exact(2).enumerate() {
             let h1 = hpair[0];
             let pei = (ne + ((lei + valence - 1) % valence)) as u32;
             let nei = (ne + ((lei + 1) % valence)) as u32;
@@ -192,7 +192,7 @@ where
             };
             subfaces.push(flocal);
         }
-        for (i, hpair) in fhs.chunks_exact(2).enumerate() {
+        for (i, hpair) in hloop.chunks_exact(2).enumerate() {
             let rh = spliths[i];
             let orh = rh.opposite();
             let flocal = subfaces[i];

@@ -100,7 +100,7 @@ pub(crate) mod test {
         let mut points = mesh.points();
         let mut points = points.try_borrow_mut().expect("Cannot borrow points");
         for p in points.iter_mut() {
-            *p = *p * 10.0;
+            *p *= 10.0;
         }
         mesh
     }
