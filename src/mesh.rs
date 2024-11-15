@@ -3,7 +3,7 @@ use crate::{
     error::Error,
     property::{EProperty, FProperty, HProperty, VProperty},
     status::Status,
-    topol::{TopolCache, Topology},
+    topol::{HasTopology, TopolCache, Topology},
 };
 use std::ops::Range;
 
@@ -555,5 +555,14 @@ where
     /// safe because they are automatically synchronized.
     pub fn garbage_collection(&mut self) -> Result<(), Error> {
         self.topol.garbage_collection(&mut self.cache)
+    }
+}
+
+impl<const DIM: usize, A> HasTopology for PolyMeshT<DIM, A>
+where
+    A: Adaptor<DIM>,
+{
+    fn topology(&self) -> &Topology {
+        &self.topol
     }
 }

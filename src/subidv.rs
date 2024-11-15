@@ -1,5 +1,7 @@
 use crate::{
-    iterator, topol::Topology, Adaptor, Error, FloatScalarAdaptor, Handle, PolyMeshT, FH, HH,
+    iterator,
+    topol::{HasTopology, Topology},
+    Adaptor, Error, FloatScalarAdaptor, Handle, PolyMeshT, FH, HH,
 };
 use std::{
     marker::PhantomData,

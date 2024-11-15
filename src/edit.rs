@@ -772,7 +772,7 @@ mod test {
         iterator,
         topol::{
             test::{loop_mesh, quad_box},
-            TopolCache,
+            HasTopology, TopolCache,
         },
     };
 

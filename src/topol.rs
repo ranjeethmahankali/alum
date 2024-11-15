@@ -45,6 +45,26 @@ impl TopolCache {
     }
 }
 
+pub trait HasTopology {
+    fn topology(&self) -> &Topology;
+
+    fn num_vertices(&self) -> usize {
+        self.topology().vertices.len()
+    }
+
+    fn num_edges(&self) -> usize {
+        self.topology().edges.len()
+    }
+
+    fn num_halfedges(&self) -> usize {
+        self.num_edges() * 2
+    }
+
+    fn num_faces(&self) -> usize {
+        self.topology().faces.len()
+    }
+}
+
 pub struct Topology {
     vertices: Vec<Vertex>,
     edges: Vec<Edge>,
@@ -229,18 +249,6 @@ impl Topology {
         &mut self.faces[f.index() as usize]
     }
 
-    pub fn num_vertices(&self) -> usize {
-        self.vertices.len()
-    }
-
-    pub fn num_edges(&self) -> usize {
-        self.edges.len()
-    }
-
-    pub fn num_halfedges(&self) -> usize {
-        self.num_edges() * 2
-    }
-
     pub fn vertices(&self) -> impl Iterator<Item = VH> {
         (0..(self.num_vertices() as u32)).map(|i| i.into())
     }
@@ -255,10 +263,6 @@ impl Topology {
 
     pub fn faces(&self) -> impl Iterator<Item = FH> {
         (0..(self.num_faces() as u32)).map(|i| i.into())
-    }
-
-    pub fn num_faces(&self) -> usize {
-        self.faces.len()
     }
 
     pub fn find_halfedge(&self, from: VH, to: VH) -> Option<HH> {
@@ -809,6 +813,12 @@ impl Topology {
     }
 }
 
+impl HasTopology for Topology {
+    fn topology(&self) -> &Topology {
+        self
+    }
+}
+
 impl Default for Topology {
     fn default() -> Self {
         Self::new()
@@ -823,7 +833,7 @@ pub(crate) mod test {
         alum_glam::PolyMeshF32,
         iterator,
         macros::assert_f32_eq,
-        topol::{Handle, VH},
+        topol::{Handle, HasTopology, VH},
     };
 
     use super::{TopolCache, Topology};

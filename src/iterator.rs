@@ -927,7 +927,7 @@ mod test {
             ff_ccw_iter, ff_cw_iter, fv_ccw_iter, fv_cw_iter, vf_ccw_iter, vf_cw_iter,
             vih_ccw_iter, vih_cw_iter, voh_ccw_iter, voh_cw_iter, vv_ccw_iter, vv_cw_iter,
         },
-        topol::{TopolCache, Topology},
+        topol::{HasTopology, TopolCache, Topology},
     };
     use arrayvec::ArrayVec;
 

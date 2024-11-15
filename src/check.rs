@@ -1,4 +1,9 @@
-use crate::{element::Handle, iterator, topol::Topology, Adaptor, Error, PolyMeshT, Status};
+use crate::{
+    element::Handle,
+    iterator,
+    topol::{HasTopology, Topology},
+    Adaptor, Error, PolyMeshT, Status,
+};
 
 fn check_vertices(
     mesh: &Topology,

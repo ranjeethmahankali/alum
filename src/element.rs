@@ -1,4 +1,4 @@
-use crate::{iterator, topol::Topology, Adaptor, PolyMeshT};
+use crate::{iterator, topol::HasTopology};
 use std::fmt::{Debug, Display};
 
 /**
@@ -182,10 +182,6 @@ impl Debug for FH {
     }
 }
 
-pub trait HasTopology {
-    fn topology(&self) -> &Topology;
-}
-
 impl VH {
     pub fn halfedge(self, mesh: &impl HasTopology) -> Option<HH> {
         mesh.topology().vertex(self).halfedge
@@ -340,21 +336,6 @@ impl FH {
     /// The number of vertices incident on a face.
     pub fn valence(self, mesh: &impl HasTopology) -> usize {
         iterator::fh_ccw_iter(mesh.topology(), self).count()
-    }
-}
-
-impl HasTopology for Topology {
-    fn topology(&self) -> &Topology {
-        self
-    }
-}
-
-impl<const DIM: usize, A> HasTopology for PolyMeshT<DIM, A>
-where
-    A: Adaptor<DIM>,
-{
-    fn topology(&self) -> &Topology {
-        &self.topol
     }
 }
 
