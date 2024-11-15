@@ -306,56 +306,6 @@ where
         self.topol.faces()
     }
 
-    /// Check if this vertex is valid for this mesh.
-    ///
-    /// It's index has to be less than the number of vertices.
-    pub fn is_valid_vertex(&self, v: VH) -> bool {
-        self.topol.is_valid_vertex(v)
-    }
-
-    /// Check if this halfedge is valid for this mesh.
-    ///
-    /// It's index has to be less than the number of halfedges.
-    pub fn is_valid_halfedge(&self, h: HH) -> bool {
-        self.topol.is_valid_halfedge(h)
-    }
-
-    /// Check if this edge is valid for this mesh.
-    ///
-    /// It's index has to be less than the number of edges.
-    pub fn is_valid_edge(&self, e: EH) -> bool {
-        self.topol.is_valid_edge(e)
-    }
-
-    /// Check if the face is valid for this mesh.
-    ///
-    /// It's index has to be less than the number of faces.
-    pub fn is_valid_face(&self, f: FH) -> bool {
-        self.topol.is_valid_face(f)
-    }
-
-    /// Check if the vertex is manifold.
-    ///
-    /// A vertex is manifold if it has at most 1 outgoing halfedge.
-    /// ```text
-    ///    .......|     .......|.......     ....\     /...
-    ///    .......|     .......|.......     .....\   /....
-    ///    .......|     .......|.......     ......\ /.....
-    ///    -------v     -------v-------     -------v------
-    ///    .......|     .......|.......     ....../ \.....
-    ///    .......|     .......|.......     ...../   \....
-    ///    .......|     .......|.......     ..../     \...
-    ///    Manifold     Manifold            Not manifold
-    /// ```
-    pub fn is_manifold_vertex(&self, v: VH) -> bool {
-        self.topol.is_manifold_vertex(v)
-    }
-
-    /// Check if the vertex is on the boundary of the mesh.
-    pub fn is_boundary_vertex(&self, v: VH) -> bool {
-        self.topol.is_boundary_vertex(v)
-    }
-
     /// Check if the halfedge is on the boundary.
     ///
     /// A halfedge is considered interior if it has a face incident on it.

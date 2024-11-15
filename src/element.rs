@@ -1,4 +1,4 @@
-use crate::{topol::Topology, Adaptor, PolyMeshT};
+use crate::{mesh, topol::Topology, Adaptor, PolyMeshT};
 use std::fmt::{Debug, Display};
 
 /**
@@ -187,8 +187,37 @@ pub trait HasTopology {
 }
 
 impl VH {
-    pub fn halfedge(&self, mesh: &impl HasTopology) -> Option<HH> {
-        mesh.topology().vertex_halfedge(*self)
+    pub fn halfedge(self, mesh: &impl HasTopology) -> Option<HH> {
+        mesh.topology().vertex_halfedge(self)
+    }
+
+    /// Check if this vertex is valid for the `mesh`.
+    ///
+    /// The index has to be less than the number of vertices in the mesh.
+    pub fn is_valid(self, mesh: &impl HasTopology) -> bool {
+        mesh.topology().is_valid_vertex(self)
+    }
+
+    /// Check if this vertex is manifold.
+    ///
+    /// A vertex is manifold if it has at most 1 outgoing halfedge.
+    /// ```text
+    ///    .......|     .......|.......     ....\     /...
+    ///    .......|     .......|.......     .....\   /....
+    ///    .......|     .......|.......     ......\ /.....
+    ///    -------v     -------v-------     -------v------
+    ///    .......|     .......|.......     ....../ \.....
+    ///    .......|     .......|.......     ...../   \....
+    ///    .......|     .......|.......     ..../     \...
+    ///    Manifold     Manifold            Not manifold
+    /// ```
+    pub fn is_manifold(self, mesh: &impl HasTopology) -> bool {
+        mesh.topology().is_manifold_vertex(self)
+    }
+
+    /// Check if this vertex is on the boundary of the `mesh`.
+    pub fn is_boundary(self, mesh: &impl HasTopology) -> bool {
+        mesh.topology().is_boundary_vertex(self)
     }
 }
 
@@ -216,6 +245,13 @@ impl HH {
     pub fn face(self, mesh: &impl HasTopology) -> Option<FH> {
         mesh.topology().halfedge_face(self)
     }
+
+    /// Check if this halfedge is valid for the `mesh`.
+    ///
+    /// The index has to be less than the number of halfedges in the mesh.
+    pub fn is_valid(self, mesh: &impl HasTopology) -> bool {
+        mesh.topology().is_valid_halfedge(self)
+    }
 }
 
 impl EH {
@@ -227,11 +263,25 @@ impl EH {
     pub fn halfedge(self, flag: bool) -> HH {
         ((self.idx << 1) | if flag { 1 } else { 0 }).into()
     }
+
+    /// Check if this edge is valid for the `mesh`.
+    ///
+    /// The index has to be less than the number of halfedges in the mesh.
+    pub fn is_valid(self, mesh: &impl HasTopology) -> bool {
+        mesh.topology().is_valid_edge(self)
+    }
 }
 
 impl FH {
     pub fn halfedge(self, mesh: &impl HasTopology) -> HH {
         mesh.topology().face_halfedge(self)
+    }
+
+    /// Check if this face is valid for the `mesh`.
+    ///
+    /// The index has to be less than the number of halffaces in the mesh.
+    pub fn is_valid(self, mesh: &impl HasTopology) -> bool {
+        mesh.topology().is_valid_face(self)
     }
 }
 
