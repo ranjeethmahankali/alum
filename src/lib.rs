@@ -54,7 +54,7 @@ mod mesh;
 mod obj;
 mod property;
 mod status;
-mod subidv;
+mod subdiv;
 mod topol;
 
 #[cfg(feature = "use_glam")]
@@ -68,3 +68,4 @@ pub use mesh::{
 };
 pub use property::{EProperty, FProperty, HProperty, Property, VProperty};
 pub use status::Status;
+pub use topol::HasTopology;

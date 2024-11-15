@@ -3,7 +3,7 @@ use std::path::Path;
 use crate::{
     error::Error,
     mesh::{Adaptor, FloatScalarAdaptor, PolyMeshT},
-    VH,
+    HasTopology, VH,
 };
 
 impl<A> PolyMeshT<3, A>
@@ -85,7 +85,7 @@ where
 
 #[cfg(all(test, feature = "use_glam"))]
 pub(crate) mod test {
-    use crate::alum_glam::PolyMeshF32;
+    use crate::{alum_glam::PolyMeshF32, HasTopology};
     use std::path::PathBuf;
 
     pub(crate) fn bunny_mesh() -> PolyMeshF32 {

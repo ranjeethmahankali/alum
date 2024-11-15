@@ -233,7 +233,7 @@ where
     /// the shape is smoothed according to the Catmull-Clark scheme.
     ///
     /// ```rust
-    /// use alum::alum_glam::PolyMeshF32;
+    /// use alum::{alum_glam::PolyMeshF32, HasTopology};
     ///
     /// let mut mesh = PolyMeshF32::unit_box().expect("Cannot create box");
     /// assert_eq!((8, 12, 6), (mesh.num_vertices(), mesh.num_edges(), mesh.num_faces()));
@@ -324,7 +324,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::{alum_glam::PolyMeshF32, obj::test::bunny_mesh};
+    use crate::{alum_glam::PolyMeshF32, obj::test::bunny_mesh, HasTopology};
 
     #[test]
     fn t_box_catmull_clark() {

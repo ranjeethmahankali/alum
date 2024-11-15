@@ -170,33 +170,12 @@ where
         }
     }
 
-    /// Create a new vertex property of type T, with the `default` value.
-    ///
-    /// The default value will be used when new elements are added to the mesh.
-    ///
-    /// ```rust
-    /// use alum::alum_glam::PolyMeshF32;
-    ///
-    /// let mut mesh = PolyMeshF32::tetrahedron(1.0).expect("Cannot crate tetrahedron");
-    /// let prop = mesh.create_vertex_prop(42usize);
-    /// // To use th property, you have to borrow it.
-    /// let prop = prop.try_borrow().expect("Cannot borrow property");
-    /// assert_eq!(mesh.num_vertices(), prop.len());
-    /// assert!(prop.iter().all(|v| *v == 42));
-    /// ```
-    pub fn create_vertex_prop<T>(&mut self, default: T) -> VProperty<T>
-    where
-        T: Clone + Copy + 'static,
-    {
-        self.topol.create_vertex_prop(default)
-    }
-
     /// Create a new halfedge property of type T, with the `default` value.
     ///
     /// The default value will be used when new elements are added to the mesh.
     ///
     /// ```rust
-    /// use alum::alum_glam::PolyMeshF32;
+    /// use alum::{alum_glam::PolyMeshF32, HasTopology};
     ///
     /// let mut mesh = PolyMeshF32::tetrahedron(1.0).expect("Cannot crate tetrahedron");
     /// let prop = mesh.create_halfedge_prop(42usize);
@@ -217,7 +196,7 @@ where
     /// The default value will be used when new elements are added to the mesh.
     ///
     /// ```rust
-    /// use alum::alum_glam::PolyMeshF32;
+    /// use alum::{alum_glam::PolyMeshF32, HasTopology};
     ///
     /// let mut mesh = PolyMeshF32::tetrahedron(1.0).expect("Cannot crate tetrahedron");
     /// let prop = mesh.create_edge_prop(42usize);
@@ -238,7 +217,7 @@ where
     /// The default value will be used when new elements are added to the mesh.
     ///
     /// ```rust
-    /// use alum::alum_glam::PolyMeshF32;
+    /// use alum::{alum_glam::PolyMeshF32, HasTopology};
     ///
     /// let mut mesh = PolyMeshF32::tetrahedron(1.0).expect("Cannot crate tetrahedron");
     /// let prop = mesh.create_face_prop(42usize);
@@ -264,26 +243,6 @@ where
     /// Delete all elements and their properties.
     pub fn clear(&mut self) -> Result<(), Error> {
         self.topol.clear()
-    }
-
-    /// Number of vertices.
-    pub fn num_vertices(&self) -> usize {
-        self.topol.num_vertices()
-    }
-
-    /// Number of edges.
-    pub fn num_edges(&self) -> usize {
-        self.topol.num_edges()
-    }
-
-    /// Number of halfedges.
-    pub fn num_halfedges(&self) -> usize {
-        self.topol.num_halfedges()
-    }
-
-    /// Number of faces.
-    pub fn num_faces(&self) -> usize {
-        self.topol.num_faces()
     }
 
     /// Iterator over the vertices of the mesh.
@@ -564,5 +523,9 @@ where
 {
     fn topology(&self) -> &Topology {
         &self.topol
+    }
+
+    fn topology_mut(&mut self) -> &mut Topology {
+        &mut self.topol
     }
 }

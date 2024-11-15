@@ -295,7 +295,7 @@ where
 /// properties work.
 ///
 /// ```rust
-/// use alum::alum_glam::PolyMeshF32;
+/// use alum::{alum_glam::PolyMeshF32, HasTopology};
 ///
 /// let mut mesh = PolyMeshF32::icosahedron(1.0).expect("Cannot create an icosahedron");
 /// // Crate a vertex property of type u32, with a default value of 42.

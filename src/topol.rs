@@ -48,20 +48,47 @@ impl TopolCache {
 pub trait HasTopology {
     fn topology(&self) -> &Topology;
 
+    fn topology_mut(&mut self) -> &mut Topology;
+
+    /// Number of vertices.
     fn num_vertices(&self) -> usize {
         self.topology().vertices.len()
     }
 
-    fn num_edges(&self) -> usize {
-        self.topology().edges.len()
-    }
-
+    /// Number of halfedges.
     fn num_halfedges(&self) -> usize {
         self.num_edges() * 2
     }
 
+    /// Number of edges.
+    fn num_edges(&self) -> usize {
+        self.topology().edges.len()
+    }
+
+    /// Number of faces.
     fn num_faces(&self) -> usize {
         self.topology().faces.len()
+    }
+
+    /// Create a new vertex property of type T, with the `default` value.
+    ///
+    /// The default value will be used when new elements are added to the mesh.
+    ///
+    /// ```rust
+    /// use alum::{alum_glam::PolyMeshF32, HasTopology};
+    ///
+    /// let mut mesh = PolyMeshF32::tetrahedron(1.0).expect("Cannot crate tetrahedron");
+    /// let prop = mesh.create_vertex_prop(42usize);
+    /// // To use th property, you have to borrow it.
+    /// let prop = prop.try_borrow().expect("Cannot borrow property");
+    /// assert_eq!(mesh.num_vertices(), prop.len());
+    /// assert!(prop.iter().all(|v| *v == 42));
+    /// ```
+    fn create_vertex_prop<T>(&mut self, default: T) -> VProperty<T>
+    where
+        T: Clone + Copy + 'static,
+    {
+        self.topology_mut().create_vertex_prop(default)
     }
 }
 
@@ -815,6 +842,10 @@ impl Topology {
 
 impl HasTopology for Topology {
     fn topology(&self) -> &Topology {
+        self
+    }
+
+    fn topology_mut(&mut self) -> &mut Topology {
         self
     }
 }

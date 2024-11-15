@@ -2,6 +2,7 @@ use crate::{
     element::{Handle, VH},
     error::Error,
     mesh::{Adaptor, FloatScalarAdaptor, PolyMeshT},
+    HasTopology,
 };
 use std::ops::{Add, Div, Mul, Neg};
 
@@ -429,7 +430,7 @@ where
 mod test {
     use core::f32;
 
-    use crate::{alum_glam::PolyMeshF32, macros::assert_f32_eq};
+    use crate::{alum_glam::PolyMeshF32, macros::assert_f32_eq, HasTopology};
 
     #[test]
     fn t_quad_box() {
