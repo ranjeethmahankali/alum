@@ -84,11 +84,11 @@ where
 }
 
 #[cfg(all(test, feature = "use_glam"))]
-mod test {
+pub(crate) mod test {
     use crate::alum_glam::PolyMeshF32;
     use std::path::PathBuf;
 
-    fn bunny_mesh() -> PolyMeshF32 {
+    pub(crate) fn bunny_mesh() -> PolyMeshF32 {
         let path = {
             let mut dirpath = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
             dirpath.push("assets");
@@ -96,7 +96,13 @@ mod test {
             dirpath
         };
         dbg!(&path);
-        PolyMeshF32::load_obj(&path).expect("Cannot load mesh")
+        let mesh = PolyMeshF32::load_obj(&path).expect("Cannot load mesh");
+        let mut points = mesh.points();
+        let mut points = points.try_borrow_mut().expect("Cannot borrow points");
+        for p in points.iter_mut() {
+            *p = *p * 10.0;
+        }
+        mesh
     }
 
     fn large_bunny_mesh() -> PolyMeshF32 {
@@ -127,7 +133,7 @@ mod test {
         let mesh = bunny_mesh();
         assert_eq!(
             mesh.try_calc_area().expect("Unable to compute the area"),
-            0.05646857
+            5.6468635
         );
     }
 

@@ -243,7 +243,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::alum_glam::PolyMeshF32;
+    use crate::{alum_glam::PolyMeshF32, obj::test::bunny_mesh};
 
     #[test]
     fn t_box_catmull_clark() {
@@ -254,5 +254,14 @@ mod test {
         assert_eq!(48, mesh.num_edges());
         assert_eq!(24, mesh.num_faces());
         mesh.check_topology().expect("Topological errors found");
+    }
+
+    #[test]
+    fn t_bunny_subdiv() {
+        let mut mesh = bunny_mesh();
+        mesh.subidivide_catmull_clark(3, true)
+            .expect("Cannot subivide");
+        mesh.check_topology().expect("Topological errors found");
+        assert_eq!(mesh.try_calc_area().expect("Cannot compute area"), 5.566642);
     }
 }
