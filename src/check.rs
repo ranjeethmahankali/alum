@@ -87,7 +87,7 @@ fn check_edges(
         let head = h.head(mesh);
         let tail = h.tail(mesh);
         if hedge.prev.next(mesh) != h
-            || mesh.prev_halfedge(hedge.next) != h
+            || hedge.next.prev(mesh) != h
             || head != hedge.next.tail(mesh)
             || tail != hedge.prev.head(mesh)
         {

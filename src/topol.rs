@@ -225,10 +225,6 @@ impl Topology {
         &mut self.faces[f.index() as usize]
     }
 
-    pub fn prev_halfedge(&self, h: HH) -> HH {
-        self.halfedge(h).prev
-    }
-
     pub fn next_halfedge(&self, h: HH) -> HH {
         self.halfedge(h).next
     }
@@ -437,7 +433,7 @@ impl Topology {
             );
             // other halfedges.
             let pstart = self.next_halfedge(prev);
-            let pend = self.prev_halfedge(next);
+            let pend = next.prev(self);
             // relink.
             cache.next_cache.extend_from_slice(&[
                 (boundprev, pstart),
@@ -495,7 +491,7 @@ impl Topology {
                     let innernext = *innernext;
                     let innerprev: HH = innerprev.into();
                     let outernext = innerprev.opposite();
-                    let boundprev = self.prev_halfedge(innernext);
+                    let boundprev = innernext.prev(self);
                     cache.next_cache.push((boundprev, outernext));
                     *opp_prev = Some(boundprev);
                     cache.next_cache.push((innerprev, innernext));
@@ -540,7 +536,7 @@ impl Topology {
                     let outernext = innerprev.opposite();
                     let outerprev = innernext.opposite();
                     if let Some(boundnext) = v.halfedge(self) {
-                        let boundprev = self.prev_halfedge(boundnext);
+                        let boundprev = boundnext.prev(self);
                         cache
                             .next_cache
                             .extend(&[(boundprev, outernext), (outerprev, boundnext)]);
@@ -691,11 +687,11 @@ impl Topology {
             let h0 = self.edge_halfedge(e, false);
             let v0 = h0.head(self);
             let next0 = self.next_halfedge(h0);
-            let prev0 = self.prev_halfedge(h0);
+            let prev0 = h0.prev(self);
             let h1 = self.edge_halfedge(e, true);
             let v1 = h1.head(self);
             let next1 = self.next_halfedge(h1);
-            let prev1 = self.prev_halfedge(h1);
+            let prev1 = h1.prev(self);
             // Adjust halfedge links and mark edge and halfedges deleted.
             self.link_halfedges(prev0, next1);
             self.link_halfedges(prev1, next0);
@@ -1194,7 +1190,7 @@ pub(crate) mod test {
                 .expect("Cannot find halfedge");
             assert_eq!(h.tail(&mesh), 6.into());
             assert_eq!(h.head(&mesh), 10.into());
-            let h = mesh.prev_halfedge(h);
+            let h = h.prev(&mesh);
             assert_eq!(
                 h,
                 mesh.find_halfedge(v0, 6.into())

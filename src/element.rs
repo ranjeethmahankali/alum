@@ -244,7 +244,7 @@ impl HH {
 
     /// Get the previous halfedge in the loop.
     pub fn prev(self, mesh: &impl HasTopology) -> HH {
-        mesh.topology().prev_halfedge(self)
+        mesh.topology().halfedge(self).prev
     }
 
     /// Get the next halfedge in the loop.

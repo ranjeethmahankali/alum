@@ -263,7 +263,7 @@ where
     /// repeated borrows.
     pub fn calc_sector_normal(&self, h: HH, points: &[A::Vector]) -> A::Vector {
         A::cross_product(
-            self.calc_halfedge_vector(self.topol.prev_halfedge(h), points),
+            self.calc_halfedge_vector(h.prev(&self.topol), points),
             self.calc_halfedge_vector(h, points),
         )
     }
