@@ -57,6 +57,8 @@ pub enum Error {
     InconsistentFaceInLoop(HH),
     /// The next-previous link between a halfedge pair doesn't commute.
     InvalidHalfedgeLink(HH),
+    /// The link between halfedge and vertex is inconsistent.
+    InvalidHalfedgeVertexLink(HH),
     /// Invalid face-halfedge link.
     InvalidFaceHalfedgeLink(FH, HH),
 

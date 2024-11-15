@@ -84,12 +84,20 @@ fn check_edges(
             return Err(Error::DeletedEdge(e));
         }
         // Check connctivity.
+        let head = mesh.head_vertex(h);
+        let tail = mesh.tail_vertex(h);
         if mesh.next_halfedge(hedge.prev) != h
             || mesh.prev_halfedge(hedge.next) != h
-            || mesh.head_vertex(h) != mesh.tail_vertex(hedge.next)
-            || mesh.tail_vertex(h) != mesh.head_vertex(hedge.prev)
+            || head != mesh.tail_vertex(hedge.next)
+            || tail != mesh.head_vertex(hedge.prev)
         {
             return Err(Error::InvalidHalfedgeLink(h));
+        }
+        // Halfedge must be found in the circulators around head and tail.
+        if !iterator::voh_ccw_iter(mesh, tail).any(|hh| hh == h)
+            || !iterator::vih_ccw_iter(mesh, head).any(|hh| hh == h)
+        {
+            return Err(Error::InvalidHalfedgeVertexLink(h));
         }
     }
     // Check all loops.
