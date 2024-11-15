@@ -20,12 +20,19 @@ where
         + Div<A::Scalar, Output = A::Vector>
         + Mul<A::Scalar, Output = A::Vector>,
 {
+    /// Reserve the space for the final mesh after `niter` iterations of
+    /// subdivision. Also reserve space for buffers used to store the points
+    /// corresponding to vertices, edges and faces. These buffers are used to
+    /// store the points corresponding to the mesh before subdivision, so the
+    /// capacity of these buffers will correspond to one less iteration of
+    /// subdivision (hence less memory required) than that of the mesh
+    /// itself. This reserve takes care of that.
     fn reserve(
         niter: usize,
         mesh: &mut Topology,
-        vpos: &mut Option<Vec<A::Vector>>,
-        epos: &mut Vec<A::Vector>,
-        fpos: &mut Vec<A::Vector>,
+        vertex_points: &mut Option<Vec<A::Vector>>,
+        edge_points: &mut Vec<A::Vector>,
+        face_points: &mut Vec<A::Vector>,
     ) -> Result<(), Error> {
         debug_assert!(niter > 0);
         let mut nv = mesh.num_vertices();
@@ -34,11 +41,11 @@ where
         for i in 0..niter {
             if i == niter - 1 {
                 // Reserve the pos arrays.
-                if let Some(vpos) = vpos {
+                if let Some(vpos) = vertex_points {
                     vpos.reserve(nv);
                 }
-                epos.reserve(ne);
-                fpos.reserve(nf);
+                edge_points.reserve(ne);
+                face_points.reserve(nf);
             }
             let v = nv + ne + nf;
             let f = if i == 0 {
@@ -55,27 +62,28 @@ where
         Ok(())
     }
 
+    /// Compute the locations of the points to split the faces and edges.
     fn calc_face_edge_points(
-        mesh: &mut PolyMeshT<DIM, A>,
+        mesh: &PolyMeshT<DIM, A>,
         update_points: bool,
-        fpos: &mut Vec<A::Vector>,
-        epos: &mut Vec<A::Vector>,
+        face_points: &mut Vec<A::Vector>,
+        edge_points: &mut Vec<A::Vector>,
     ) -> Result<(), Error> {
         let points = mesh.points();
         let points = points.try_borrow()?;
         // Compute face points.
-        fpos.clear();
-        fpos.extend(mesh.faces().map(|f| mesh.calc_face_centroid(f, &points)));
+        face_points.clear();
+        face_points.extend(mesh.faces().map(|f| mesh.calc_face_centroid(f, &points)));
         // Compute edge points.
-        epos.clear();
-        epos.extend(mesh.edges().map(|e| {
+        edge_points.clear();
+        edge_points.extend(mesh.edges().map(|e| {
             let (h, oh) = mesh.halfedge_pair(e);
             match (mesh.halfedge_face(h), mesh.halfedge_face(oh)) {
                 (Some(fa), Some(fb)) if update_points => {
                     (points[mesh.head_vertex(h).index() as usize]
                         + points[mesh.head_vertex(oh).index() as usize]
-                        + fpos[fa.index() as usize]
-                        + fpos[fb.index() as usize])
+                        + face_points[fa.index() as usize]
+                        + face_points[fb.index() as usize])
                         * A::scalarf64(0.25)
                 }
                 _ => {
@@ -88,31 +96,34 @@ where
         Ok(())
     }
 
+    /// Compute the new locations of the vertices, and move them there. This
+    /// function makes use of the preallocated buffer `vertex_points` to avoid
+    /// repeated allocations.
     fn update_vertex_positions(
         mesh: &mut PolyMeshT<DIM, A>,
-        fpos: &[A::Vector],
-        epos: &[A::Vector],
-        vpos: &mut Vec<A::Vector>,
+        face_points: &[A::Vector],
+        edge_points: &[A::Vector],
+        vertex_points: &mut Vec<A::Vector>,
     ) -> Result<(), Error> {
         // Compute vertex positions.
         let mut points = mesh.points();
         let mut points = points.try_borrow_mut()?;
-        vpos.clear();
+        vertex_points.clear();
         {
             let points: &[A::Vector] = &points;
-            vpos.extend(mesh.vertices().map(|v| {
+            vertex_points.extend(mesh.vertices().map(|v| {
                 if mesh.is_boundary_vertex(v) {
                     let (count, sum) = mesh
                         .ve_ccw_iter(v)
                         .filter(|e| mesh.is_boundary_edge(*e))
                         .fold((1usize, points[v.index() as usize]), |(count, total), e| {
-                            (count + 1, total + epos[e.index() as usize])
+                            (count + 1, total + edge_points[e.index() as usize])
                         });
                     sum / A::scalarf64(count as f64)
                 } else {
                     let valence = mesh.vertex_valence(v) as f64;
                     (((mesh.vf_ccw_iter(v).fold(A::zero_vector(), |total, f| {
-                        total + fpos[f.index() as usize]
+                        total + face_points[f.index() as usize]
                     }) + mesh.vv_ccw_iter(v).fold(A::zero_vector(), |total, v| {
                         total + points[v.index() as usize]
                     })) / A::scalarf64(valence))
@@ -122,10 +133,14 @@ where
             }));
         }
         // Update the vertex positions.
-        points.copy_from_slice(vpos);
+        points.copy_from_slice(vertex_points);
         Ok(())
     }
 
+    /// Split a face according to the catmull clark scheme. This must be called
+    /// after all the edges of the face are already split. `hloop`, `spliths`,
+    /// and `subfaces` are preallocated buffers used by this function to avoid
+    /// repeated allocations inside the call.
     fn split_face(
         mesh: &mut PolyMeshT<DIM, A>,
         f: FH,
@@ -207,12 +222,32 @@ where
         + Div<A::Scalar, Output = A::Vector>
         + Mul<A::Scalar, Output = A::Vector>,
 {
-    pub fn subidivide_catmull_clark(
+    /// Subdivide the mesh according to the [Catmull-Clark
+    /// scheme](https://en.wikipedia.org/wiki/Catmull%E2%80%93Clark_subdivision_surface).
+    ///
+    /// Subdivisions are carried out for the given number of
+    /// `iterations`. `update_points` determines whether the vertices of the
+    /// mesh are moved. If this is `false`, only the topology of the mesh is
+    /// subdivided, leaving the shape of the unmodified. If this is `true`, then
+    /// the shape is smoothed according to the Catmull-Clark scheme.
+    ///
+    /// ```rust
+    /// use alum::alum_glam::PolyMeshF32;
+    ///
+    /// let mut mesh = PolyMeshF32::unit_box().expect("Cannot create box");
+    /// assert_eq!((8, 12, 6), (mesh.num_vertices(), mesh.num_edges(), mesh.num_faces()));
+    /// mesh.subdivide_catmull_clark(1, true)
+    ///     .expect("Subdivision failed");
+    /// // The mesh now has more faces.
+    /// assert_eq!((26, 48, 24), (mesh.num_vertices(), mesh.num_edges(), mesh.num_faces()));
+    /// mesh.check_topology().expect("Topological errors found");
+    /// ```
+    pub fn subdivide_catmull_clark(
         &mut self,
-        iters: usize,
+        iterations: usize,
         update_points: bool,
     ) -> Result<(), Error> {
-        if iters == 0 {
+        if iterations == 0 {
             return Ok(());
         }
         {
@@ -242,12 +277,18 @@ where
         };
         // Use vectors instead of properties because we don't want these to
         // change when we add new topology.
-        CatmullClark::<DIM, A>::reserve(iters, &mut self.topol, &mut vpos, &mut epos, &mut fpos)?;
+        CatmullClark::<DIM, A>::reserve(
+            iterations,
+            &mut self.topol,
+            &mut vpos,
+            &mut epos,
+            &mut fpos,
+        )?;
         // Temporary storage to use inside the loop.
         let mut hloop = Vec::new();
         let mut spliths = Vec::new();
         let mut subfaces = Vec::new();
-        for _ in 0..iters {
+        for _ in 0..iterations {
             CatmullClark::<DIM, A>::calc_face_edge_points(
                 self,
                 update_points,
@@ -287,7 +328,7 @@ mod test {
     #[test]
     fn t_box_catmull_clark() {
         let mut mesh = PolyMeshF32::unit_box().expect("Cannot create box");
-        mesh.subidivide_catmull_clark(1, true)
+        mesh.subdivide_catmull_clark(1, true)
             .expect("Subdivision failed");
         assert_eq!(26, mesh.num_vertices());
         assert_eq!(48, mesh.num_edges());
@@ -298,7 +339,7 @@ mod test {
     #[test]
     fn t_bunny_subdiv() {
         let mut mesh = bunny_mesh();
-        mesh.subidivide_catmull_clark(3, true)
+        mesh.subdivide_catmull_clark(3, true)
             .expect("Cannot subivide");
         mesh.check_topology().expect("Topological errors found");
         assert_eq!(mesh.try_calc_area().expect("Cannot compute area"), 5.566642);
