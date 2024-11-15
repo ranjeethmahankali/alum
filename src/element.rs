@@ -217,7 +217,10 @@ impl VH {
 
     /// Check if this vertex is on the boundary of the `mesh`.
     pub fn is_boundary(self, mesh: &impl HasTopology) -> bool {
-        mesh.topology().is_boundary_vertex(self)
+        match self.halfedge(mesh) {
+            Some(h) => h.is_boundary(mesh),
+            None => true,
+        }
     }
 
     /// The number of edges incident on this vertex.
@@ -273,7 +276,7 @@ impl HH {
     ///
     /// A halfedge is considered interior if it has a face incident on it.
     pub fn is_boundary(self, mesh: &impl HasTopology) -> bool {
-        self.face(mesh.topology()).is_none()
+        self.face(mesh).is_none()
     }
 }
 

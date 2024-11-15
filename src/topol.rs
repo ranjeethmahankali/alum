@@ -229,13 +229,6 @@ impl Topology {
         &mut self.faces[f.index() as usize]
     }
 
-    pub fn is_boundary_vertex(&self, v: VH) -> bool {
-        match self.vertices[v.index() as usize].halfedge {
-            Some(h) => h.is_boundary(self),
-            None => true,
-        }
-    }
-
     pub fn cw_rotated_halfedge(&self, h: HH) -> HH {
         h.opposite().next(self)
     }
@@ -365,7 +358,7 @@ impl Topology {
         cache.next_cache.reserve(verts.len() * 6);
         // Check for topological errors.
         for i in 0..verts.len() {
-            if !self.is_boundary_vertex(verts[i]) {
+            if !verts[i].is_boundary(self) {
                 // Ensure vertex is manifold.
                 return Err(Error::ComplexVertex(verts[i]));
             }
@@ -1206,15 +1199,10 @@ pub(crate) mod test {
         assert_eq!(qbox.num_edges(), 12);
         assert_eq!(qbox.num_vertices(), 8);
         for v in qbox.vertices() {
-            assert_eq!(qbox.is_boundary_vertex(v), v.index() > 3);
+            assert_eq!(v.is_boundary(&qbox), v.index() > 3);
         }
         assert_eq!(4, qbox.edges().filter(|e| e.is_boundary(&qbox)).count());
-        assert_eq!(
-            4,
-            qbox.vertices()
-                .filter(|v| qbox.is_boundary_vertex(*v))
-                .count()
-        );
+        assert_eq!(4, qbox.vertices().filter(|v| v.is_boundary(&qbox)).count());
     }
 
     #[test]
@@ -1254,12 +1242,7 @@ pub(crate) mod test {
         assert_eq!(qbox.num_edges(), 11);
         assert_eq!(qbox.num_vertices(), 8);
         assert_eq!(6, qbox.edges().filter(|e| e.is_boundary(&qbox)).count());
-        assert_eq!(
-            6,
-            qbox.vertices()
-                .filter(|v| qbox.is_boundary_vertex(*v))
-                .count()
-        );
+        assert_eq!(6, qbox.vertices().filter(|v| v.is_boundary(&qbox)).count());
     }
 
     #[test]
@@ -1283,12 +1266,7 @@ pub(crate) mod test {
         assert_eq!(qbox.num_halfedges(), 18);
         assert_eq!(qbox.num_faces(), 3);
         assert_eq!(6, qbox.edges().filter(|e| e.is_boundary(&qbox)).count());
-        assert_eq!(
-            6,
-            qbox.vertices()
-                .filter(|v| qbox.is_boundary_vertex(*v))
-                .count()
-        );
+        assert_eq!(6, qbox.vertices().filter(|v| v.is_boundary(&qbox)).count());
     }
 
     #[test]

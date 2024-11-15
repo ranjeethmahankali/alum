@@ -68,8 +68,8 @@ impl Topology {
             }
         }
         // Check if we're collapsing across two different boundaries.
-        if self.is_boundary_vertex(v0)
-            && self.is_boundary_vertex(v1)
+        if v0.is_boundary(self)
+            && v1.is_boundary(self)
             && !h.is_boundary(self)
             && !oh.is_boundary(self)
         {
