@@ -295,8 +295,8 @@ impl Topology {
             let next2 = next.next(self);
             let fnew = self.new_face(base)?;
             let enew = self.new_edge(vstart, next.head(self), prev, next2, next, base)?;
-            let hnew = self.edge_halfedge(enew, false);
-            let ohnew = self.edge_halfedge(enew, true);
+            let hnew = enew.halfedge(false);
+            let ohnew = enew.halfedge(true);
             // Link the triangle created.
             self.link_halfedges(base, next);
             self.link_halfedges(next, ohnew);
@@ -335,8 +335,8 @@ impl Topology {
         let (f0, f1) = (h0.face(self), h1.face(self));
         // Create a new edge and rewire topology.
         let enew = self.new_edge(vfrom, v, ph0, h0, h1, nh1)?;
-        let hnew = self.edge_halfedge(enew, false);
-        let ohnew = self.edge_halfedge(enew, true);
+        let hnew = enew.halfedge(false);
+        let ohnew = enew.halfedge(true);
         // Rewire halfedge -> vertex.
         self.halfedge_mut(h1).vertex = v;
         // Rewire halfedge -> halfedge.
@@ -362,8 +362,8 @@ impl Topology {
     }
 
     pub fn swap_edge_ccw(&mut self, e: EH) -> bool {
-        let h = self.edge_halfedge(e, false);
-        let oh = self.edge_halfedge(e, true);
+        let h = e.halfedge(false);
+        let oh = e.halfedge(true);
         let (f, of) = match (h.face(self), oh.face(self)) {
             (Some(f), Some(of)) => (f, of),
             _ => return false, // Cannot swap boundary edge.
@@ -413,8 +413,8 @@ impl Topology {
     }
 
     pub fn swap_edge_cw(&mut self, e: EH) -> bool {
-        let h = self.edge_halfedge(e, false);
-        let oh = self.edge_halfedge(e, true);
+        let h = e.halfedge(false);
+        let oh = e.halfedge(true);
         let (f, of) = match (h.face(self), oh.face(self)) {
             (Some(f), Some(of)) => (f, of),
             _ => return false, // Cannot swap boundary edge.
@@ -469,7 +469,7 @@ impl Topology {
     /// The boundary is treated as one face. So the boundary edges can only be
     /// simple links if
     fn edge_is_unique_link(&self, e: EH) -> bool {
-        let h = self.edge_halfedge(e, false);
+        let h = e.halfedge(false);
         let fo = h.opposite().face(self);
         iterator::loop_ccw_iter(self, h)
             .skip(1)
@@ -1029,12 +1029,12 @@ mod test {
             .find_halfedge(4.into(), 5.into())
             .expect("Cannot find halfedge")
             .edge();
-        let h = qbox.edge_halfedge(e, false);
-        let oh = qbox.edge_halfedge(e, true);
+        let h = e.halfedge(false);
+        let oh = e.halfedge(true);
         let v = qbox.add_vertex().expect("Cannotr add vertex");
         let enew = qbox.split_edge(e, v, false).expect("Cannot split edge");
-        let hnew = qbox.edge_halfedge(enew, false);
-        let ohnew = qbox.edge_halfedge(enew, true);
+        let hnew = enew.halfedge(false);
+        let ohnew = enew.halfedge(true);
         assert_eq!(oh.head(&qbox), ohnew.tail(&qbox));
         assert_eq!(oh.head(&qbox), v);
         assert_eq!(hnew.head(&qbox), h.tail(&qbox));
@@ -1068,10 +1068,10 @@ mod test {
         eprop.set(e, 123).expect("Cannot set property");
         let mut hprop = qbox.create_halfedge_prop::<usize>(0);
         hprop
-            .set(qbox.edge_halfedge(e, true), 234)
+            .set(e.halfedge(true), 234)
             .expect("Cannot set property");
         hprop
-            .set(qbox.edge_halfedge(e, false), 345)
+            .set(e.halfedge(false), 345)
             .expect("Cannot set property");
         assert_eq!(
             1,
@@ -1086,12 +1086,12 @@ mod test {
                 .count()
         );
         // Do the split and check topology.
-        let h = qbox.edge_halfedge(e, false);
-        let oh = qbox.edge_halfedge(e, true);
+        let h = e.halfedge(false);
+        let oh = e.halfedge(true);
         let v = qbox.add_vertex().expect("Cannotr add vertex");
         let enew = qbox.split_edge(e, v, true).expect("Cannot split edge");
-        let hnew = qbox.edge_halfedge(enew, false);
-        let ohnew = qbox.edge_halfedge(enew, true);
+        let hnew = enew.halfedge(false);
+        let ohnew = enew.halfedge(true);
         assert_eq!(oh.head(&qbox), ohnew.tail(&qbox));
         assert_eq!(oh.head(&qbox), v);
         assert_eq!(hnew.head(&qbox), h.tail(&qbox));

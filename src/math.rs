@@ -362,7 +362,7 @@ where
 {
     /// Compute the length of a mesh edge. `points` must be the positions of the vertices.
     pub fn calc_edge_length(&self, e: EH, points: &[A::Vector]) -> A::Scalar {
-        A::vector_length(self.calc_halfedge_vector(self.edge_halfedge(e, false), points))
+        A::vector_length(self.calc_halfedge_vector(e.halfedge(false), points))
     }
 
     /// Similar to [`Self::calc_edge_length`], except this function tries to
@@ -468,8 +468,8 @@ where
         if e.is_boundary(self) {
             return A::scalarf64(0.0);
         }
-        let h0 = self.edge_halfedge(e, false);
-        let h1 = self.edge_halfedge(e, true);
+        let h0 = e.halfedge(false);
+        let h1 = e.halfedge(true);
         Self::aligned_angle(
             self.calc_sector_normal(h0, points),
             self.calc_sector_normal(h1, points),
@@ -499,8 +499,8 @@ where
         points: &[A::Vector],
         face_normals: &[A::Vector],
     ) -> A::Scalar {
-        let h0 = self.edge_halfedge(e, false);
-        let h1 = self.edge_halfedge(e, true);
+        let h0 = e.halfedge(false);
+        let h1 = e.halfedge(true);
         let f0 = h0.face(self);
         let f1 = h1.face(self);
         match (f0, f1) {

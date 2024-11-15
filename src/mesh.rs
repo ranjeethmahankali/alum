@@ -408,13 +408,6 @@ where
         self.topol.face_halfedge(f)
     }
 
-    /// Get a halfedge from the edge.
-    ///
-    /// The Boolean flag indicates one of the two possible orientations.
-    pub fn edge_halfedge(&self, e: EH, flag: bool) -> HH {
-        self.topol.edge_halfedge(e, flag)
-    }
-
     /// Get the clockwise rotated halfedge around the vertex at the base of the
     /// given halfedge.
     pub fn cw_rotated_halfedge(&self, h: HH) -> HH {

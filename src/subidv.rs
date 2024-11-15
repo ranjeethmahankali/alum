@@ -182,7 +182,7 @@ where
                 h1,
             )?;
             debug_assert_eq!(enew.index(), (lei + ne) as u32);
-            spliths.push(mesh.edge_halfedge(enew, false));
+            spliths.push(enew.halfedge(false));
             let flocal = if h1 == hstart {
                 f
             } else {

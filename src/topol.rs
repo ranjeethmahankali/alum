@@ -225,10 +225,6 @@ impl Topology {
         &mut self.faces[f.index() as usize]
     }
 
-    pub fn edge_halfedge(&self, e: EH, flag: bool) -> HH {
-        e.halfedge(flag)
-    }
-
     pub fn face_halfedge(&self, f: FH) -> HH {
         self.faces[f.index() as usize].halfedge
     }
@@ -622,8 +618,8 @@ impl Topology {
         ecache: &mut Vec<EH>,
         vcache: &mut Vec<VH>,
     ) -> Result<(), Error> {
-        let h0 = self.edge_halfedge(e, false);
-        let h1 = self.edge_halfedge(e, true);
+        let h0 = e.halfedge(false);
+        let h1 = e.halfedge(true);
         let f0 = h0.face(self);
         let f1 = h1.face(self);
         if let Some(f) = f0 {
@@ -672,11 +668,11 @@ impl Topology {
         }
         // Delete collected topology.
         for e in ecache.drain(..) {
-            let h0 = self.edge_halfedge(e, false);
+            let h0 = e.halfedge(false);
             let v0 = h0.head(self);
             let next0 = h0.next(self);
             let prev0 = h0.prev(self);
-            let h1 = self.edge_halfedge(e, true);
+            let h1 = e.halfedge(true);
             let v1 = h1.head(self);
             let next1 = h1.next(self);
             let prev1 = h1.prev(self);

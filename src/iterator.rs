@@ -258,17 +258,15 @@ pub(crate) fn vf_cw_iter(topol: &Topology, v: VH) -> impl Iterator<Item = FH> + 
 }
 
 pub(crate) fn ev_iter(topol: &Topology, e: EH) -> impl Iterator<Item = VH> + use<'_> {
-    eh_iter(topol, e).map(|h| h.head(topol))
+    eh_iter(e).map(|h| h.head(topol))
 }
 
-pub(crate) fn eh_iter(topol: &Topology, e: EH) -> impl Iterator<Item = HH> + use<'_> {
-    [false, true]
-        .iter()
-        .map(move |flag| topol.edge_halfedge(e, *flag))
+pub(crate) fn eh_iter(e: EH) -> impl Iterator<Item = HH> {
+    [false, true].iter().map(move |flag| e.halfedge(*flag))
 }
 
 pub(crate) fn ef_iter(topol: &Topology, e: EH) -> impl Iterator<Item = FH> + use<'_> {
-    eh_iter(topol, e).filter_map(|h| h.face(topol))
+    eh_iter(e).filter_map(|h| h.face(topol))
 }
 
 pub(crate) fn fv_ccw_iter(topol: &Topology, f: FH) -> impl Iterator<Item = VH> + use<'_> {
@@ -412,8 +410,8 @@ where
     }
 
     /// Iterator over the two halfedges corresponding to an edge.
-    pub fn eh_iter(&self, e: EH) -> impl Iterator<Item = HH> + use<'_, A, DIM> {
-        eh_iter(&self.topol, e)
+    pub fn eh_iter(&self, e: EH) -> impl Iterator<Item = HH> + use<A, DIM> {
+        eh_iter(e)
     }
 
     /// Iterator over the faces incident on an edge.

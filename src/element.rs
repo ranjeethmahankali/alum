@@ -284,6 +284,9 @@ impl EH {
         (hi.into(), (hi | 1).into())
     }
 
+    /// Get a halfedge from the edge.
+    ///
+    /// The Boolean flag indicates one of the two possible orientations.
     pub fn halfedge(self, flag: bool) -> HH {
         ((self.idx << 1) | if flag { 1 } else { 0 }).into()
     }
