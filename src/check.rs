@@ -13,7 +13,7 @@ fn check_vertices(
     {
         if let Some(h) = mesh.vertex_halfedge(v) {
             // Invalid index, or deleted halfedge.
-            if !mesh.is_valid_halfedge(h) {
+            if !h.is_valid(mesh) {
                 return Err(Error::InvalidHalfedge(h));
             }
             if hstatus[h.index() as usize].deleted() {

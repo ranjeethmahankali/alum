@@ -195,7 +195,7 @@ impl VH {
     ///
     /// The index has to be less than the number of vertices in the mesh.
     pub fn is_valid(self, mesh: &impl HasTopology) -> bool {
-        mesh.topology().is_valid_vertex(self)
+        (self.idx as usize) < mesh.topology().num_vertices()
     }
 
     /// Check if this vertex is manifold.
@@ -255,7 +255,7 @@ impl HH {
     ///
     /// The index has to be less than the number of halfedges in the mesh.
     pub fn is_valid(self, mesh: &impl HasTopology) -> bool {
-        mesh.topology().is_valid_halfedge(self)
+        (self.idx as usize) < mesh.topology().num_halfedges()
     }
 
     /// Check if this halfedge is on the boundary of `mesh`.
@@ -280,7 +280,7 @@ impl EH {
     ///
     /// The index has to be less than the number of halfedges in the mesh.
     pub fn is_valid(self, mesh: &impl HasTopology) -> bool {
-        mesh.topology().is_valid_edge(self)
+        (self.idx as usize) < mesh.topology().num_edges()
     }
 
     /// Check if the edge is a boundary edge.
@@ -301,7 +301,7 @@ impl FH {
     ///
     /// The index has to be less than the number of halffaces in the mesh.
     pub fn is_valid(self, mesh: &impl HasTopology) -> bool {
-        mesh.topology().is_valid_face(self)
+        (self.idx as usize) < mesh.topology().num_faces()
     }
 
     /// The number of vertices incident on a face.
