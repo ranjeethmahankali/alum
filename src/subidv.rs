@@ -234,6 +234,7 @@ where
                     self.topol.link_halfedges(orh, h1);
                     self.topol.link_halfedges(h1, h2);
                 }
+                self.topol.vertex_mut(fv).halfedge = Some(self.opposite_halfedge(hhs[0]));
             }
         }
         Ok(())
