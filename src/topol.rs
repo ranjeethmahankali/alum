@@ -221,16 +221,12 @@ impl Topology {
         &mut self.edges[(h.index() >> 1) as usize].halfedges[(h.index() & 1) as usize]
     }
 
-    pub(crate) fn face_mut(&mut self, f: FH) -> &mut Face {
-        &mut self.faces[f.index() as usize]
-    }
-
     pub(crate) fn face(&self, f: FH) -> &Face {
         &self.faces[f.index() as usize]
     }
 
-    pub fn is_boundary_edge(&self, e: EH) -> bool {
-        e.is_boundary(self)
+    pub(crate) fn face_mut(&mut self, f: FH) -> &mut Face {
+        &mut self.faces[f.index() as usize]
     }
 
     pub fn is_boundary_vertex(&self, v: VH) -> bool {
@@ -1009,17 +1005,8 @@ pub(crate) mod test {
         assert_eq!(topol.num_halfedges(), 10);
         assert_eq!(topol.num_edges(), 5);
         assert_eq!(topol.num_faces(), 2);
-        assert_eq!(
-            topol.edges().filter(|e| topol.is_boundary_edge(*e)).count(),
-            4
-        );
-        assert_eq!(
-            topol
-                .edges()
-                .filter(|e| !topol.is_boundary_edge(*e))
-                .count(),
-            1
-        );
+        assert_eq!(topol.edges().filter(|e| e.is_boundary(&topol)).count(), 4);
+        assert_eq!(topol.edges().filter(|e| !e.is_boundary(&topol)).count(), 1);
     }
 
     #[test]
@@ -1104,10 +1091,7 @@ pub(crate) mod test {
              0----------1----------2----------3
         */
         let mut mesh = loop_mesh();
-        assert_eq!(
-            mesh.edges().filter(|e| mesh.is_boundary_edge(*e)).count(),
-            16
-        );
+        assert_eq!(mesh.edges().filter(|e| e.is_boundary(&mesh)).count(), 16);
         // Add a floating triangle at v6.
         let v0 = mesh.add_vertex().expect("Unable to add vertex");
         let v1 = mesh.add_vertex().expect("Unable to add vertex");
@@ -1161,20 +1145,14 @@ pub(crate) mod test {
                     .expect("Cannot find halfedge")
             );
         }
-        assert_eq!(
-            mesh.edges().filter(|e| mesh.is_boundary_edge(*e)).count(),
-            19
-        );
+        assert_eq!(mesh.edges().filter(|e| e.is_boundary(&mesh)).count(), 19);
         // Add another face.
         let f1 = mesh
             .add_face(&[5.into(), 6.into(), v1], &mut cache)
             .expect("Unable to add face");
         assert_eq!(f1.index(), 9);
         assert_eq!(mesh.num_edges(), 28);
-        assert_eq!(
-            mesh.edges().filter(|e| mesh.is_boundary_edge(*e)).count(),
-            18
-        );
+        assert_eq!(mesh.edges().filter(|e| e.is_boundary(&mesh)).count(), 18);
         assert_eq!(
             iterator::vf_ccw_iter(&mesh, 6.into())
                 .map(|f| f.index())
@@ -1230,10 +1208,7 @@ pub(crate) mod test {
         for v in qbox.vertices() {
             assert_eq!(qbox.is_boundary_vertex(v), v.index() > 3);
         }
-        assert_eq!(
-            4,
-            qbox.edges().filter(|e| qbox.is_boundary_edge(*e)).count()
-        );
+        assert_eq!(4, qbox.edges().filter(|e| e.is_boundary(&qbox)).count());
         assert_eq!(
             4,
             qbox.vertices()
@@ -1278,10 +1253,7 @@ pub(crate) mod test {
         assert_eq!(qbox.num_faces(), 4);
         assert_eq!(qbox.num_edges(), 11);
         assert_eq!(qbox.num_vertices(), 8);
-        assert_eq!(
-            6,
-            qbox.edges().filter(|e| qbox.is_boundary_edge(*e)).count()
-        );
+        assert_eq!(6, qbox.edges().filter(|e| e.is_boundary(&qbox)).count());
         assert_eq!(
             6,
             qbox.vertices()
@@ -1310,10 +1282,7 @@ pub(crate) mod test {
         assert_eq!(qbox.num_edges(), 9);
         assert_eq!(qbox.num_halfedges(), 18);
         assert_eq!(qbox.num_faces(), 3);
-        assert_eq!(
-            6,
-            qbox.edges().filter(|e| qbox.is_boundary_edge(*e)).count()
-        );
+        assert_eq!(6, qbox.edges().filter(|e| e.is_boundary(&qbox)).count());
         assert_eq!(
             6,
             qbox.vertices()
