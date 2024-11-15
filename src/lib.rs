@@ -67,7 +67,7 @@ example code that iterates over the vertices of face with index 2, and modifies
 their positions.
 
 ```rust
-use alum::{alum_glam::PolyMeshF32, FH, HasIterators};
+use alum::{alum_glam::PolyMeshF32, FH, HasIterators, HasTopology};
 
 let mut boxmesh = PolyMeshF32::unit_box().expect("Cannot create a box");
 assert_eq!(1.0, boxmesh.try_calc_volume().expect("Cannot compute volume"));
