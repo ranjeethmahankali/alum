@@ -1,4 +1,4 @@
-use crate::{topol::Topology, Adaptor, PolyMeshT};
+use crate::{iterator, topol::Topology, Adaptor, PolyMeshT};
 use std::fmt::{Debug, Display};
 
 /**
@@ -218,6 +218,11 @@ impl VH {
     /// Check if this vertex is on the boundary of the `mesh`.
     pub fn is_boundary(self, mesh: &impl HasTopology) -> bool {
         mesh.topology().is_boundary_vertex(self)
+    }
+
+    /// The number of edges incident on this vertex.
+    pub fn valence(self, mesh: &impl HasTopology) -> usize {
+        iterator::voh_ccw_iter(mesh.topology(), self).count()
     }
 }
 

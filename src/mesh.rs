@@ -306,11 +306,6 @@ where
         self.topol.faces()
     }
 
-    /// The number of edges incident on a vertex.
-    pub fn vertex_valence(&self, v: VH) -> usize {
-        self.topol.vertex_valence(v)
-    }
-
     /// The number of vertices incident on a face.
     pub fn face_valence(&self, f: FH) -> usize {
         self.topol.face_valence(f)

@@ -121,7 +121,7 @@ where
                         });
                     sum / A::scalarf64(count as f64)
                 } else {
-                    let valence = mesh.vertex_valence(v) as f64;
+                    let valence = v.valence(mesh) as f64;
                     (((mesh.vf_ccw_iter(v).fold(A::zero_vector(), |total, f| {
                         total + face_points[f.index() as usize]
                     }) + mesh.vv_ccw_iter(v).fold(A::zero_vector(), |total, v| {

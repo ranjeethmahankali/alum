@@ -644,10 +644,6 @@ impl Topology {
         Ok(fnew)
     }
 
-    pub fn vertex_valence(&self, v: VH) -> usize {
-        iterator::voh_ccw_iter(self, v).count()
-    }
-
     pub fn face_valence(&self, f: FH) -> usize {
         iterator::fv_ccw_iter(self, f).count()
     }
@@ -1154,7 +1150,7 @@ pub(crate) mod test {
     fn t_box_vertex_valences() {
         let qbox = quad_box();
         for v in qbox.vertices() {
-            assert_eq!(qbox.vertex_valence(v), 3);
+            assert_eq!(v.valence(&qbox), 3);
         }
     }
 
