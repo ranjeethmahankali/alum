@@ -276,15 +276,6 @@ impl Topology {
         Ok(())
     }
 
-    /// Get an iterator over triplets of vertices, that represent the triangulation of a face.
-    pub fn triangulated_face_vertices(&self, f: FH) -> impl Iterator<Item = [VH; 3]> + use<'_> {
-        let hstart = f.halfedge(self);
-        let vstart = hstart.tail(self);
-        iterator::loop_ccw_iter(self, hstart.next(self))
-            .take_while(move |h| h.head(self) != vstart)
-            .map(move |h| [vstart, h.tail(self), h.head(self)])
-    }
-
     pub fn triangulate_face(&mut self, f: FH) -> Result<(), Error> {
         let mut base = f.halfedge(self);
         let vstart = base.tail(self);

@@ -250,6 +250,55 @@ pub trait HasTopology {
     fn find_halfedge(&self, from: VH, to: VH) -> Option<HH> {
         iterator::voh_ccw_iter(self.topology(), from).find(|h| h.head(self.topology()) == to)
     }
+
+    /// Iterator over the vertex triplets that represent a triangulation of the
+    /// given face.
+    ///
+    /// The triangulation does not take the shape of the face into account. It
+    /// only accounts for the topology of the face.
+    /// ```rust
+    /// use alum::{alum_glam::PolyMeshF32, Handle, HasTopology};
+    ///
+    /// let mut mesh = PolyMeshF32::new();
+    /// let verts = [glam::vec3(0.0, 0.0, 0.0), glam::vec3(1.0, 0.0, 0.0),
+    ///              glam::vec3(1.0, 1.0, 0.0), glam::vec3(0.0, 1.0, 0.0)];
+    /// mesh.add_vertices(&verts).expect("Cannot add vertices");
+    /// mesh.add_quad_face(0.into(), 1.into(), 2.into(), 3.into());
+    /// assert_eq!(mesh.triangulated_face_vertices(0.into())
+    ///                .flatten()
+    ///                .map(|v| v.index())
+    ///                .collect::<Vec<u32>>(), [3, 0, 1, 3, 1, 2]);
+    /// ```
+    fn triangulated_face_vertices(&self, f: FH) -> impl Iterator<Item = [VH; 3]> {
+        let topol = self.topology();
+        let hstart = f.halfedge(topol);
+        let vstart = hstart.tail(topol);
+        iterator::loop_ccw_iter(topol, hstart.next(topol))
+            .take_while(move |h| h.head(topol) != vstart)
+            .map(move |h| [vstart, h.tail(topol), h.head(topol)])
+    }
+
+    /// Iterator over the vertex triplets that represent a triangulation of this
+    /// mesh. The triangulation of a face does not take it's shape into
+    /// account. It only accounts for the topology.
+    ///
+    /// ```rust
+    /// use alum::{alum_glam::PolyMeshF32, Handle, HasTopology};
+    ///
+    /// let mut mesh = PolyMeshF32::new();
+    /// let verts = [glam::vec3(0.0, 0.0, 0.0), glam::vec3(1.0, 0.0, 0.0),
+    ///              glam::vec3(1.0, 1.0, 0.0), glam::vec3(0.0, 1.0, 0.0)];
+    /// mesh.add_vertices(&verts).expect("Cannot add vertices");
+    /// mesh.add_quad_face(0.into(), 1.into(), 2.into(), 3.into());
+    /// assert_eq!(mesh.triangulated_vertices()
+    ///                .flatten()
+    ///                .map(|v| v.index())
+    ///                .collect::<Vec<u32>>(), [3, 0, 1, 3, 1, 2]);
+    /// ```
+    fn triangulated_vertices(&self) -> impl Iterator<Item = [VH; 3]> {
+        self.faces()
+            .flat_map(move |f| self.triangulated_face_vertices(f))
+    }
 }
 
 pub struct Topology {

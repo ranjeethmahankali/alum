@@ -246,53 +246,6 @@ where
             .clone()
     }
 
-    /// Iterator over the vertex triplets that represent a triangulation of this
-    /// mesh. The triangulation of a face does not take it's shape into
-    /// account. It only accounts for the topology.
-    ///
-    /// ```rust
-    /// use alum::{alum_glam::PolyMeshF32, Handle};
-    ///
-    /// let mut mesh = PolyMeshF32::new();
-    /// let verts = [glam::vec3(0.0, 0.0, 0.0), glam::vec3(1.0, 0.0, 0.0),
-    ///              glam::vec3(1.0, 1.0, 0.0), glam::vec3(0.0, 1.0, 0.0)];
-    /// mesh.add_vertices(&verts).expect("Cannot add vertices");
-    /// mesh.add_quad_face(0.into(), 1.into(), 2.into(), 3.into());
-    /// assert_eq!(mesh.triangulated_vertices()
-    ///                .flatten()
-    ///                .map(|v| v.index())
-    ///                .collect::<Vec<u32>>(), [3, 0, 1, 3, 1, 2]);
-    /// ```
-    pub fn triangulated_vertices(&self) -> impl Iterator<Item = [VH; 3]> + use<'_, A, DIM> {
-        self.faces()
-            .flat_map(move |f| self.triangulated_face_vertices(f))
-    }
-
-    /// Iterator over the vertex triplets that represent a triangulation of the
-    /// given face.
-    ///
-    /// The triangulation does not take the shape of the face into account. It
-    /// only accounts for the topology of the face.
-    /// ```rust
-    /// use alum::{alum_glam::PolyMeshF32, Handle};
-    ///
-    /// let mut mesh = PolyMeshF32::new();
-    /// let verts = [glam::vec3(0.0, 0.0, 0.0), glam::vec3(1.0, 0.0, 0.0),
-    ///              glam::vec3(1.0, 1.0, 0.0), glam::vec3(0.0, 1.0, 0.0)];
-    /// mesh.add_vertices(&verts).expect("Cannot add vertices");
-    /// mesh.add_quad_face(0.into(), 1.into(), 2.into(), 3.into());
-    /// assert_eq!(mesh.triangulated_face_vertices(0.into())
-    ///                .flatten()
-    ///                .map(|v| v.index())
-    ///                .collect::<Vec<u32>>(), [3, 0, 1, 3, 1, 2]);
-    /// ```
-    pub fn triangulated_face_vertices(
-        &self,
-        f: FH,
-    ) -> impl Iterator<Item = [VH; 3]> + use<'_, A, DIM> {
-        self.topol.triangulated_face_vertices(f)
-    }
-
     /// Add a vertex to this mesh at the given position.
     pub fn add_vertex(&mut self, pos: A::Vector) -> Result<VH, Error> {
         let vi = self.topol.add_vertex()?;
