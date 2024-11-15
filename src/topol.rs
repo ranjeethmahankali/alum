@@ -1,10 +1,12 @@
+use crate::edit::EditableTopology;
+use crate::iterator::HasIterators;
+use crate::property::EProperty;
 use crate::{
     element::{
         ERange, Edge, FRange, Face, HRange, Halfedge, Handle, VRange, Vertex, EH, FH, HH, VH,
     },
     error::Error,
-    iterator,
-    property::{EProperty, FProperty, HProperty, PropertyContainer, VProperty},
+    property::{FProperty, HProperty, PropertyContainer, VProperty},
     status::Status,
 };
 use std::{cell::RefMut, ops::Range};
@@ -47,7 +49,7 @@ impl TopolCache {
     }
 }
 
-pub trait HasTopology {
+pub trait HasTopology: Sized {
     fn topology(&self) -> &Topology;
 
     fn topology_mut(&mut self) -> &mut Topology;
@@ -246,9 +248,11 @@ pub trait HasTopology {
         self.topology_mut().fstatus.get_mut(f)
     }
 
-    /// Find a halfedge spanning the vertices `from` and `to`, if one exists
-    fn find_halfedge(&self, from: VH, to: VH) -> Option<HH> {
-        iterator::voh_ccw_iter(self.topology(), from).find(|h| h.head(self.topology()) == to)
+    /// Check the topology of the mesh.
+    ///
+    /// This function will return an error if any errors are found in the topolgy.
+    fn check_topology(&self) -> Result<(), Error> {
+        self.topology().check()
     }
 }
 
@@ -345,13 +349,6 @@ impl Topology {
 
     pub(crate) fn face_mut(&mut self, f: FH) -> &mut Face {
         &mut self.faces[f.index() as usize]
-    }
-
-    pub(crate) fn adjust_outgoing_halfedge(&mut self, v: VH) {
-        let h = iterator::voh_ccw_iter(self, v).find(|h| h.is_boundary(self));
-        if let Some(h) = h {
-            self.vertex_mut(v).halfedge = Some(h);
-        }
     }
 
     pub fn add_vertex(&mut self) -> Result<VH, Error> {
@@ -642,7 +639,7 @@ impl Topology {
          * as we iterate over them. Instead we collect them into cache and then
          * delete them. */
         cache.faces.clear();
-        cache.faces.extend(iterator::vf_ccw_iter(self, v));
+        cache.faces.extend(self.vf_ccw_iter(v));
         for f in &cache.faces {
             self.delete_face(
                 *f,
@@ -703,7 +700,7 @@ impl Topology {
         // Collect neighborhood topology.
         ecache.clear();
         vcache.clear();
-        for (mesh, h) in iterator::fh_ccw_iter_mut(self, f) {
+        for (mesh, h) in self.fh_ccw_iter_mut(f) {
             mesh.halfedge_mut(h).face = None; // Disconnect from face.
             if h.opposite().is_boundary(mesh) {
                 ecache.push(h.edge());
@@ -901,6 +898,10 @@ impl HasTopology for Topology {
     }
 }
 
+impl HasIterators for Topology {}
+
+impl EditableTopology for Topology {}
+
 impl Default for Topology {
     fn default() -> Self {
         Self::new()
@@ -913,7 +914,7 @@ pub(crate) mod test {
 
     use crate::{
         alum_glam::PolyMeshF32,
-        iterator,
+        iterator::HasIterators,
         macros::assert_f32_eq,
         topol::{Handle, HasTopology, VH},
     };
@@ -1165,18 +1166,18 @@ pub(crate) mod test {
             .expect("Unable to add a face");
         assert_eq!(f0.index(), 8);
         assert_eq!(
-            iterator::vf_ccw_iter(&mesh, 6.into())
+            mesh.vf_ccw_iter(6.into())
                 .map(|i| i.index())
                 .collect::<Vec<_>>(),
             [8, 1, 2, 4]
         );
         assert_eq!(
-            iterator::vv_ccw_iter(&mesh, 6.into())
+            mesh.vv_ccw_iter(6.into())
                 .map(|v| v.index())
                 .collect::<Vec<_>>(),
             [10, v0.index(), v1.index(), 5, 2, 7]
         );
-        assert_eq!(iterator::ve_ccw_iter(&mesh, 6.into()).count(), 6);
+        assert_eq!(mesh.ve_ccw_iter(6.into()).count(), 6);
         assert_eq!(mesh.vertices().filter(|v| v.is_manifold(&mesh)).count(), 17);
         let v: VH = 6.into();
         assert!(!v.is_manifold(&mesh));
@@ -1214,25 +1215,25 @@ pub(crate) mod test {
         assert_eq!(mesh.num_edges(), 28);
         assert_eq!(mesh.edges().filter(|e| e.is_boundary(&mesh)).count(), 18);
         assert_eq!(
-            iterator::vf_ccw_iter(&mesh, 6.into())
+            mesh.vf_ccw_iter(6.into())
                 .map(|f| f.index())
                 .collect::<Vec<_>>(),
             [8, 9, 1, 2, 4]
         );
         assert_eq!(
-            iterator::vf_ccw_iter(&mesh, 5.into())
+            mesh.vf_ccw_iter(5.into())
                 .map(|f| f.index())
                 .collect::<Vec<_>>(),
             [3, 0, 1, 9]
         );
         assert_eq!(
-            iterator::vv_ccw_iter(&mesh, 6.into())
+            mesh.vv_ccw_iter(6.into())
                 .map(|v| v.index())
                 .collect::<Vec<_>>(),
             [10, v0.index(), v1.index(), 5, 2, 7]
         );
         assert_eq!(
-            iterator::vv_ccw_iter(&mesh, 5.into())
+            mesh.vv_ccw_iter(5.into())
                 .map(|v| v.index())
                 .collect::<Vec<_>>(),
             [v1.index(), 9, 4, 1, 6]

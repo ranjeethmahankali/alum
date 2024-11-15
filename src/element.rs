@@ -1,4 +1,4 @@
-use crate::{iterator, topol::HasTopology};
+use crate::{iterator::HasIterators, topol::HasTopology};
 use std::{
     fmt::{Debug, Display},
     marker::PhantomData,
@@ -255,8 +255,8 @@ impl VH {
     ///    .......|     .......|.......     ..../     \...
     ///    Manifold     Manifold            Not manifold
     /// ```
-    pub fn is_manifold(self, mesh: &impl HasTopology) -> bool {
-        iterator::voh_ccw_iter(mesh.topology(), self)
+    pub fn is_manifold(self, mesh: &impl HasIterators) -> bool {
+        mesh.voh_ccw_iter(self)
             .skip(1)
             .all(|h| !h.is_boundary(mesh))
     }
@@ -270,8 +270,8 @@ impl VH {
     }
 
     /// The number of edges incident on this vertex.
-    pub fn valence(self, mesh: &impl HasTopology) -> usize {
-        iterator::voh_ccw_iter(mesh.topology(), self).count()
+    pub fn valence(self, mesh: &impl HasIterators) -> usize {
+        mesh.voh_ccw_iter(self).count()
     }
 }
 
@@ -382,8 +382,8 @@ impl FH {
     }
 
     /// The number of vertices incident on a face.
-    pub fn valence(self, mesh: &impl HasTopology) -> usize {
-        iterator::fh_ccw_iter(mesh.topology(), self).count()
+    pub fn valence(self, mesh: &impl HasIterators) -> usize {
+        mesh.fh_ccw_iter(self).count()
     }
 }
 
