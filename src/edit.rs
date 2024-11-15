@@ -8,14 +8,14 @@ use crate::{
     HasTopology,
 };
 
-impl Topology {
+pub trait EditableTopology: HasIterators {
     /// Check if it is safe to collapse an edge.
     ///
     /// This function uses the edge-status and vertex-status(mutable) properties
     /// to keep track of the neighborhood. Use this with borrowed properties as
     /// arguments if you're calling this function in a hot loop, to avoid
     /// repeated borrows.
-    pub fn check_edge_collapse(
+    fn check_edge_collapse(
         &self,
         h: HH,
         edge_status: &[Status],
@@ -130,13 +130,14 @@ impl Topology {
     /// This is the same as [`Self::check_edge_collapse`], except it will attempt to
     /// borrow the necessary properties and may return an error if it ccannot
     /// borrow the required properties.
-    pub fn try_check_edge_collapse(&self, h: HH) -> Result<bool, Error> {
-        let estatus = self.estatus.try_borrow()?;
+    fn try_check_edge_collapse(&self, h: HH) -> Result<bool, Error> {
+        let topol = self.topology();
+        let estatus = topol.estatus.try_borrow()?;
         // Clone the property to side step compile time borrow checker. The
         // runtime borrow checker is still in use, so not a problem.
-        let mut vstatus = self.vstatus.clone();
+        let mut vstatus = topol.vstatus.clone();
         let mut vstatus = vstatus.try_borrow_mut()?;
-        Ok(self.check_edge_collapse(h, &estatus, &mut vstatus))
+        Ok(topol.check_edge_collapse(h, &estatus, &mut vstatus))
     }
 
     /// Sometimes after collapsing an edge, if the neighboring faces are
@@ -149,32 +150,33 @@ impl Topology {
         estatus: &mut [Status],
         fstatus: &mut [Status],
     ) {
-        let h1 = h.next(self);
+        let topol = self.topology_mut();
+        let h1 = h.next(topol);
         let o = h.opposite();
         let o1 = h1.opposite();
-        let v0 = h.head(self);
-        let v1 = h1.head(self);
-        let fh = h.face(self);
-        let fo = o.face(self);
+        let v0 = h.head(topol);
+        let v1 = h1.head(topol);
+        let fh = h.face(topol);
+        let fo = o.face(topol);
         // Ensure the loop represents a collapsed triangle. Because this is a
         // private function, all callers inside the implementation, so we can be
         // confident and assert to catch and weed out any bugs in debug builds.
-        debug_assert_eq!(h1.next(self), h);
+        debug_assert_eq!(h1.next(topol), h);
         debug_assert_ne!(h1, o);
         // Rewire halfedge -> halfedge.
-        self.link_halfedges(h1, o.next(self));
-        self.link_halfedges(o.prev(self), h1);
+        topol.link_halfedges(h1, o.next(topol));
+        topol.link_halfedges(o.prev(topol), h1);
         // Rewire halfedge -> face.
-        self.halfedge_mut(h1).face = fo;
+        topol.halfedge_mut(h1).face = fo;
         // Rewire vertex -> halfedge.
-        self.vertex_mut(v0).halfedge = Some(h1);
-        self.adjust_outgoing_halfedge(v0);
-        self.vertex_mut(v1).halfedge = Some(o1);
-        self.adjust_outgoing_halfedge(v1);
+        topol.vertex_mut(v0).halfedge = Some(h1);
+        topol.adjust_outgoing_halfedge(v0);
+        topol.vertex_mut(v1).halfedge = Some(o1);
+        topol.adjust_outgoing_halfedge(v1);
         // Rewire face -> halfedge.
         if let Some(fo) = fo {
-            if fo.halfedge(self) == o {
-                self.face_mut(fo).halfedge = h1;
+            if fo.halfedge(topol) == o {
+                topol.face_mut(fo).halfedge = h1;
             }
         }
         // Delete stuff.
@@ -194,7 +196,7 @@ impl Topology {
     /// status properties of vertices, halfedges, edges and faces. This is
     /// useful when collapsing edges in a hot loop, to avoid repeated borrows of
     /// properties.
-    pub fn collapse_edge(
+    fn collapse_edge(
         &mut self,
         h: HH,
         vstatus: &mut [Status],
@@ -203,40 +205,41 @@ impl Topology {
         fstatus: &mut [Status],
         cache: &mut TopolCache,
     ) {
+        let topol = self.topology_mut();
         // Collect neighboring topology.
-        let hn = h.next(self);
-        let hp = h.prev(self);
+        let hn = h.next(topol);
+        let hp = h.prev(topol);
         let o = h.opposite();
-        let on = o.next(self);
-        let op = o.prev(self);
-        let fh = h.face(self);
-        let fo = o.face(self);
-        let vh = h.head(self);
-        let vo = o.head(self);
+        let on = o.next(topol);
+        let op = o.prev(topol);
+        let fh = h.face(topol);
+        let fo = o.face(topol);
+        let vh = h.head(topol);
+        let vo = o.head(topol);
         // Setup cache.
         let hcache: &mut Vec<HH> = &mut cache.halfedges;
         // Rewire halfedge -> vertex
         hcache.clear();
-        hcache.extend(self.vih_ccw_iter(vo));
+        hcache.extend(topol.vih_ccw_iter(vo));
         for ih in hcache.drain(..) {
-            self.halfedge_mut(ih).vertex = vh;
+            topol.halfedge_mut(ih).vertex = vh;
         }
         // Rewire halfedge -> halfedge
-        self.link_halfedges(hp, hn);
-        self.link_halfedges(op, on);
+        topol.link_halfedges(hp, hn);
+        topol.link_halfedges(op, on);
         // Rewire face -> halfedge
         if let Some(fh) = fh {
-            self.face_mut(fh).halfedge = hn;
+            topol.face_mut(fh).halfedge = hn;
         }
         if let Some(fo) = fo {
-            self.face_mut(fo).halfedge = on;
+            topol.face_mut(fo).halfedge = on;
         }
         // Rewire vertex -> halfedge
-        if vh.halfedge(self) == Some(o) {
-            self.vertex_mut(vh).halfedge = Some(hn);
+        if vh.halfedge(topol) == Some(o) {
+            topol.vertex_mut(vh).halfedge = Some(hn);
         }
-        self.adjust_outgoing_halfedge(vh);
-        self.vertex_mut(vo).halfedge = None;
+        topol.adjust_outgoing_halfedge(vh);
+        topol.vertex_mut(vo).halfedge = None;
         // Delete stuff
         estatus[h.edge().index() as usize].set_deleted(true);
         vstatus[vo.index() as usize].set_deleted(true);
@@ -245,27 +248,28 @@ impl Topology {
         // If the loops that used to contain the halfedges that were collapsed
         // and deleted had a valance of 3, they are now degenerate. So we need
         // to collapse those loops.
-        if hn.next(self) == hp {
-            self.collapse_degenerate_triangle(hn, hstatus, estatus, fstatus);
+        if hn.next(topol) == hp {
+            topol.collapse_degenerate_triangle(hn, hstatus, estatus, fstatus);
         }
-        if on.next(self) == op {
-            self.collapse_degenerate_triangle(on, hstatus, estatus, fstatus);
+        if on.next(topol) == op {
+            topol.collapse_degenerate_triangle(on, hstatus, estatus, fstatus);
         }
     }
 
     /// This is the same as [`Self::collapse_edge`] except it will attempt to
     /// borrow all the required properties, and returns an error if borrowing
     /// fails.
-    pub fn try_collapse_edge(&mut self, h: HH, cache: &mut TopolCache) -> Result<(), Error> {
-        let mut vstatus = self.vstatus.clone();
+    fn try_collapse_edge(&mut self, h: HH, cache: &mut TopolCache) -> Result<(), Error> {
+        let topol = self.topology_mut();
+        let mut vstatus = topol.vstatus.clone();
         let mut vstatus = vstatus.try_borrow_mut()?;
-        let mut hstatus = self.hstatus.clone();
+        let mut hstatus = topol.hstatus.clone();
         let mut hstatus = hstatus.try_borrow_mut()?;
-        let mut estatus = self.estatus.clone();
+        let mut estatus = topol.estatus.clone();
         let mut estatus = estatus.try_borrow_mut()?;
-        let mut fstatus = self.fstatus.clone();
+        let mut fstatus = topol.fstatus.clone();
         let mut fstatus = fstatus.try_borrow_mut()?;
-        self.collapse_edge(
+        topol.collapse_edge(
             h,
             &mut vstatus,
             &mut hstatus,
@@ -275,7 +279,9 @@ impl Topology {
         );
         Ok(())
     }
+}
 
+impl Topology {
     pub fn triangulate_face(&mut self, f: FH) -> Result<(), Error> {
         let mut base = f.halfedge(self);
         let vstart = base.tail(self);
@@ -760,6 +766,7 @@ where
 #[cfg(test)]
 mod test {
     use crate::{
+        edit::EditableTopology,
         element::Handle,
         iterator::HasIterators,
         topol::{

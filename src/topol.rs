@@ -1,3 +1,4 @@
+use crate::edit::EditableTopology;
 use crate::iterator::HasIterators;
 use crate::property::EProperty;
 use crate::{
@@ -891,6 +892,8 @@ impl HasTopology for Topology {
 }
 
 impl HasIterators for Topology {}
+
+impl EditableTopology for Topology {}
 
 impl Default for Topology {
     fn default() -> Self {
