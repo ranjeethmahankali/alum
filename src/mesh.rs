@@ -1,5 +1,4 @@
 use crate::{
-    edit::HasTriangulation,
     element::{EH, FH, VH},
     error::Error,
     iterator::HasIterators,
@@ -365,5 +364,3 @@ where
 }
 
 impl<const DIM: usize, A> HasIterators for PolyMeshT<DIM, A> where A: Adaptor<DIM> {}
-
-impl<const DIM: usize, A> HasTriangulation for PolyMeshT<DIM, A> where A: Adaptor<DIM> {}

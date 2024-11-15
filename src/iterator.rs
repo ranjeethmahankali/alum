@@ -218,12 +218,6 @@ impl<'a, T> Iterator for LoopHalfedgeIterMut<'a, false, T> {
 /* Mutable iterators.*/
 
 pub trait HasIterators: HasTopology {
-    /// Find a halfedge spanning the vertices `from` and `to`, if one exists
-    fn find_halfedge(&self, from: VH, to: VH) -> Option<HH> {
-        self.voh_ccw_iter(from)
-            .find(|h| h.head(self.topology()) == to)
-    }
-
     /// Iterator over the outgoing halfedges around a vertex, going counter-clockwise.
     fn voh_ccw_iter(&self, v: VH) -> impl Iterator<Item = HH> {
         RadialHalfedgeIter::<true>::new(self.topology(), v.halfedge(self.topology()))
@@ -675,6 +669,59 @@ pub trait HasIterators: HasTopology {
             hcurrent: Some(h),
             _phantom: PhantomData,
         }
+    }
+    /// Iterator over the vertex triplets that represent a triangulation of the
+    /// given face.
+    ///
+    /// The triangulation does not take the shape of the face into account. It
+    /// only accounts for the topology of the face.
+    /// ```rust
+    /// use alum::{alum_glam::PolyMeshF32, Handle, HasTopology, HasIterators};
+    ///
+    /// let mut mesh = PolyMeshF32::new();
+    /// let verts = [glam::vec3(0.0, 0.0, 0.0), glam::vec3(1.0, 0.0, 0.0),
+    ///              glam::vec3(1.0, 1.0, 0.0), glam::vec3(0.0, 1.0, 0.0)];
+    /// mesh.add_vertices(&verts).expect("Cannot add vertices");
+    /// mesh.add_quad_face(0.into(), 1.into(), 2.into(), 3.into());
+    /// assert_eq!(mesh.triangulated_face_vertices(0.into())
+    ///                .flatten()
+    ///                .map(|v| v.index())
+    ///                .collect::<Vec<u32>>(), [3, 0, 1, 3, 1, 2]);
+    /// ```
+    fn triangulated_face_vertices(&self, f: FH) -> impl Iterator<Item = [VH; 3]> {
+        let hstart = f.halfedge(self);
+        let vstart = hstart.tail(self);
+        self.loop_ccw_iter(hstart.next(self))
+            .take_while(move |h| h.head(self) != vstart)
+            .map(move |h| [vstart, h.tail(self), h.head(self)])
+    }
+
+    /// Iterator over the vertex triplets that represent a triangulation of this
+    /// mesh. The triangulation of a face does not take it's shape into
+    /// account. It only accounts for the topology.
+    ///
+    /// ```rust
+    /// use alum::{alum_glam::PolyMeshF32, Handle, HasTopology, HasIterators};
+    ///
+    /// let mut mesh = PolyMeshF32::new();
+    /// let verts = [glam::vec3(0.0, 0.0, 0.0), glam::vec3(1.0, 0.0, 0.0),
+    ///              glam::vec3(1.0, 1.0, 0.0), glam::vec3(0.0, 1.0, 0.0)];
+    /// mesh.add_vertices(&verts).expect("Cannot add vertices");
+    /// mesh.add_quad_face(0.into(), 1.into(), 2.into(), 3.into());
+    /// assert_eq!(mesh.triangulated_vertices()
+    ///                .flatten()
+    ///                .map(|v| v.index())
+    ///                .collect::<Vec<u32>>(), [3, 0, 1, 3, 1, 2]);
+    /// ```
+    fn triangulated_vertices(&self) -> impl Iterator<Item = [VH; 3]> {
+        self.faces()
+            .flat_map(move |f| self.triangulated_face_vertices(f))
+    }
+
+    /// Find a halfedge spanning the vertices `from` and `to`, if one exists
+    fn find_halfedge(&self, from: VH, to: VH) -> Option<HH> {
+        self.voh_ccw_iter(from)
+            .find(|h| h.head(self.topology()) == to)
     }
 }
 

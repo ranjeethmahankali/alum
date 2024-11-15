@@ -1,5 +1,4 @@
 use crate::{
-    edit::HasTriangulation,
     element::{Handle, EH, FH, HH, VH},
     error::Error,
     iterator::HasIterators,
