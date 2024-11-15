@@ -5,6 +5,7 @@ use crate::{
     mesh::{Adaptor, PolyMeshT},
     status::Status,
     topol::{TopolCache, Topology},
+    HasTopology,
 };
 
 impl Topology {

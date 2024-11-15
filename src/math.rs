@@ -7,6 +7,7 @@ use crate::{
         VectorAngleAdaptor, VectorLengthAdaptor, VectorNormalizeAdaptor,
     },
     property::{FProperty, VProperty},
+    HasTopology,
 };
 use std::ops::{Add, AddAssign, Div, Mul, Neg, Sub};
 
@@ -370,7 +371,7 @@ where
     /// fails.
     ///
     /// ```rust
-    /// use alum::alum_glam::PolyMeshF32;
+    /// use alum::{alum_glam::PolyMeshF32, HasTopology};
     ///
     /// let qbox = PolyMeshF32::quad_box(glam::vec3(0.0, 0.0, 0.0), glam::vec3(1.0, 1.0, 1.0))
     ///     .expect("Cannot create a box primitive");
@@ -631,7 +632,7 @@ where
 mod test {
     use core::f32;
 
-    use crate::{alum_glam::PolyMeshF32, error::Error, macros::assert_f32_eq};
+    use crate::{alum_glam::PolyMeshF32, error::Error, macros::assert_f32_eq, HasTopology};
 
     #[test]
     fn t_box_face_normals() {

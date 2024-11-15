@@ -1,5 +1,7 @@
 use crate::{
-    element::{Edge, Face, Halfedge, Handle, Vertex, EH, FH, HH, VH},
+    element::{
+        ERange, Edge, FRange, Face, HRange, Halfedge, Handle, VRange, Vertex, EH, FH, HH, VH,
+    },
     error::Error,
     iterator,
     property::{EProperty, FProperty, HProperty, PropertyContainer, VProperty},
@@ -88,7 +90,120 @@ pub trait HasTopology {
     where
         T: Clone + Copy + 'static,
     {
-        self.topology_mut().create_vertex_prop(default)
+        VProperty::<T>::new(&mut self.topology_mut().vprops, default)
+    }
+
+    /// Create a new halfedge property of type T, with the `default` value.
+    ///
+    /// The default value will be used when new elements are added to the mesh.
+    ///
+    /// ```rust
+    /// use alum::{alum_glam::PolyMeshF32, HasTopology};
+    ///
+    /// let mut mesh = PolyMeshF32::tetrahedron(1.0).expect("Cannot crate tetrahedron");
+    /// let prop = mesh.create_halfedge_prop(42usize);
+    /// // To use th property, you have to borrow it.
+    /// let prop = prop.try_borrow().expect("Cannot borrow property");
+    /// assert_eq!(mesh.num_halfedges(), prop.len());
+    /// assert!(prop.iter().all(|v| *v == 42));
+    /// ```
+    fn create_halfedge_prop<T>(&mut self, default: T) -> HProperty<T>
+    where
+        T: Clone + Copy + 'static,
+    {
+        HProperty::<T>::new(&mut self.topology_mut().hprops, default)
+    }
+
+    /// Create a new edge property of type T, with the `default` value.
+    ///
+    /// The default value will be used when new elements are added to the mesh.
+    ///
+    /// ```rust
+    /// use alum::{alum_glam::PolyMeshF32, HasTopology};
+    ///
+    /// let mut mesh = PolyMeshF32::tetrahedron(1.0).expect("Cannot crate tetrahedron");
+    /// let prop = mesh.create_edge_prop(42usize);
+    /// // To use th property, you have to borrow it.
+    /// let prop = prop.try_borrow().expect("Cannot borrow property");
+    /// assert_eq!(mesh.num_edges(), prop.len());
+    /// assert!(prop.iter().all(|v| *v == 42));
+    /// ```
+    fn create_edge_prop<T>(&mut self, default: T) -> EProperty<T>
+    where
+        T: Clone + Copy + 'static,
+    {
+        EProperty::<T>::new(&mut self.topology_mut().eprops, default)
+    }
+
+    /// Create a new face property of type T, with the `default` value.
+    ///
+    /// The default value will be used when new elements are added to the mesh.
+    ///
+    /// ```rust
+    /// use alum::{alum_glam::PolyMeshF32, HasTopology};
+    ///
+    /// let mut mesh = PolyMeshF32::tetrahedron(1.0).expect("Cannot crate tetrahedron");
+    /// let prop = mesh.create_face_prop(42usize);
+    /// // To use th property, you have to borrow it.
+    /// let prop = prop.try_borrow().expect("Cannot borrow property");
+    /// assert_eq!(mesh.num_faces(), prop.len());
+    /// assert!(prop.iter().all(|v| *v == 42));
+    /// ```
+    fn create_face_prop<T>(&mut self, default: T) -> FProperty<T>
+    where
+        T: Clone + Copy + 'static,
+    {
+        FProperty::<T>::new(&mut self.topology_mut().fprops, default)
+    }
+
+    /// Reserve memory for the given number of elements.
+    ///
+    /// The memory is also reserved for all properties.
+    fn reserve(&mut self, nverts: usize, nedges: usize, nfaces: usize) -> Result<(), Error> {
+        // Elements.
+        self.topology_mut().vertices.reserve(nverts);
+        self.topology_mut().edges.reserve(nedges);
+        self.topology_mut().faces.reserve(nfaces);
+        // Properties.
+        self.topology_mut().vprops.reserve(nverts)?;
+        self.topology_mut().hprops.reserve(nedges * 2)?;
+        self.topology_mut().eprops.reserve(nedges)?;
+        self.topology_mut().fprops.reserve(nfaces)?;
+        Ok(())
+    }
+
+    /// Delete all elements and their properties.
+    fn clear(&mut self) -> Result<(), Error> {
+        // Elements.
+        self.topology_mut().vertices.clear();
+        self.topology_mut().edges.clear();
+        self.topology_mut().faces.clear();
+        // Properties.
+        self.topology_mut().vprops.clear()?;
+        self.topology_mut().hprops.clear()?;
+        self.topology_mut().eprops.clear()?;
+        self.topology_mut().fprops.clear()?;
+        Ok(())
+    }
+
+    /// Iterator over the vertices of the mesh.
+    fn vertices(&self) -> VRange {
+        (0..(self.num_vertices() as u32)).into()
+    }
+
+    /// Iterator over the halfedges of the mesh.
+    fn halfedges(&self) -> HRange {
+        (0..(self.num_halfedges() as u32)).into()
+    }
+
+    /// Iterator over the edges of the mesh.
+    fn edges(&self) -> ERange {
+        (0..(self.num_edges() as u32)).into()
+    }
+
+    /// Iterator over the faces of the mesh.
+    fn faces(&self) -> FRange {
+        (0..(self.num_faces() as u32)).into()
     }
 }
 
@@ -163,32 +278,6 @@ impl Topology {
         }
     }
 
-    pub fn reserve(&mut self, nverts: usize, nedges: usize, nfaces: usize) -> Result<(), Error> {
-        // Elements.
-        self.vertices.reserve(nverts);
-        self.edges.reserve(nedges);
-        self.faces.reserve(nfaces);
-        // Properties.
-        self.vprops.reserve(nverts)?;
-        self.hprops.reserve(nedges * 2)?;
-        self.eprops.reserve(nedges)?;
-        self.fprops.reserve(nfaces)?;
-        Ok(())
-    }
-
-    pub fn clear(&mut self) -> Result<(), Error> {
-        // Elements.
-        self.vertices.clear();
-        self.edges.clear();
-        self.faces.clear();
-        // Properties.
-        self.vprops.clear()?;
-        self.hprops.clear()?;
-        self.eprops.clear()?;
-        self.fprops.clear()?;
-        Ok(())
-    }
-
     pub fn vertex_status(&self, v: VH) -> Result<Status, Error> {
         self.vstatus.get(v)
     }
@@ -205,44 +294,16 @@ impl Topology {
         self.estatus.get(e)
     }
 
-    pub fn edge_status_mut(&mut self, e: EH) -> Result<RefMut<'_, Status>, Error> {
-        self.estatus.get_mut(e)
-    }
-
     pub fn face_status(&self, f: FH) -> Result<Status, Error> {
         self.fstatus.get(f)
     }
 
+    pub fn edge_status_mut(&mut self, e: EH) -> Result<RefMut<'_, Status>, Error> {
+        self.estatus.get_mut(e)
+    }
+
     pub fn face_status_mut(&mut self, f: FH) -> Result<RefMut<'_, Status>, Error> {
         self.fstatus.get_mut(f)
-    }
-
-    pub fn create_vertex_prop<T>(&mut self, default: T) -> VProperty<T>
-    where
-        T: Clone + Copy + 'static,
-    {
-        VProperty::<T>::new(&mut self.vprops, default)
-    }
-
-    pub fn create_halfedge_prop<T>(&mut self, default: T) -> HProperty<T>
-    where
-        T: Clone + Copy + 'static,
-    {
-        HProperty::<T>::new(&mut self.hprops, default)
-    }
-
-    pub fn create_edge_prop<T>(&mut self, default: T) -> EProperty<T>
-    where
-        T: Clone + Copy + 'static,
-    {
-        EProperty::<T>::new(&mut self.eprops, default)
-    }
-
-    pub fn create_face_prop<T>(&mut self, default: T) -> FProperty<T>
-    where
-        T: Clone + Copy + 'static,
-    {
-        FProperty::<T>::new(&mut self.fprops, default)
     }
 
     pub fn new_vprop_with_capacity<T>(&mut self, n: usize, default: T) -> VProperty<T>
@@ -274,22 +335,6 @@ impl Topology {
 
     pub(crate) fn face_mut(&mut self, f: FH) -> &mut Face {
         &mut self.faces[f.index() as usize]
-    }
-
-    pub fn vertices(&self) -> impl Iterator<Item = VH> {
-        (0..(self.num_vertices() as u32)).map(|i| i.into())
-    }
-
-    pub fn halfedges(&self) -> impl Iterator<Item = HH> {
-        (0..(self.num_halfedges() as u32)).map(|i| i.into())
-    }
-
-    pub fn edges(&self) -> impl Iterator<Item = EH> {
-        (0..(self.num_edges() as u32)).map(|i| i.into())
-    }
-
-    pub fn faces(&self) -> impl Iterator<Item = FH> {
-        (0..(self.num_faces() as u32)).map(|i| i.into())
     }
 
     pub fn find_halfedge(&self, from: VH, to: VH) -> Option<HH> {

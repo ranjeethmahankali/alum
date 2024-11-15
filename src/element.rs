@@ -1,16 +1,64 @@
 use crate::{iterator, topol::HasTopology};
-use std::fmt::{Debug, Display};
+use std::{
+    fmt::{Debug, Display},
+    marker::PhantomData,
+    ops::Range,
+};
 
 /**
  * All elements of the mesh implement this trait. They are identified by their
  * index.
  */
-pub trait Handle {
+pub trait Handle: From<u32> {
     /**
      * The index of the element.
      */
     fn index(&self) -> u32;
 }
+
+pub struct HandleRange<H>
+where
+    H: Handle,
+{
+    current: u32,
+    stop: u32,
+    _phantom: PhantomData<H>,
+}
+
+impl<H> From<Range<u32>> for HandleRange<H>
+where
+    H: Handle,
+{
+    fn from(value: Range<u32>) -> Self {
+        HandleRange {
+            current: value.start,
+            stop: value.end,
+            _phantom: PhantomData,
+        }
+    }
+}
+
+impl<H> Iterator for HandleRange<H>
+where
+    H: Handle,
+{
+    type Item = H;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.current < self.stop {
+            let i = self.current;
+            self.current += 1;
+            Some(i.into())
+        } else {
+            None
+        }
+    }
+}
+
+pub type VRange = HandleRange<VH>;
+pub type HRange = HandleRange<HH>;
+pub type ERange = HandleRange<EH>;
+pub type FRange = HandleRange<FH>;
 
 /**
  * Vertex handle.

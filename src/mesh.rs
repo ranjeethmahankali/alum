@@ -1,7 +1,7 @@
 use crate::{
     element::{EH, FH, HH, VH},
     error::Error,
-    property::{EProperty, FProperty, HProperty, VProperty},
+    property::{FProperty, VProperty},
     status::Status,
     topol::{HasTopology, TopolCache, Topology},
 };
@@ -168,101 +168,6 @@ where
             vnormals: None,
             fnormals: None,
         }
-    }
-
-    /// Create a new halfedge property of type T, with the `default` value.
-    ///
-    /// The default value will be used when new elements are added to the mesh.
-    ///
-    /// ```rust
-    /// use alum::{alum_glam::PolyMeshF32, HasTopology};
-    ///
-    /// let mut mesh = PolyMeshF32::tetrahedron(1.0).expect("Cannot crate tetrahedron");
-    /// let prop = mesh.create_halfedge_prop(42usize);
-    /// // To use th property, you have to borrow it.
-    /// let prop = prop.try_borrow().expect("Cannot borrow property");
-    /// assert_eq!(mesh.num_halfedges(), prop.len());
-    /// assert!(prop.iter().all(|v| *v == 42));
-    /// ```
-    pub fn create_halfedge_prop<T>(&mut self, default: T) -> HProperty<T>
-    where
-        T: Clone + Copy + 'static,
-    {
-        self.topol.create_halfedge_prop(default)
-    }
-
-    /// Create a new edge property of type T, with the `default` value.
-    ///
-    /// The default value will be used when new elements are added to the mesh.
-    ///
-    /// ```rust
-    /// use alum::{alum_glam::PolyMeshF32, HasTopology};
-    ///
-    /// let mut mesh = PolyMeshF32::tetrahedron(1.0).expect("Cannot crate tetrahedron");
-    /// let prop = mesh.create_edge_prop(42usize);
-    /// // To use th property, you have to borrow it.
-    /// let prop = prop.try_borrow().expect("Cannot borrow property");
-    /// assert_eq!(mesh.num_edges(), prop.len());
-    /// assert!(prop.iter().all(|v| *v == 42));
-    /// ```
-    pub fn create_edge_prop<T>(&mut self, default: T) -> EProperty<T>
-    where
-        T: Clone + Copy + 'static,
-    {
-        self.topol.create_edge_prop(default)
-    }
-
-    /// Create a new face property of type T, with the `default` value.
-    ///
-    /// The default value will be used when new elements are added to the mesh.
-    ///
-    /// ```rust
-    /// use alum::{alum_glam::PolyMeshF32, HasTopology};
-    ///
-    /// let mut mesh = PolyMeshF32::tetrahedron(1.0).expect("Cannot crate tetrahedron");
-    /// let prop = mesh.create_face_prop(42usize);
-    /// // To use th property, you have to borrow it.
-    /// let prop = prop.try_borrow().expect("Cannot borrow property");
-    /// assert_eq!(mesh.num_faces(), prop.len());
-    /// assert!(prop.iter().all(|v| *v == 42));
-    /// ```
-    pub fn create_face_prop<T>(&mut self, default: T) -> FProperty<T>
-    where
-        T: Clone + Copy + 'static,
-    {
-        self.topol.create_face_prop(default)
-    }
-
-    /// Reserve memory for the given number of elements.
-    ///
-    /// The memory is also reserved for all properties.
-    pub fn reserve(&mut self, nverts: usize, nedges: usize, nfaces: usize) -> Result<(), Error> {
-        self.topol.reserve(nverts, nedges, nfaces)
-    }
-
-    /// Delete all elements and their properties.
-    pub fn clear(&mut self) -> Result<(), Error> {
-        self.topol.clear()
-    }
-
-    /// Iterator over the vertices of the mesh.
-    pub fn vertices(&self) -> impl Iterator<Item = VH> {
-        self.topol.vertices()
-    }
-
-    /// Iterator over the halfedges of the mesh.
-    pub fn halfedges(&self) -> impl Iterator<Item = HH> {
-        self.topol.halfedges()
-    }
-
-    /// Iterator over the edges of the mesh.
-    pub fn edges(&self) -> impl Iterator<Item = EH> {
-        self.topol.edges()
-    }
-
-    /// Iterator over the faces of the mesh.
-    pub fn faces(&self) -> impl Iterator<Item = FH> {
-        self.topol.faces()
     }
 
     /// The position of a vertex.
