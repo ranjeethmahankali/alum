@@ -699,7 +699,7 @@ mod loop_scheme {
             let mut points = self.points();
             for _ in 0..iterations {
                 {
-                    let mut points = points.try_borrow_mut()?;
+                    let points = points.try_borrow()?;
                     // Compute vertex points.
                     if update_points {
                         LoopScheme::<DIM, A>::compute_vertex_points(
@@ -707,11 +707,7 @@ mod loop_scheme {
                             &points,
                             &mut vpos,
                         );
-                        points.copy_from_slice(&vpos);
                     }
-                }
-                {
-                    let points = points.try_borrow()?;
                     // Compute edge points.
                     epos.clear();
                     epos.extend(self.edges().map(|e| {
@@ -730,6 +726,11 @@ mod loop_scheme {
                 }
                 // Make them immutable from here.
                 let epos: &[A::Vector] = &epos;
+                let vpos: &[A::Vector] = &vpos;
+                if update_points {
+                    let mut points = points.try_borrow_mut()?;
+                    points.copy_from_slice(&vpos);
+                }
                 let num_old_verts = self.num_vertices() as u32;
                 // Split edges.
                 for (e, epos) in self.edges().map(|e| (e, epos[e.index() as usize])) {
