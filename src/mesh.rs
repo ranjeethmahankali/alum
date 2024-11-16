@@ -287,12 +287,12 @@ where
         self.topol.add_face(verts, &mut self.cache)
     }
 
-    /// Add a triangular face with the three given vertices.
+    /// Add a triangular face with the given vertices.
     pub fn add_tri_face(&mut self, v0: VH, v1: VH, v2: VH) -> Result<FH, Error> {
         self.add_face(&[v0, v1, v2])
     }
 
-    /// Add a quadrilateral face with the three given vertices.
+    /// Add a quadrilateral face with the given vertices.
     pub fn add_quad_face(&mut self, v0: VH, v1: VH, v2: VH, v3: VH) -> Result<FH, Error> {
         self.add_face(&[v0, v1, v2, v3])
     }

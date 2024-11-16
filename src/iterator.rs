@@ -215,9 +215,64 @@ impl<'a, T> Iterator for LoopHalfedgeIterMut<'a, false, T> {
     }
 }
 
-/* Mutable iterators.*/
-
 pub trait HasIterators: HasTopology {
+    /*!
+    This trait defines iterators to traverse the topology of a mesh.
+
+    # Working with mutable iterators
+
+    Iterators such as [`Self::loop_ccw_iter`] and other `*_iter` iterators
+    borrow the mesh immutably. These are useful when iterating over the elements
+    of the mesh without needing to modify the mesh. While the mesh is borrowed
+    by the iterators, the borrow checker will not let you borrow the mesh again
+    mutably, for as long as the iterator is alive. This is a problem if you're
+    trying to modify the mesh while iterating over it's elements. In such
+    scenarios, mutable iterators are useful. These functions end with
+    `*_iter_mut`.
+
+    The `*_iter_mut` functions borrow the mesh mutably. Similar to immutable
+    iterators, while the mutable iterator is alive, the borrow checker won't let
+    you mutably borrow the mesh again. But, unlike the immutable iterators, the
+    mutable iterators don't yield just the elements of the mesh. Instead the
+    mutable iterators yield a tuple containing a mutable reference to the mesh,
+    and the mesh element. You can modify the mesh using the mutable reference
+    yielded by the mutable iterator. So essentially, the borrow checker is happy
+    because the iterator borrows the mesh mutably and to modify the mesh, you
+    borrow the mesh from the iterator. The borrows are chained instead of being
+    simultaenous. This keeps the borrow checker happy, and ensures safety to
+    some extent. Below is some example code that iterates over the vertices of
+    face with index 2, and modifies their positions.
+
+    ```rust
+    use alum::{alum_glam::PolyMeshF32, FH, HasIterators, HasTopology};
+
+    let mut boxmesh = PolyMeshF32::unit_box().expect("Cannot create a box");
+    assert_eq!(1.0, boxmesh.try_calc_volume().expect("Cannot compute volume"));
+    // Modify the mesh while using a mutable iterator - pull points closer to origin.
+    let f: FH = 2.into();
+    for (mesh, v) in boxmesh.fv_ccw_iter_mut(f) {
+        // Inside this loop, while the iterator is alive, we cannot borrow `boxmesh`
+        // because the iterator already borrowed `boxmesh` mutably. Instead we will use
+        // the `mesh` mutable reference yielded by the iterator along with the halfedge.
+        let mut pos = mesh.point(v).expect("Cannot read position");
+        pos *= 0.75;
+        mesh.set_point(v, pos);
+    }
+    // The iterator is not alive anymore, so we can borrow `boxmesh` again.
+    boxmesh.check_topology().expect("Topological errors found");
+    // Volume is smaller than one because we pulled the vertices closer to the origin.
+    assert!(1.0 > boxmesh.try_calc_volume().expect("Cannot compute volume"));
+    ```
+
+    Despite enforcing the borrow checker rules, the mutable iterators can lead
+    to problems when used incorrectly. Modifying the topology of the mesh while
+    using mutable iterators is NOT advised, as this can lead to topological
+    errors. Only do this if you're know what you're doing. This is akin to
+    mutably iterating over a linked list while modifying the links between the
+    elements of the linked list. You can easily create cycles, infinite loops
+    and other problems if you're not careful.
+     */
+
     /// Iterator over the outgoing halfedges around a vertex, going counter-clockwise.
     fn voh_ccw_iter(&self, v: VH) -> impl Iterator<Item = HH> {
         RadialHalfedgeIter::<true>::new(self.topology(), v.halfedge(self.topology()))
@@ -378,7 +433,7 @@ pub trait HasIterators: HasTopology {
     /// counter-clockwise.
     ///
     /// A mutable iterator allows modifying the mesh while iterating over its
-    /// elements. See [this section](crate#working-with-mutable-iterators) for an
+    /// elements. See [this section](#working-with-mutable-iterators) for an
     /// overview on mutable iterators.
     fn voh_ccw_iter_mut(&mut self, v: VH) -> impl Iterator<Item = (&mut Self, HH)> {
         let h = v.halfedge(self.topology());
@@ -394,7 +449,7 @@ pub trait HasIterators: HasTopology {
     /// Iterator over the outgoing halfedges around a vertex, going clockwise.
     ///
     /// A mutable iterator allows modifying the mesh while iterating over its
-    /// elements. See [this section](crate#working-with-mutable-iterators) for an
+    /// elements. See [this section](#working-with-mutable-iterators) for an
     /// overview on mutable iterators.
     fn voh_cw_iter_mut(&mut self, v: VH) -> impl Iterator<Item = (&mut Self, HH)> {
         let h = v.halfedge(self.topology());
@@ -411,7 +466,7 @@ pub trait HasIterators: HasTopology {
     /// counter-clockwise.
     ///
     /// A mutable iterator allows modifying the mesh while iterating over its
-    /// elements. See [this section](crate#working-with-mutable-iterators) for an
+    /// elements. See [this section](#working-with-mutable-iterators) for an
     /// overview on mutable iterators.
     fn vih_ccw_iter_mut(&mut self, v: VH) -> impl Iterator<Item = (&mut Self, HH)> {
         self.voh_ccw_iter_mut(v)
@@ -421,7 +476,7 @@ pub trait HasIterators: HasTopology {
     /// Iterator over the incoming halfedges around a vertex, going clockwise.
     ///
     /// A mutable iterator allows modifying the mesh while iterating over its
-    /// elements. See [this section](crate#working-with-mutable-iterators) for an
+    /// elements. See [this section](#working-with-mutable-iterators) for an
     /// overview on mutable iterators.
     fn vih_cw_iter_mut(&mut self, v: VH) -> impl Iterator<Item = (&mut Self, HH)> {
         self.voh_cw_iter_mut(v)
@@ -432,7 +487,7 @@ pub trait HasIterators: HasTopology {
     /// going counter-clockwise.
     ///
     /// A mutable iterator allows modifying the mesh while iterating over its
-    /// elements. See [this section](crate#working-with-mutable-iterators) for an
+    /// elements. See [this section](#working-with-mutable-iterators) for an
     /// overview on mutable iterators.
     fn vv_ccw_iter_mut(&mut self, v: VH) -> impl Iterator<Item = (&mut Self, VH)> {
         self.voh_ccw_iter_mut(v).map(|(mesh, h)| {
@@ -445,7 +500,7 @@ pub trait HasIterators: HasTopology {
     /// going clockwise.
     ///
     /// A mutable iterator allows modifying the mesh while iterating over its
-    /// elements. See [this section](crate#working-with-mutable-iterators) for an
+    /// elements. See [this section](#working-with-mutable-iterators) for an
     /// overview on mutable iterators.
     fn vv_cw_iter_mut(&mut self, v: VH) -> impl Iterator<Item = (&mut Self, VH)> {
         self.voh_cw_iter_mut(v).map(|(mesh, h)| {
@@ -458,7 +513,7 @@ pub trait HasIterators: HasTopology {
     /// counter-clockwise.
     ///
     /// A mutable iterator allows modifying the mesh while iterating over its
-    /// elements. See [this section](crate#working-with-mutable-iterators) for an
+    /// elements. See [this section](#working-with-mutable-iterators) for an
     /// overview on mutable iterators.
     fn ve_ccw_iter_mut(&mut self, v: VH) -> impl Iterator<Item = (&mut Self, EH)> {
         self.voh_ccw_iter_mut(v).map(|(mesh, h)| (mesh, h.edge()))
@@ -467,7 +522,7 @@ pub trait HasIterators: HasTopology {
     /// Iterator over the incident edges around a vertex, going clockwise.
     ///
     /// A mutable iterator allows modifying the mesh while iterating over its
-    /// elements. See [this section](crate#working-with-mutable-iterators) for an
+    /// elements. See [this section](#working-with-mutable-iterators) for an
     /// overview on mutable iterators.
     fn ve_cw_iter_mut(&mut self, v: VH) -> impl Iterator<Item = (&mut Self, EH)> {
         self.voh_cw_iter_mut(v).map(|(mesh, h)| (mesh, h.edge()))
@@ -477,7 +532,7 @@ pub trait HasIterators: HasTopology {
     /// counter-clockwise.
     ///
     /// A mutable iterator allows modifying the mesh while iterating over its
-    /// elements. See [this section](crate#working-with-mutable-iterators) for an
+    /// elements. See [this section](#working-with-mutable-iterators) for an
     /// overview on mutable iterators.
     fn vf_ccw_iter_mut(&mut self, v: VH) -> impl Iterator<Item = (&mut Self, FH)> {
         self.voh_ccw_iter_mut(v)
@@ -487,7 +542,7 @@ pub trait HasIterators: HasTopology {
     /// Iterator over the incident faces around a vertex, going clockwise.
     ///
     /// A mutable iterator allows modifying the mesh while iterating over its
-    /// elements. See [this section](crate#working-with-mutable-iterators) for an
+    /// elements. See [this section](#working-with-mutable-iterators) for an
     /// overview on mutable iterators.
     fn vf_cw_iter_mut(&mut self, v: VH) -> impl Iterator<Item = (&mut Self, FH)> {
         self.voh_cw_iter_mut(v)
@@ -497,7 +552,7 @@ pub trait HasIterators: HasTopology {
     /// Iterator over the vertices incident on a face, going counter-clockwise.
     ///
     /// A mutable iterator allows modifying the mesh while iterating over its
-    /// elements. See [this section](crate#working-with-mutable-iterators) for an
+    /// elements. See [this section](#working-with-mutable-iterators) for an
     /// overview on mutable iterators.
     fn fv_ccw_iter_mut(&mut self, f: FH) -> impl Iterator<Item = (&mut Self, VH)> {
         self.fh_ccw_iter_mut(f).map(|(mesh, h)| {
@@ -509,7 +564,7 @@ pub trait HasIterators: HasTopology {
     /// Iterator over the vertices incident on a face, going clockwise.
     ///
     /// A mutable iterator allows modifying the mesh while iterating over its
-    /// elements. See [this section](crate#working-with-mutable-iterators) for an
+    /// elements. See [this section](#working-with-mutable-iterators) for an
     /// overview on mutable iterators.
     fn fv_cw_iter_mut(&mut self, f: FH) -> impl Iterator<Item = (&mut Self, VH)> {
         self.fh_cw_iter_mut(f).map(|(mesh, h)| {
@@ -521,7 +576,7 @@ pub trait HasIterators: HasTopology {
     /// Iterator over the halfedges of a face loop, going counter-clockwise.
     ///
     /// A mutable iterator allows modifying the mesh while iterating over its
-    /// elements. See [this section](crate#working-with-mutable-iterators) for an
+    /// elements. See [this section](#working-with-mutable-iterators) for an
     /// overview on mutable iterators.
     fn fh_ccw_iter_mut(&mut self, f: FH) -> impl Iterator<Item = (&mut Self, HH)> {
         let h = f.halfedge(self);
@@ -537,7 +592,7 @@ pub trait HasIterators: HasTopology {
     /// Iterator over the halfedges in a face loop, going clockwise.
     ///
     /// A mutable iterator allows modifying the mesh while iterating over its
-    /// elements. See [this section](crate#working-with-mutable-iterators) for an
+    /// elements. See [this section](#working-with-mutable-iterators) for an
     /// overview on mutable iterators.
     fn fh_cw_iter_mut(&mut self, f: FH) -> impl Iterator<Item = (&mut Self, HH)> {
         let h = f.halfedge(self);
@@ -553,7 +608,7 @@ pub trait HasIterators: HasTopology {
     /// Iterator over the edges incident on a face, going counter-clockwise.
     ///
     /// A mutable iterator allows modifying the mesh while iterating over its
-    /// elements. See [this section](crate#working-with-mutable-iterators) for an
+    /// elements. See [this section](#working-with-mutable-iterators) for an
     /// overview on mutable iterators.
     fn fe_ccw_iter_mut(&mut self, f: FH) -> impl Iterator<Item = (&mut Self, EH)> {
         self.fh_ccw_iter_mut(f).map(|(mesh, h)| (mesh, h.edge()))
@@ -562,7 +617,7 @@ pub trait HasIterators: HasTopology {
     /// Iterator over the edges incident on a face, going clockwise.
     ///
     /// A mutable iterator allows modifying the mesh while iterating over its
-    /// elements. See [this section](crate#working-with-mutable-iterators) for an
+    /// elements. See [this section](#working-with-mutable-iterators) for an
     /// overview on mutable iterators.
     fn fe_cw_iter_mut(&mut self, f: FH) -> impl Iterator<Item = (&mut Self, EH)> {
         self.fh_cw_iter_mut(f).map(|(mesh, h)| (mesh, h.edge()))
@@ -575,7 +630,7 @@ pub trait HasIterators: HasTopology {
     /// connected via shared edge.
     ///
     /// A mutable iterator allows modifying the mesh while iterating over its
-    /// elements. See [this section](crate#working-with-mutable-iterators) for an
+    /// elements. See [this section](#working-with-mutable-iterators) for an
     /// overview on mutable iterators.
     fn ff_ccw_iter_mut(&mut self, f: FH) -> impl Iterator<Item = (&mut Self, FH)> {
         self.fh_ccw_iter_mut(f)
@@ -589,7 +644,7 @@ pub trait HasIterators: HasTopology {
     /// connected via shared edge.
     ///
     /// A mutable iterator allows modifying the mesh while iterating over its
-    /// elements. See [this section](crate#working-with-mutable-iterators) for an
+    /// elements. See [this section](#working-with-mutable-iterators) for an
     /// overview on mutable iterators.
     fn ff_cw_iter_mut(&mut self, f: FH) -> impl Iterator<Item = (&mut Self, FH)> {
         self.fh_cw_iter_mut(f)
@@ -602,7 +657,7 @@ pub trait HasIterators: HasTopology {
     /// This is equivalent to a circular shifted [`Self::voh_ccw_iter_mut`] of
     /// the vertex at the tail of the given halfedge. A mutable iterator allows
     /// modifying the mesh while iterating over its elements. See [this
-    /// section](crate#working-with-mutable-iterators) for an overview on
+    /// section](#working-with-mutable-iterators) for an overview on
     /// mutable iterators.
     fn ccw_rotate_iter_mut(&mut self, h: HH) -> impl Iterator<Item = (&mut Self, HH)> {
         RadialHalfedgeIterMut::<true, Self> {
@@ -620,7 +675,7 @@ pub trait HasIterators: HasTopology {
     /// This is equivalent to a circular shifted [`Self::voh_cw_iter_mut`] of
     /// the vertex at the tail of the given halfedge. A mutable iterator allows
     /// modifying the mesh while iterating over its elements. See [this
-    /// section](crate#working-with-mutable-iterators) for an overview on
+    /// section](#working-with-mutable-iterators) for an overview on
     /// mutable iterators.
     fn cw_rotate_iter_mut(&mut self, h: HH) -> impl Iterator<Item = (&mut Self, HH)> {
         RadialHalfedgeIterMut::<false, Self> {
@@ -640,7 +695,7 @@ pub trait HasIterators: HasTopology {
     /// the boundary, this iterator goes over the boundary loop
     /// counter-clockwise. A mutable iterator allows modifying the mesh while
     /// iterating over its elements. See [this
-    /// section](crate#working-with-mutable-iterators) for an overview on
+    /// section](#working-with-mutable-iterators) for an overview on
     /// mutable iterators.
     fn loop_ccw_iter_mut(&mut self, h: HH) -> impl Iterator<Item = (&mut Self, HH)> {
         LoopHalfedgeIterMut::<true, Self> {
@@ -659,7 +714,7 @@ pub trait HasIterators: HasTopology {
     /// [`Self::fh_cw_iter_mut`] of the incident face. If the halfedge is on the
     /// boundary, this iterator goes over the boundary loop clockwise. A mutable
     /// iterator allows modifying the mesh while iterating over its
-    /// elements. See [this section](crate#working-with-mutable-iterators) for
+    /// elements. See [this section](#working-with-mutable-iterators) for
     /// an overview on mutable iterators.
     fn loop_cw_iter_mut(&mut self, h: HH) -> impl Iterator<Item = (&mut Self, HH)> {
         LoopHalfedgeIterMut::<false, Self> {

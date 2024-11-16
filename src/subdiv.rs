@@ -551,7 +551,7 @@ where
             let vpos: &[A::Vector] = &vpos;
             if update_points {
                 let mut points = points.try_borrow_mut()?;
-                points.copy_from_slice(&vpos);
+                points.copy_from_slice(vpos);
             }
             let num_old_verts = self.num_vertices() as u32;
             // Split edges.
