@@ -721,9 +721,9 @@ mod loop_scheme {
                             vsum * A::scalarf64(0.5)
                         } else {
                             let (h, oh) = e.halfedges();
+                            let (v2, v3) = (h.next(self).head(self), oh.next(self).head(self));
                             let sum = vsum * A::scalarf64(3.0)
-                                + points[h.next(self).head(self).index() as usize]
-                                + points[oh.next(self).head(self).index() as usize];
+                                + (points[v2.index() as usize] + points[v3.index() as usize]);
                             sum / A::scalarf64(8.0)
                         }
                     }));
