@@ -741,7 +741,6 @@ where
                 debug_assert!(hhs.len() % 2 == 0);
                 for hpair in hhs.chunks_exact(2) {
                     self.insert_edge(hpair[1], hpair[0])?;
-                    self.check_topology().expect("Failed...");
                 }
             }
         }
@@ -797,7 +796,7 @@ mod test {
     #[test]
     fn t_box_subdiv_loop() {
         let mut mesh = PolyMeshF32::unit_box().expect("Cannot create a box");
-        mesh.subdivide_loop(1, true).expect("Cannot subdivide");
+        mesh.subdivide_loop(4, true).expect("Cannot subdivide");
         mesh.check_topology().expect("Topological errors found");
         assert_eq!(
             mesh.try_calc_area().expect("Cannot compute area"),
