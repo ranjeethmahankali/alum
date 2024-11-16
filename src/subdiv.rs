@@ -601,12 +601,10 @@ mod loop_scheme {
     ];
 
     pub fn compute_weight(valence: usize) -> (f64, f64) {
-        let alpha = (40.0
-            - f64::powf(
-                3.0 + 2.0 * f64::cos(f64::consts::TAU / (valence as f64)),
-                2.0,
-            ))
-            / 64.0;
+        const THREE_OVER_EIGHT: f64 = 3.0 / 8.0;
+        let n = valence as f64;
+        let alpha = THREE_OVER_EIGHT
+            + f64::powi(THREE_OVER_EIGHT + 0.25 * f64::cos(f64::consts::TAU / n), 2);
         (1.0 - alpha, alpha / (valence as f64))
     }
 
@@ -661,15 +659,16 @@ mod loop_scheme {
                     }
                 } else {
                     let (valence, sum) = mesh
-                        .vv_cw_iter(v)
+                        .vv_ccw_iter(v)
                         .fold((0usize, A::zero_vector()), |(valence, sum), nv| {
                             (valence + 1, sum + points[nv.index() as usize])
                         });
-                    let (a, b) = if valence < WEIGHTS.len() {
-                        WEIGHTS[valence]
-                    } else {
-                        compute_weight(valence)
-                    };
+                    let (a, b) = compute_weight(valence);
+                    // let (a, b) = if valence < WEIGHTS.len() {
+                    //     WEIGHTS[valence]
+                    // } else {
+                    //     compute_weight(valence)
+                    // };
                     sum * A::scalarf64(b) + points[v.index() as usize] * A::scalarf64(a)
                 }
             }));
