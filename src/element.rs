@@ -5,14 +5,10 @@ use std::{
     ops::Range,
 };
 
-/**
- * All elements of the mesh implement this trait. They are identified by their
- * index.
- */
+/// All elements of the mesh implement this trait. They are identified by their
+/// index.
 pub trait Handle: From<u32> {
-    /**
-     * The index of the element.
-     */
+    /// The index of the element.
     fn index(&self) -> u32;
 }
 
@@ -60,33 +56,25 @@ pub type HRange = HandleRange<HH>;
 pub type ERange = HandleRange<EH>;
 pub type FRange = HandleRange<FH>;
 
-/**
- * Vertex handle.
- */
+/// Vertex handle.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct VH {
     idx: u32,
 }
 
-/**
- * Halfedge handle.
- */
+/// Halfedge handle.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct HH {
     idx: u32,
 }
 
-/**
- * Edge handle.
- */
+/// Edge handle.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct EH {
     idx: u32,
 }
 
-/**
- * Face handle.
- */
+/// Face handle.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct FH {
     idx: u32,
@@ -343,6 +331,12 @@ impl EH {
     pub fn halfedges(self) -> (HH, HH) {
         let hi = self.idx << 1;
         (hi.into(), (hi | 1).into())
+    }
+
+    /// Get the two vertices incident on this edge.
+    pub fn vertices(self, mesh: &impl HasTopology) -> (VH, VH) {
+        let (h, oh) = self.halfedges();
+        (h.head(mesh), oh.head(mesh))
     }
 
     /// Get a halfedge from the edge.
