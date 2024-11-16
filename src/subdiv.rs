@@ -713,7 +713,6 @@ mod loop_scheme {
                     }
                 }
                 {
-                    let update_points = false; // DEBUG
                     let points = self.points();
                     let points = points.try_borrow()?;
                     // Compute edge points.
