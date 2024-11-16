@@ -662,8 +662,8 @@ mod loop_scheme {
                 } else {
                     let (valence, sum) = mesh
                         .vv_cw_iter(v)
-                        .fold((0usize, A::zero_vector()), |(valence, sum), v| {
-                            (valence + 1, sum + points[v.index() as usize])
+                        .fold((0usize, A::zero_vector()), |(valence, sum), nv| {
+                            (valence + 1, sum + points[nv.index() as usize])
                         });
                     let (a, b) = if valence < WEIGHTS.len() {
                         WEIGHTS[valence]
@@ -713,6 +713,7 @@ mod loop_scheme {
                     }
                 }
                 {
+                    let update_points = false; // DEBUG
                     let points = self.points();
                     let points = points.try_borrow()?;
                     // Compute edge points.
@@ -798,7 +799,7 @@ mod test {
             .expect("Cannot add vertex");
         mesh.add_tri_face(0.into(), 1.into(), 2.into())
             .expect("Cannot add face");
-        mesh.subdivide_loop(1, false).expect("Cannot subidivde");
+        mesh.subdivide_loop(1, true).expect("Cannot subidivde");
         mesh.check_topology().expect("Topological errors found");
         assert_eq!(6, mesh.num_vertices());
         assert_eq!(9, mesh.num_edges());
@@ -808,8 +809,13 @@ mod test {
     #[test]
     fn t_box_subdiv_loop() {
         let mut mesh = PolyMeshF32::unit_box().expect("Cannot create a box");
-        mesh.subdivide_loop(1, false).expect("Cannot subdivide");
+        mesh.subdivide_loop(1, true).expect("Cannot subdivide");
         mesh.check_topology().expect("Topological errors found");
-        assert_eq!(mesh.try_calc_area().expect("Cannot compute area"), 5.566642);
+        // assert_eq!(mesh.try_calc_area().expect("Cannot compute area"), 5.566642);
+        // DEBUG
+        for vi in 0..8 {
+            eprintln!("{}: {}", vi, mesh.point(vi.into()).unwrap());
+        }
+        todo!()
     }
 }
