@@ -42,60 +42,6 @@ crate has an API that is very similar to OpenMesh.
     floating point types to represent the geometry.
 */
 
-/*!
-# Working with mutable iterators
-
-Iterators such as [`Self::loop_ccw_iter`] and other `*_iter` iterators borrow
-the mesh immutably. These are useful when iterating over the elements of the
-mesh without needing to modify the mesh. While the mesh is borrowed by the
-iterators, the borrow checker will not let you borrow the mesh again mutably,
-for as long as the iterator is alive. This is a problem if you're trying to
-modify the mesh while iterating over it's elements. In such scenarios, mutable
-iterators are useful. These functions end with `*_iter_mut`.
-
-The `*_iter_mut` functions borrow the mesh mutably. Similar to immutable
-iterators, while the mutable iterator is alive, the borrow checker won't let you
-mutably borrow the mesh again. But, unlike the immutable iterators, the mutable
-iterators don't yield just the elements of the mesh. Instead the mutable
-iterators yield a tuple containing a mutable reference to the mesh, and the mesh
-element. You can modify the mesh using the mutable reference yielded by the
-mutable iterator. So essentially, the borrow checker is happy because the
-iterator borrows the mesh mutably and to modify the mesh, you borrow the mesh
-from the iterator. The borrows are chained instead of being simultaenous. This
-keeps the borrow checker happy, and ensures safety to some extent. Below is some
-example code that iterates over the vertices of face with index 2, and modifies
-their positions.
-
-```rust
-use alum::{alum_glam::PolyMeshF32, FH, HasIterators, HasTopology};
-
-let mut boxmesh = PolyMeshF32::unit_box().expect("Cannot create a box");
-assert_eq!(1.0, boxmesh.try_calc_volume().expect("Cannot compute volume"));
-// Modify the mesh while using a mutable iterator - pull points closer to origin.
-let f: FH = 2.into();
-for (mesh, v) in boxmesh.fv_ccw_iter_mut(f) {
-    // Inside this loop, while the iterator is alive, we cannot borrow `boxmesh`
-    // because the iterator already borrowed `boxmesh` mutably. Instead we will use
-    // the `mesh` mutable reference yielded by the iterator along with the halfedge.
-    let mut pos = mesh.point(v).expect("Cannot read position");
-    pos *= 0.75;
-    mesh.set_point(v, pos);
-}
-// The iterator is not alive anymore, so we can borrow `boxmesh` again.
-boxmesh.check_topology().expect("Topological errors found");
-// Volume is smaller than one because we pulled the vertices closer to the origin.
-assert!(1.0 > boxmesh.try_calc_volume().expect("Cannot compute volume"));
-```
-
-Despite enforcing the borrow checker rules, the mutable iterators can lead to
-problems when used incorrectly. Modifying the topology of the mesh while using
-mutable iterators is NOT advised, as this can lead to topological errors. Only
-do this if you're know what you're doing. This is akin to mutably iterating over
-a linked list while modifying the links between the elements of the linked
-list. You can easily create cycles, infinite loops and other problems if you're
-not careful.
- */
-
 mod check;
 mod create;
 mod edit;
