@@ -519,8 +519,9 @@ pub trait EditableTopology: HasIterators {
     /// An edge is a unique link if it is the only edge connecting the two faces
     /// incident on it.
     ///
-    /// The boundary is treated as one face. So the boundary edges can only be
-    /// simple links if
+    /// The boundary is treated as one face. So a boundary edge can be a simple
+    /// links only if it is the lone boundary edge, incident on the opposite
+    /// face.
     fn edge_is_unique_link(&self, e: EH) -> bool {
         let h = e.halfedge(false);
         let fo = h.opposite().face(self);
