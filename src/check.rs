@@ -151,6 +151,8 @@ fn check_faces(mesh: &Topology, hstatus: &[Status], fstatus: &[Status]) -> Resul
             return Err(Error::DeletedHalfedge(h));
         }
         if h.face(mesh) != Some(f) {
+            dbg!(h.face(mesh));
+            dbg!(f);
             return Err(Error::InvalidFaceHalfedgeLink(f, h));
         }
     }

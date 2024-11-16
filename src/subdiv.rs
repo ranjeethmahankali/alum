@@ -697,7 +697,7 @@ mod loop_scheme {
             let mut vpos = Vec::new();
             let mut epos = Vec::new();
             LoopScheme::<DIM, A>::reserve(iterations, &mut self.topol, &mut vpos, &mut epos)?;
-            let mut hhs = Vec::new();
+            // let mut hhs = Vec::new();
             for _ in 0..iterations {
                 {
                     let mut points = self.points();
@@ -735,26 +735,30 @@ mod loop_scheme {
                 }
                 // Make them immutable from here.
                 let epos: &[A::Vector] = &epos;
-                let num_old_verts = self.num_vertices() as u32;
+                // let num_old_verts = self.num_vertices() as u32;
                 // Split edges.
                 for (e, epos) in self.edges().map(|e| (e, epos[e.index() as usize])) {
                     let ev = self.add_vertex(epos)?;
                     self.split_edge(e, ev, true)?;
                 }
-                dbg!(self.num_faces());
-                for f in self.faces() {
-                    let hstart = self
-                        .fh_ccw_iter(f)
-                        .find(|h| h.head(self).index() < num_old_verts)
-                        .ok_or(Error::CannotSplitFace(f))?;
-                    hhs.clear();
-                    hhs.extend(self.loop_ccw_iter(hstart));
-                    dbg!(f, hhs.len());
-                    debug_assert!(hhs.len() % 2 == 0);
-                    for hpair in hhs.chunks_exact(2) {
-                        self.insert_edge(hpair[1], hpair[0])?;
-                    }
-                }
+                // for f in self.faces() {
+                //     let hstart = self
+                //         .fh_ccw_iter(f)
+                //         .find(|h| h.head(self).index() < num_old_verts)
+                //         .ok_or(Error::CannotSplitFace(f))?;
+                //     hhs.clear();
+                //     hhs.extend(self.loop_ccw_iter(hstart));
+                //     debug_assert!(hhs.len() % 2 == 0);
+                //     for hpair in hhs.chunks_exact(2) {
+                //         eprintln!(
+                //             "Inserting an edge from {} to {}",
+                //             self.point(hpair[1].head(self)).unwrap(),
+                //             self.point(hpair[0].tail(self)).unwrap()
+                //         );
+                //         self.insert_edge(hpair[1], hpair[0])?;
+                //         self.check_topology().expect("Failed...");
+                //     }
+                // }
             }
             Ok(())
         }
@@ -763,7 +767,7 @@ mod loop_scheme {
 
 #[cfg(test)]
 mod test {
-    use crate::{alum_glam::PolyMeshF32, obj::test::bunny_mesh, HasTopology};
+    use crate::{alum_glam::PolyMeshF32, obj::test::bunny_mesh, HasTopology, HH};
 
     #[test]
     fn t_box_catmull_clark() {
@@ -791,7 +795,14 @@ mod test {
     #[test]
     fn t_box_subdiv_loop() {
         let mut mesh = PolyMeshF32::unit_box().expect("Cannot create a box");
-        mesh.subdivide_loop(1, true).expect("Cannot subdivide");
+        mesh.subdivide_loop(1, false).expect("Cannot subdivide");
+        let h: HH = 9.into();
+        println!(
+            "HH 9 goes from {} to {}",
+            mesh.point(h.head(&mesh)).unwrap(),
+            mesh.point(h.tail(&mesh)).unwrap()
+        );
+        mesh.check_topology().expect("Topological errors found");
         assert_eq!(mesh.try_calc_area().expect("Cannot compute area"), 5.566642);
     }
 }

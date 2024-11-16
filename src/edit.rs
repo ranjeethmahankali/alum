@@ -661,6 +661,7 @@ pub trait EditableTopology: HasIterators {
         // Rewire face -> halfedge and halfedge -> face.
         if let Some(f) = f {
             let fnew = topol.new_face(oh)?;
+            eprintln!("fnew {:?}; f {:?}; h {:?}; oh {:?}", fnew, f, h, oh);
             let hf = f.halfedge(topol);
             topol.halfedge_mut(h).face = Some(f);
             for (mesh, h) in topol.loop_ccw_iter_mut(oh) {
