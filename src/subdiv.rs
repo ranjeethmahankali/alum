@@ -697,7 +697,7 @@ where
             return Ok(());
         }
         check_for_deleted(&self.topol)?;
-        self.triangulate()?;
+        // self.triangulate()?;
         let mut vpos = Vec::new();
         let mut epos = Vec::new();
         LoopScheme::<DIM, A>::reserve(iterations, &mut self.topol, &mut vpos, &mut epos)?;
