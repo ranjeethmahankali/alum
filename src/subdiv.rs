@@ -605,7 +605,7 @@ mod loop_scheme {
         let n = valence as f64;
         let alpha = THREE_OVER_EIGHT
             + f64::powi(THREE_OVER_EIGHT + 0.25 * f64::cos(f64::consts::TAU / n), 2);
-        (1.0 - alpha, alpha / (valence as f64))
+        (1.0 - alpha, alpha / n)
     }
 
     /// This struct doesn't conatin any data. This purpose of this struct is to
@@ -663,12 +663,11 @@ mod loop_scheme {
                         .fold((0usize, A::zero_vector()), |(valence, sum), nv| {
                             (valence + 1, sum + points[nv.index() as usize])
                         });
-                    let (a, b) = compute_weight(valence);
-                    // let (a, b) = if valence < WEIGHTS.len() {
-                    //     WEIGHTS[valence]
-                    // } else {
-                    //     compute_weight(valence)
-                    // };
+                    let (a, b) = if valence < WEIGHTS.len() {
+                        WEIGHTS[valence]
+                    } else {
+                        compute_weight(valence)
+                    };
                     sum * A::scalarf64(b) + points[v.index() as usize] * A::scalarf64(a)
                 }
             }));
@@ -697,9 +696,9 @@ mod loop_scheme {
             let mut epos = Vec::new();
             LoopScheme::<DIM, A>::reserve(iterations, &mut self.topol, &mut vpos, &mut epos)?;
             let mut hhs = Vec::new();
+            let mut points = self.points();
             for _ in 0..iterations {
                 {
-                    let mut points = self.points();
                     let mut points = points.try_borrow_mut()?;
                     // Compute vertex points.
                     if update_points {
@@ -712,23 +711,20 @@ mod loop_scheme {
                     }
                 }
                 {
-                    let points = self.points();
                     let points = points.try_borrow()?;
                     // Compute edge points.
                     epos.clear();
                     epos.extend(self.edges().map(|e| {
+                        let (v0, v1) = e.vertices(self);
+                        let vsum = points[v0.index() as usize] + points[v1.index() as usize];
                         if e.is_boundary(self) || !update_points {
-                            let (v0, v1) = e.vertices(self);
-                            (points[v0.index() as usize] + points[v1.index() as usize])
-                                * A::scalarf64(0.5)
+                            vsum * A::scalarf64(0.5)
                         } else {
                             let (h, oh) = e.halfedges();
-                            ((points[h.head(self).index() as usize]
-                                + points[oh.head(self).index() as usize])
-                                * A::scalarf64(3.0)
+                            let sum = vsum * A::scalarf64(3.0)
                                 + points[h.next(self).head(self).index() as usize]
-                                + points[oh.next(self).head(self).index() as usize])
-                                / A::scalarf64(8.0)
+                                + points[oh.next(self).head(self).index() as usize];
+                            sum / A::scalarf64(8.0)
                         }
                     }));
                 }
