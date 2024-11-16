@@ -87,6 +87,13 @@ Every face is linked to exactly one [`halfedge`](FH::halfedge) from it's
 loop. All other halfedges in that loop, can be reached by traversing the
 [`next`](HH::next) and [`previous`](HH::prev) links of the halfedge.
 
+For more on how to work with halfedge mesh datastructures, even though the
+vocabulary used by OpenMesh is slightly different it is identical to the one
+used by this crate and can be super helpful:
+
+- <https://www.graphics.rwth-aachen.de/media/openmesh_static/Documentations/OpenMesh-6.0-Documentation/a00016.html>
+- <https://www.graphics.rwth-aachen.de/media/openmesh_static/Documentations/OpenMesh-6.2-Documentation/a00032.html>
+
 In this crate, these elements are addressed using handles: [`VH`] for vertex,
 [`HH`] for halfedge, [`EH`] for edge, and [`FH`] for face. The handles are just
 convenient wrappers around the indices of these elements. So when traversing
