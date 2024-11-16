@@ -345,6 +345,7 @@ impl EH {
         (hi.into(), (hi | 1).into())
     }
 
+    /// Get the two vertices incident on this edge.
     pub fn vertices(self, mesh: &impl HasTopology) -> (VH, VH) {
         let (h, oh) = self.halfedges();
         (h.head(mesh), oh.head(mesh))

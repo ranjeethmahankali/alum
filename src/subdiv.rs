@@ -651,10 +651,9 @@ where
                     .fold((0usize, A::zero_vector()), |(valence, sum), nv| {
                         (valence + 1, sum + points[nv.index() as usize])
                     });
-                let (a, b) = if valence < LOOP_WEIGHTS.len() {
-                    LOOP_WEIGHTS[valence]
-                } else {
-                    compute_loop_weights(valence)
+                let (a, b) = match LOOP_WEIGHTS.get(valence) {
+                    Some((a, b)) => (*a, *b),
+                    None => compute_loop_weights(valence),
                 };
                 sum * A::scalarf64(b) + points[v.index() as usize] * A::scalarf64(a)
             }
@@ -802,5 +801,13 @@ mod test {
             mesh.try_calc_area().expect("Cannot compute area"),
             2.6263301
         );
+    }
+
+    #[test]
+    fn t_bunny_subdiv_loop() {
+        let mut mesh = bunny_mesh();
+        mesh.subdivide_loop(3, true)
+            .expect("Cannot subdivide the mesh");
+        todo!()
     }
 }
