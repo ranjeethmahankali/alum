@@ -797,6 +797,9 @@ mod test {
         let mut mesh = PolyMeshF32::unit_box().expect("Cannot subdivide");
         mesh.subdivide_loop(2, true).expect("Cannot subdivide");
         mesh.check_topology().expect("Topological errors found");
+        assert_eq!(12 * 16, mesh.num_faces());
+        assert_eq!(288, mesh.num_edges());
+        assert_eq!(192, mesh.num_faces());
         assert_eq!(
             mesh.try_calc_area().expect("Cannot compute area"),
             2.6263301
@@ -808,6 +811,8 @@ mod test {
         let mut mesh = bunny_mesh();
         mesh.subdivide_loop(3, true)
             .expect("Cannot subdivide the mesh");
-        todo!()
+        assert_eq!(159142, mesh.num_vertices());
+        assert_eq!(477096, mesh.num_edges());
+        assert_eq!(317952, mesh.num_faces());
     }
 }
