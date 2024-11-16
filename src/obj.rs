@@ -95,7 +95,6 @@ pub(crate) mod test {
             dirpath.push("bunny.obj");
             dirpath
         };
-        dbg!(&path);
         let mesh = PolyMeshF32::load_obj(&path).expect("Cannot load mesh");
         let mut points = mesh.points();
         let mut points = points.try_borrow_mut().expect("Cannot borrow points");
@@ -112,7 +111,6 @@ pub(crate) mod test {
             dirpath.push("bunny_large.obj");
             dirpath
         };
-        dbg!(&path);
         PolyMeshF32::load_obj(&path).expect("Cannot load mesh")
     }
 

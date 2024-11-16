@@ -622,7 +622,7 @@ pub trait EditableTopology: HasIterators {
         //   |                next  ^|     n0                ^
         //   |                      ||                       |
         //   |                      ||                       |
-        //   |                     h||oh                     |
+        //   |          f          h||oh       fnew          |
         //   |                      ||                       |
         //   |                      ||                       |
         //   v                prev  |v     p1                |
@@ -652,27 +652,26 @@ pub trait EditableTopology: HasIterators {
         let v0 = prev.head(topol);
         let v1 = next.tail(topol);
         let enew = topol.new_edge(v0, v1, prev, next, n0, p1)?;
-        let (h, oh) = enew.halfedges();
+        let (h0, h1) = enew.halfedges();
         // Rewire halfedge -> halfedge.
-        topol.link_halfedges(prev, h);
-        topol.link_halfedges(h, next);
-        topol.link_halfedges(n0, oh);
-        topol.link_halfedges(oh, p1);
+        topol.link_halfedges(prev, h0);
+        topol.link_halfedges(h0, next);
+        topol.link_halfedges(n0, h1);
+        topol.link_halfedges(h1, p1);
         // Rewire face -> halfedge and halfedge -> face.
         if let Some(f) = f {
-            let fnew = topol.new_face(oh)?;
-            eprintln!("fnew {:?}; f {:?}; h {:?}; oh {:?}", fnew, f, h, oh);
+            let fnew = topol.new_face(h1)?;
             let hf = f.halfedge(topol);
-            topol.halfedge_mut(h).face = Some(f);
-            for (mesh, h) in topol.loop_ccw_iter_mut(oh) {
+            topol.halfedge_mut(h0).face = Some(f);
+            for (mesh, h) in topol.loop_ccw_iter_mut(h1) {
                 if hf == h {
-                    mesh.face_mut(f).halfedge = h;
+                    mesh.face_mut(f).halfedge = h0;
                 }
                 mesh.halfedge_mut(h).face = Some(fnew);
             }
         } else {
-            let fnew = topol.new_face(h)?;
-            for (mesh, h) in topol.loop_ccw_iter_mut(h) {
+            let fnew = topol.new_face(h0)?;
+            for (mesh, h) in topol.loop_ccw_iter_mut(h0) {
                 mesh.halfedge_mut(h).face = Some(fnew);
             }
         };
