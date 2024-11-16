@@ -6,6 +6,8 @@ use crate::{
     topol::TopolCache,
 };
 
+/// This trait defines functions to edit the topology of a mesh, with typical
+/// editing operations such as edge swaps, collapses etc.
 pub trait EditableTopology: HasIterators {
     /// Check if it is safe to collapse an edge.
     ///

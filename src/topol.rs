@@ -49,6 +49,10 @@ impl TopolCache {
     }
 }
 
+/// This trait defines functions to access the topology of a mesh.
+///
+/// It also has other related functions to create properties, access the status
+/// of an element etc.
 pub trait HasTopology: Sized {
     fn topology(&self) -> &Topology;
 

@@ -215,8 +215,7 @@ impl<'a, T> Iterator for LoopHalfedgeIterMut<'a, false, T> {
     }
 }
 
-/* Mutable iterators.*/
-
+/// This trait defines iterators to traverse the topology of a mesh.
 pub trait HasIterators: HasTopology {
     /*!
     # Working with mutable iterators
