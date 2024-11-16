@@ -799,11 +799,9 @@ mod test {
         let mut mesh = PolyMeshF32::unit_box().expect("Cannot create a box");
         mesh.subdivide_loop(1, true).expect("Cannot subdivide");
         mesh.check_topology().expect("Topological errors found");
-        // assert_eq!(mesh.try_calc_area().expect("Cannot compute area"), 5.566642);
-        // DEBUG
-        for vi in 0..8 {
-            eprintln!("{}: {}", vi, mesh.point(vi.into()).unwrap());
-        }
-        todo!()
+        assert_eq!(
+            mesh.try_calc_area().expect("Cannot compute area"),
+            3.0437944
+        );
     }
 }
