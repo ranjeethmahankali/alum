@@ -215,9 +215,10 @@ impl<'a, T> Iterator for LoopHalfedgeIterMut<'a, false, T> {
     }
 }
 
-/// This trait defines iterators to traverse the topology of a mesh.
 pub trait HasIterators: HasTopology {
     /*!
+    This trait defines iterators to traverse the topology of a mesh.
+
     # Working with mutable iterators
 
     Iterators such as [`Self::loop_ccw_iter`] and other `*_iter` iterators
