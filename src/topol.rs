@@ -892,6 +892,61 @@ impl Topology {
     }
 }
 
+impl Clone for Topology {
+    /// Clone the topology. This is not a full clone.
+    ///
+    /// This clones the topology, the elements and the built-in properties such
+    /// as statuses for vertices, halfedges, edges, and faces. This doesn't
+    /// clone any other properties because the topology doesn't fully own the
+    /// other properties. It is upto the owners of the property (i.e. users of
+    /// the API) to clone the other properties. Furthermore, the built-in
+    /// properties are only cloned if they can be successfully borrowed. If the
+    /// caller already borrowed the builtin properties, they may not be copied.
+    fn clone(&self) -> Self {
+        let (mut vprops, mut hprops, mut eprops, mut fprops) = (
+            PropertyContainer::new_with_size(self.num_vertices()),
+            PropertyContainer::new_with_size(self.num_halfedges()),
+            PropertyContainer::new_with_size(self.num_edges()),
+            PropertyContainer::new_with_size(self.num_faces()),
+        );
+        let (mut vstatus, mut hstatus, mut estatus, mut fstatus) = (
+            VProperty::new(&mut vprops, Default::default()),
+            HProperty::new(&mut hprops, Default::default()),
+            EProperty::new(&mut eprops, Default::default()),
+            FProperty::new(&mut fprops, Default::default()),
+        );
+        match (self.vstatus.try_borrow(), vstatus.try_borrow_mut()) {
+            (Ok(src), Ok(mut dst)) if src.len() == dst.len() => dst.copy_from_slice(&src),
+            _ => {} //
+        }
+        match (self.hstatus.try_borrow(), hstatus.try_borrow_mut()) {
+            (Ok(src), Ok(mut dst)) if src.len() == dst.len() => dst.copy_from_slice(&src),
+            _ => {} //
+        }
+        match (self.estatus.try_borrow(), estatus.try_borrow_mut()) {
+            (Ok(src), Ok(mut dst)) if src.len() == dst.len() => dst.copy_from_slice(&src),
+            _ => {} //
+        }
+        match (self.fstatus.try_borrow(), fstatus.try_borrow_mut()) {
+            (Ok(src), Ok(mut dst)) if src.len() == dst.len() => dst.copy_from_slice(&src),
+            _ => {} //
+        }
+        Self {
+            vertices: self.vertices.clone(),
+            edges: self.edges.clone(),
+            faces: self.faces.clone(),
+            vstatus,
+            hstatus,
+            estatus,
+            fstatus,
+            vprops,
+            hprops,
+            eprops,
+            fprops,
+        }
+    }
+}
+
 impl HasTopology for Topology {
     fn topology(&self) -> &Topology {
         self

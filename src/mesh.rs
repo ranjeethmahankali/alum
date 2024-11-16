@@ -351,6 +351,62 @@ where
     }
 }
 
+impl<const DIM: usize, A> Clone for PolyMeshT<DIM, A>
+where
+    A: Adaptor<DIM>,
+{
+    /// Clone the mesh. This doesn't clone all the properties.
+    ///
+    /// This clones the topology of the mesh, i.e. the vertices, halfedges,
+    /// edges, and faces, and all the built-in properties such as statuses of
+    /// all the elements, points, and normals. This does not copy any other
+    /// properties, because the mesh doesn't fully own the other properties. The
+    /// properties are owned by whoever created them, and it is their
+    /// responsibilities to properly clone the data in those
+    /// properties. Furthermore, this only copies the data in built-in
+    /// properties if they can be borrowed successfully. If someone upstream
+    /// already borrowed these properties mutably, then the borrow during clone
+    /// will fail and the data won't be copied. The new mesh will have default
+    /// initialized properties.
+    fn clone(&self) -> Self {
+        let mut topol = self.topol.clone();
+        let mut points = VProperty::new(&mut topol.vprops, A::zero_vector());
+        match (self.points.try_borrow(), points.try_borrow_mut()) {
+            (Ok(src), Ok(mut dst)) if src.len() == dst.len() => dst.copy_from_slice(&src),
+            _ => {}
+        }
+        let vnormals = match &self.vnormals {
+            Some(normals) => {
+                let mut dst = VProperty::new(&mut topol.vprops, A::zero_vector());
+                match (normals.try_borrow(), dst.try_borrow_mut()) {
+                    (Ok(src), Ok(mut dst)) if src.len() == dst.len() => dst.copy_from_slice(&src),
+                    _ => {}
+                }
+                Some(dst)
+            }
+            None => None,
+        };
+        let fnormals = match &self.fnormals {
+            Some(normals) => {
+                let mut dst = FProperty::new(&mut topol.fprops, A::zero_vector());
+                match (normals.try_borrow(), dst.try_borrow_mut()) {
+                    (Ok(src), Ok(mut dst)) if src.len() == dst.len() => dst.copy_from_slice(&src),
+                    _ => {}
+                }
+                Some(dst)
+            }
+            None => None,
+        };
+        Self {
+            topol,
+            cache: Default::default(),
+            points,
+            vnormals,
+            fnormals,
+        }
+    }
+}
+
 impl<const DIM: usize, A> HasTopology for PolyMeshT<DIM, A>
 where
     A: Adaptor<DIM>,
