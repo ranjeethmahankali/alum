@@ -40,7 +40,83 @@ crate has an API that is very similar to OpenMesh.
   + [`PolyMeshF64`](alum_glam::PolyMeshF64) using the
     [`BuiltInAdaptorF64`](alum_glam::BuiltInAdaptorF64). This mesh uses 64 bit
     floating point types to represent the geometry.
-*/
+
+# Halfedge Mesh Representation
+
+```text
+   ^|          ^|          ^|          ^|
+   ||          ||          ||          ||
+   ||          ||          ||          ||
+   ||          ||          ||          ||
+   ||          ||          ||          ||
+   |v          |v          |v          |v
+   ** -------> ** -------> ** -------> **
+   ** <------- ** <------- ** <------- **
+   ^|          ^|          ^|          ^|
+   ||          ||          ||          ||
+   ||          ||          ||          ||
+   ||          ||          ||          ||
+   ||          ||          ||          ||
+   |v          |v          |v          |v
+```
+
+Each is represented as a [`pair of halfedges`](EH::halfedges), that point in
+opposite directions. These two halfedges are considered the
+[`opposite`](HH::opposite) of each other. The vertex a halfedge points toward is
+its [`head`](HH::head) and the vertex it points away from is its
+[`tail`](HH::tail). So for a pair of opposite halfedges belonging to an edge,
+the head of one of them is the tail of the other and vice-versa. A circular
+chain of halfedges where each consecutive halfedge points away from the head of
+the previous halfedge form a `loop`. A halfedge must always exist in a loop. The
+halfedges in a loop are linked to each other as [`next`](HH::next) and
+[`previous`](HH::prev) halfedges. A loop can optionally contain a face,
+otherwise it's considered a boundary loop. When a loop is not a boundary loop,
+every halfedge in that loop is linked to the [`face`](HH::face), otherwise the
+halfedge is considered a [boundary](HH::is_boundary). If either halfedge in an
+edge is boundary, then the edge is also considered [boundary](EH::is_boundary).
+
+Every vertex in the mesh is optionally linked to a
+[`halfedge`](VH::halfedge). If a vertex is not linked to a halfedge, it is
+considered isolated. When a vertex is linked to a halfedge, all other topology
+incident on that vertex can be reached by traversing from that halfedge. If a
+vertex is on the boundary of a mesh, it must be linked to a boundary
+halfedge. This assumption is used to check if a vertex [is on the
+boundary](VH::is_boundary).
+
+Every face is linked to exactly one [`halfedge`](FH::halfedge) from it's
+loop. All other halfedges in that loop, can be reached by traversing the
+[`next`](HH::next) and [`previous`](HH::prev) links of the halfedge.
+
+In this crate, these elements are addressed using handles: [`VH`] for vertex,
+[`HH`] for halfedge, [`EH`] for edge, and [`FH`] for face. The handles are just
+convenient wrappers around the indices of these elements. So when traversing
+topology, the container with the topological information (e.g. the mesh) must be
+supplied as shown in below example. While this is true for most topological
+functions, note that some of them don't require the mesh to be passed in. For
+example, the [opposite](HH::opposite) of a halfedge, and the
+[halfedge](EH::halfedge) of an edge, are implicitly computed based on it's
+indices. This is a consequence of how the halfedges and edges are stored.
+
+```rust
+use alum::{alum_glam::PolyMeshF32, HasTopology, HasIterators, Handle};
+
+let mesh = PolyMeshF32::unit_box().expect("Cannot create a box");
+
+// Find halfedge pointing from vertex 0 to vertex 1.
+let h = mesh.find_halfedge(0.into(), 1.into()).expect("Cannot find halfedge");
+
+// To traverse to the tail vertex or the head vertex of this halfedge, we have to
+// provide the mesh because `h` is just a thin wrapper around the index.
+let v0 = h.tail(&mesh);
+let v1 = h.head(&mesh);
+assert_eq!(v0.index(), 0);
+assert_eq!(v1.index(), 1);
+
+// The traversal functions can be chained to 'walk` the mesh.
+let f = h.next(&mesh).next(&mesh).opposite().face(&mesh);
+assert!(f.is_some()); // No boundary halfedges in a box. So this must link to a face.
+```
+ */
 
 mod check;
 mod create;
