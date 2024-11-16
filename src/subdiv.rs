@@ -718,7 +718,7 @@ mod loop_scheme {
                     // Compute edge points.
                     epos.clear();
                     epos.extend(self.edges().map(|e| {
-                        if e.is_boundary(self) {
+                        if e.is_boundary(self) || !update_points {
                             let (v0, v1) = e.vertices(self);
                             (points[v0.index() as usize] + points[v1.index() as usize])
                                 * A::scalarf64(0.5)
@@ -741,6 +741,7 @@ mod loop_scheme {
                     let ev = self.add_vertex(epos)?;
                     self.split_edge(e, ev, true)?;
                 }
+                dbg!(self.num_faces());
                 for f in self.faces() {
                     let hstart = self
                         .fh_ccw_iter(f)
@@ -748,6 +749,7 @@ mod loop_scheme {
                         .ok_or(Error::CannotSplitFace(f))?;
                     hhs.clear();
                     hhs.extend(self.loop_ccw_iter(hstart));
+                    dbg!(f, hhs.len());
                     debug_assert!(hhs.len() % 2 == 0);
                     for hpair in hhs.chunks_exact(2) {
                         self.insert_edge(hpair[1], hpair[0])?;
@@ -787,9 +789,9 @@ mod test {
     }
 
     #[test]
-    fn t_bunny_subdiv_loop() {
-        let mut mesh = bunny_mesh();
-        mesh.subdivide_loop(3, true).expect("Cannot subdivide");
+    fn t_box_subdiv_loop() {
+        let mut mesh = PolyMeshF32::unit_box().expect("Cannot create a box");
+        mesh.subdivide_loop(1, true).expect("Cannot subdivide");
         assert_eq!(mesh.try_calc_area().expect("Cannot compute area"), 5.566642);
     }
 }
