@@ -794,13 +794,13 @@ mod test {
     }
 
     #[test]
-    fn t_bunny_subdiv_loop() {
-        let mut mesh = bunny_mesh();
-        mesh.subdivide_loop(3, true).expect("Cannot subdivide");
-        // mesh.check_topology().expect("Topological errors found");
-        // assert_eq!(
-        //     mesh.try_calc_area().expect("Cannot compute area"),
-        //     3.0437944
-        // );
+    fn t_box_subdiv_loop() {
+        let mut mesh = PolyMeshF32::unit_box().expect("Cannot subdivide");
+        mesh.subdivide_loop(2, true).expect("Cannot subdivide");
+        mesh.check_topology().expect("Topological errors found");
+        assert_eq!(
+            mesh.try_calc_area().expect("Cannot compute area"),
+            2.6263301
+        );
     }
 }
