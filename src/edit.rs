@@ -604,7 +604,7 @@ pub trait EditableTopology: HasIterators {
     ///    |              next    ^|                       ^
     ///    |                      ||                       |
     ///    |                      ||                       |
-    ///    |              new edge||                       |
+    ///    |              new-edge||                       |
     ///    |                      ||                       |
     ///    |                      ||                       |
     ///    v              prev    |v                       |
@@ -622,7 +622,7 @@ pub trait EditableTopology: HasIterators {
         //   |                next  ^|     n0                ^
         //   |                      ||                       |
         //   |                      ||                       |
-        //   |          f          h||oh       fnew          |
+        //   |          f         h0||h1       fnew          |
         //   |                      ||                       |
         //   |                      ||                       |
         //   v                prev  |v     p1                |
