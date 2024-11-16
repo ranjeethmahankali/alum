@@ -709,7 +709,7 @@ mod loop_scheme {
                             &points,
                             &mut vpos,
                         );
-                        points.copy_from_slice(&vpos);
+                        // points.copy_from_slice(&vpos);
                     }
                 }
                 {
