@@ -345,6 +345,11 @@ impl EH {
         (hi.into(), (hi | 1).into())
     }
 
+    pub fn vertices(self, mesh: &impl HasTopology) -> (VH, VH) {
+        let (h, oh) = self.halfedges();
+        (h.head(mesh), oh.head(mesh))
+    }
+
     /// Get a halfedge from the edge.
     ///
     /// The Boolean flag indicates one of the two possible orientations.
