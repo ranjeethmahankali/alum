@@ -319,7 +319,7 @@ impl HH {
         self.opposite().next(mesh)
     }
 
-    /// Get the counter-clockwise rotated hafedge around teh vertex at the base
+    /// Get the counter-clockwise rotated hafedge around the vertex at the base
     /// of the given halfedge.
     pub fn rotate_ccw(self, mesh: &impl HasTopology) -> HH {
         self.prev(mesh).opposite()

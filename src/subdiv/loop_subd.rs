@@ -180,7 +180,7 @@ where
         + Div<A::Scalar, Output = A::Vector>
         + Mul<A::Scalar, Output = A::Vector>,
 {
-    /// Subdivide the mesh according to teh [Loop subdivision
+    /// Subdivide the mesh according to the [Loop subdivision
     /// scheme](https://en.wikipedia.org/wiki/Loop_subdivision_surface).
     ///
     /// Subdivisions are carried out for the given number of

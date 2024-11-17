@@ -377,9 +377,9 @@ pub trait EditableTopology: HasIterators {
 
     /// Split the face by connecting all incident vertices to the given vertex.
     ///
-    /// This will triangulate the faces by connecting all the vertices incident
-    /// of the face to the given vertex. The given vertex must be isolated to
-    /// produce valid topology, otherwise [`Error::ComplexVertex`] is returned.
+    /// This will triangulate the faces by connecting all the incident vertices
+    /// to the given vertex. The given vertex must be isolated to produce valid
+    /// topology, otherwise [`Error::ComplexVertex`] is returned.
     fn split_face(&mut self, f: FH, v: VH, copy_props: bool) -> Result<(), Error> {
         let topol = self.topology_mut();
         // After we're done, this vertex will be in the interior of the
