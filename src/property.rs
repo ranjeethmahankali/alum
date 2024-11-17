@@ -146,6 +146,10 @@ where
     pub fn garbage_collection(&mut self) {
         self.props.retain(|prop| prop.is_valid())
     }
+
+    pub fn num_properties(&self) -> usize {
+        self.props.len()
+    }
 }
 
 trait GenericProperty<H>

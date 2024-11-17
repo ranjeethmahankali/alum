@@ -162,6 +162,42 @@ pub trait HasTopology: Sized {
         FProperty::<T>::new(&mut self.topology_mut().fprops, default)
     }
 
+    /// Get the number of properties defined on vertices.
+    ///
+    /// This may include empty slots corresponding to properties that have been
+    /// dropped. Performing a garbage collection can clean up all empty slots
+    /// and provide an accurate count of the properties.
+    fn num_vertex_props(&self) -> usize {
+        self.topology().vprops.num_properties()
+    }
+
+    /// Get the number of properties defined on halfedges.
+    ///
+    /// This may include empty slots corresponding to properties that have been
+    /// dropped. Performing a garbage collection can clean up all empty slots
+    /// and provide an accurate count of the properties.
+    fn num_halfedge_props(&self) -> usize {
+        self.topology().hprops.num_properties()
+    }
+
+    /// Get the number of properties defined on edges.
+    ///
+    /// This may include empty slots corresponding to properties that have been
+    /// dropped. Performing a garbage collection can clean up all empty slots
+    /// and provide an accurate count of the properties.
+    fn num_edge_props(&self) -> usize {
+        self.topology().eprops.num_properties()
+    }
+
+    /// Get the number of properties defined on faces.
+    ///
+    /// This may include empty slots corresponding to properties that have been
+    /// dropped. Performing a garbage collection can clean up all empty slots
+    /// and provide an accurate count of the properties.
+    fn num_face_props(&self) -> usize {
+        self.topology().fprops.num_properties()
+    }
+
     /// Reserve memory for the given number of elements.
     ///
     /// The memory is also reserved for all properties.
@@ -1488,6 +1524,11 @@ pub(crate) mod test {
     #[test]
     fn t_quad_box_clone() {
         let mut mesh = quad_box();
+        let myprop = mesh.create_halfedge_prop(0u8); // Create custom halfedge property.
+        {
+            let myprop = myprop.try_borrow().expect("Cannot borrow property");
+            assert_eq!(myprop.len(), mesh.num_halfedges());
+        }
         // Tag the odd numbered elements.
         for v in mesh.vertices().filter(|v| v.index() % 2 != 0) {
             mesh.vertex_status_mut(v)
@@ -1542,5 +1583,7 @@ pub(crate) mod test {
                     .tagged()
             );
         }
+        // Caller owned properties are not cloned. There is exactly one caller owned property.
+        assert_eq!(1 + copy.num_halfedge_props(), mesh.num_halfedge_props());
     }
 }

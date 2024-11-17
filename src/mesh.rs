@@ -431,6 +431,11 @@ mod test {
     #[test]
     fn t_icosahedron_clone() {
         let mut mesh = PolyMeshF32::icosahedron(1.0).expect("Cannot make an icosahedron");
+        let myprop = mesh.create_halfedge_prop(0u8); // Create a custom property.
+        {
+            let myprop = myprop.try_borrow().expect("Cannot borrow property");
+            assert_eq!(myprop.len(), mesh.num_halfedges());
+        }
         // Tag the odd numbered elements.
         for v in mesh.vertices().filter(|v| v.index() % 2 != 0) {
             mesh.vertex_status_mut(v)
@@ -498,5 +503,7 @@ mod test {
             mesh.try_calc_volume().expect("Cannot compute volume"),
             copy.try_calc_volume().expect("Cannot compute volume")
         );
+        // Caller owned properties are not cloned. There is exactly one caller owned property.
+        assert_eq!(1 + copy.num_halfedge_props(), mesh.num_halfedge_props());
     }
 }
