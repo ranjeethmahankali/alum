@@ -4,6 +4,7 @@ use crate::{
     iterator::HasIterators,
     status::Status,
     topol::TopolCache,
+    HasTopology,
 };
 
 /// This trait defines functions to edit the topology of a mesh, with typical
@@ -369,6 +370,60 @@ pub trait EditableTopology: HasIterators {
             topol.hprops.copy_many(&[h0, h1], &[hnew, ohnew])?;
         }
         Ok(enew)
+    }
+
+    fn split_face(&mut self, f: FH, v: VH, copy_props: bool) -> Result<(), Error> {
+        let topol = self.topology_mut();
+        let valence = f.valence(topol) as u32;
+        let hend = f.halfedge(topol);
+        let num_edges_before = topol.num_edges() as u32;
+        let mut ei = 0u32;
+        let mut hh = hend.next(topol);
+        let hold = {
+            // Predetermining the indices of edges we haven't created yet. We will create them later.
+            let enext: EH = (num_edges_before + ((ei + 1) % valence)).into();
+            let eprev: EH = (num_edges_before + ((ei + valence - 1) % valence)).into();
+            let enew = topol.new_edge(
+                hend.head(topol),
+                v,
+                hend,
+                eprev.halfedge(true),
+                enext.halfedge(false),
+                hh,
+            )?;
+            ei += 1;
+            enew.halfedge(false)
+        };
+        topol.link_halfedges(hend, hold);
+        topol.halfedge_mut(hold).face = Some(f);
+        let mut hold = hold.opposite();
+        while hh != hend {
+            let hnext = hh.next(topol);
+            let fnew = topol.new_face(hh)?;
+            // Predetermining the indices of edges we may not have created yet.
+            let enext: EH = (num_edges_before + ((ei + 1) % valence)).into();
+            let enew = topol.new_edge(hh.head(topol), v, hh, hold, enext.halfedge(false), hnext)?;
+            ei += 1;
+            let hnew = enew.halfedge(false);
+            topol.link_halfedges(hnew, hold);
+            topol.link_halfedges(hold, hh);
+            topol.link_halfedges(hh, hnew);
+            topol.halfedge_mut(hnew).face = Some(fnew);
+            topol.halfedge_mut(hold).face = Some(fnew);
+            topol.halfedge_mut(hh).face = Some(fnew);
+            hold = hnew.opposite();
+            hh = hnext;
+        }
+        topol.link_halfedges(hold, hend);
+        topol.link_halfedges(hend.next(topol), hold);
+        topol.halfedge_mut(hold).face = Some(f);
+        topol.vertex_mut(v).halfedge = Some(hold);
+        if copy_props {
+            for (mesh, fnew) in topol.vf_ccw_iter_mut(v).filter(|(_m, fnew)| *fnew != f) {
+                mesh.fprops.copy(f, fnew)?;
+            }
+        }
+        Ok(())
     }
 
     /// Swap an edge counter-clockwise.
@@ -1180,5 +1235,85 @@ mod test {
         assert!(!oh.is_boundary(&mesh));
         assert_eq!(3, mesh.loop_ccw_iter(h).count());
         assert_eq!(3, mesh.loop_ccw_iter(oh).count());
+    }
+
+    #[test]
+    fn t_box_split_face() {
+        let mut mesh = quad_box();
+        const DEFAULT_PROP: u8 = 42u8;
+        let mut fprop = mesh.create_face_prop(DEFAULT_PROP);
+        {
+            // Set face indices as property values.
+            let mut fprop = fprop.try_borrow_mut().expect("Cannot borrow property");
+            for f in mesh.faces() {
+                fprop[f.index() as usize] = f.index() as u8;
+            }
+        }
+        let vnew = mesh.add_vertex().expect("Cannot add vertex");
+        mesh.split_face(5.into(), vnew, false)
+            .expect("Cannot split face");
+        let mesh = &mesh; // Immutable.
+        mesh.check_topology().expect("Topological errors found");
+        assert_eq!(
+            (4, 5),
+            mesh.faces()
+                .fold((0usize, 0usize), |(tris, quads), f| match f.valence(mesh) {
+                    3 => (tris + 1, quads),
+                    4 => (tris, quads + 1),
+                    _ => (tris, quads),
+                })
+        );
+        // Properties should not be copied to the new faces. They should get the default value.
+        let fprop = fprop.try_borrow().expect("Cannot borrow property");
+        assert_eq!(
+            (6, 3),
+            mesh.faces().fold((0usize, 0usize), |(old, new), f| {
+                if fprop[f.index() as usize] == DEFAULT_PROP {
+                    (old, 1 + new)
+                } else {
+                    (1 + old, new)
+                }
+            })
+        );
+    }
+
+    #[test]
+    fn t_box_split_face_copy_props() {
+        let mut mesh = quad_box();
+        const DEFAULT_PROP: u8 = 42u8;
+        let mut fprop = mesh.create_face_prop(DEFAULT_PROP);
+        {
+            // Set face indices as property values.
+            let mut fprop = fprop.try_borrow_mut().expect("Cannot borrow property");
+            for f in mesh.faces() {
+                fprop[f.index() as usize] = f.index() as u8;
+            }
+        }
+        let vnew = mesh.add_vertex().expect("Cannot add vertex");
+        mesh.split_face(5.into(), vnew, true)
+            .expect("Cannot split face");
+        let mesh = &mesh; // Immutable.
+        mesh.check_topology().expect("Topological errors found");
+        assert_eq!(
+            (4, 5),
+            mesh.faces()
+                .fold((0usize, 0usize), |(tris, quads), f| match f.valence(mesh) {
+                    3 => (tris + 1, quads),
+                    4 => (tris, quads + 1),
+                    _ => (tris, quads),
+                })
+        );
+        // Properties should not be copied to the new faces. They should get the default value.
+        let fprop = fprop.try_borrow().expect("Cannot borrow property");
+        assert_eq!(
+            (9, 0),
+            mesh.faces().fold((0usize, 0usize), |(old, new), f| {
+                if fprop[f.index() as usize] == DEFAULT_PROP {
+                    (old, 1 + new)
+                } else {
+                    (1 + old, new)
+                }
+            })
+        );
     }
 }
