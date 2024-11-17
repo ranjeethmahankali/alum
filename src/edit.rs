@@ -385,7 +385,7 @@ pub trait EditableTopology: HasIterators {
         // After we're done, this vertex will be in the interior of the
         // face. The vertex must be isolated. Which means it must be isolated
         // before we start.
-        if let Some(_) = v.halfedge(topol) {
+        if v.halfedge(topol).is_some() {
             return Err(Error::ComplexVertex(v));
         }
         let valence = f.valence(topol) as u32;

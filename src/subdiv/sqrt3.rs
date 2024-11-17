@@ -226,7 +226,7 @@ where
             {
                 // Update vertex positions.
                 let mut points = points.try_borrow_mut()?;
-                points.copy_from_slice(&vpoints);
+                points.copy_from_slice(vpoints);
             }
             let num_old_edges = self.num_edges();
             // Split faces.
