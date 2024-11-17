@@ -135,7 +135,21 @@ where
     /// not a strictly triangle mesh, it will be triangulated before any
     /// subdivisions are performed. Subdivision is performed for the given
     /// number of `iterations`.
-    pub fn subdiv_sqrt3(&mut self, iterations: usize, mut phase: bool) -> Result<bool, Error> {
+    ///
+    /// Consecutive iterations of the this subdivision scheme are not
+    /// identical. The `phase` flag tells this implementation how to subdivide
+    /// the mesh. This is treated as a suggestion, and can be ignored in order
+    /// to preserve the topology of the mesh. Essentially, `phase` is meant to
+    /// be used to keep track of the internal state of the subdivision when
+    /// calling this function multiple times. When calling this function for the
+    /// first time, set the `phase` to `false`. Store the returned boolean value
+    /// and pass it in as the phase for the subsequent call to this
+    /// function. While it is not necessary to keep track of the phase, but
+    /// doing so will result in better quality subdivision.
+    pub fn subdivide_sqrt3(&mut self, iterations: usize, mut phase: bool) -> Result<bool, Error> {
+        if iterations == 0 {
+            return Ok(phase);
+        }
         check_for_deleted(&self.topol)?;
         self.triangulate()?;
         // Phase cannot be true if any face has more than one boundary edge.
