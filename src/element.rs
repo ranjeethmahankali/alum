@@ -319,7 +319,7 @@ impl HH {
         self.opposite().next(mesh)
     }
 
-    /// Get the counter-clockwise rotated hafedge around teh vertex at the base
+    /// Get the counter-clockwise rotated hafedge around the vertex at the base
     /// of the given halfedge.
     pub fn rotate_ccw(self, mesh: &impl HasTopology) -> HH {
         self.prev(mesh).opposite()
@@ -378,6 +378,18 @@ impl FH {
     /// The number of vertices incident on a face.
     pub fn valence(self, mesh: &impl HasIterators) -> usize {
         mesh.fh_ccw_iter(self).count()
+    }
+
+    /// Check if a face is on the boundary.
+    ///
+    /// A face is considered to be on the boundary if at least one of it's edges
+    /// are on the boundary. If `check_vertex` is true, then it is also
+    /// considered to be on the boundary if at least one incident vertex is on
+    /// the boundary.
+    pub fn is_boundary(self, mesh: &impl HasIterators, check_vertex: bool) -> bool {
+        mesh.fh_ccw_iter(self)
+            .any(|h| h.opposite().is_boundary(mesh))
+            || (check_vertex && mesh.fv_ccw_iter(self).any(|v| v.is_boundary(mesh)))
     }
 }
 

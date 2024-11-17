@@ -21,9 +21,9 @@ jobs:
         - name: Check formatting
           run: cargo fmt -- --check
         - name: Run Clippy
-          run: cargo clippy --all-targets --all-features
+          run: cargo clippy --all-targets --all-features -- -D warnings
         - name: Run tests
-          run: cargo test --verbose
+          run: cargo test --all-features --verbose
   build_windows:
       runs-on: ubuntu-latest
       steps:
@@ -35,6 +35,6 @@ jobs:
         - name: Check formatting
           run: cargo fmt -- --check
         - name: Run Clippy
-          run: cargo clippy --all-targets --all-features
+          run: cargo clippy --all-targets --all-features -- -D warnings
         - name: Run tests
-          run: cargo test --verbose
+          run: cargo test --all-features --verbose

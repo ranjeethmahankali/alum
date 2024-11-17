@@ -4,6 +4,7 @@ use crate::{
     iterator::HasIterators,
     status::Status,
     topol::TopolCache,
+    HasTopology,
 };
 
 /// This trait defines functions to edit the topology of a mesh, with typical
@@ -335,47 +336,112 @@ pub trait EditableTopology: HasIterators {
     /// Split an edge with a new vertex at the given position.
     ///
     /// A new vertex is inserted at the given position and is used to split the
-    /// given edge. A new edge is created during this split. If successful, a
-    /// tuple containing the new vertex and the new edge is returned.
-    fn split_edge(&mut self, e: EH, v: VH, copy_props: bool) -> Result<EH, Error> {
+    /// edge. Say, the existing edge spans vertices `a` and `b`. After the
+    /// split, this edge will span vertices `v` and `b`, and a new edge is
+    /// created that spans vertices `a` and `v`. If successful, a halfedge
+    /// pointing from `a` to `v` is returned.
+    fn split_edge(&mut self, h: HH, v: VH, copy_props: bool) -> Result<HH, Error> {
         let topol = self.topology_mut();
-        let (h0, h1) = e.halfedges();
-        let vfrom = h0.tail(topol);
-        let (ph0, nh1) = (h0.prev(topol), h1.next(topol));
-        let (f0, f1) = (h0.face(topol), h1.face(topol));
+        let oh = h.opposite();
+        let e = h.edge();
+        let vfrom = h.tail(topol);
+        let (ph, on) = (h.prev(topol), oh.next(topol));
+        let (f, of) = (h.face(topol), oh.face(topol));
         // Create a new edge and rewire topology.
-        let enew = topol.new_edge(vfrom, v, ph0, h0, h1, nh1)?;
+        let enew = topol.new_edge(vfrom, v, ph, h, oh, on)?;
         let hnew = enew.halfedge(false);
         let ohnew = enew.halfedge(true);
         // Rewire halfedge -> vertex.
-        topol.halfedge_mut(h1).vertex = v;
+        topol.halfedge_mut(oh).vertex = v;
         // Rewire halfedge -> halfedge.
-        topol.link_halfedges(hnew, h0);
-        topol.link_halfedges(h1, ohnew);
-        topol.link_halfedges(ph0, hnew);
-        topol.link_halfedges(ohnew, nh1);
+        topol.link_halfedges(hnew, h);
+        topol.link_halfedges(oh, ohnew);
+        topol.link_halfedges(ph, hnew);
+        topol.link_halfedges(ohnew, on);
         // Rewire halfedge -> face.
-        topol.halfedge_mut(hnew).face = f0;
-        topol.halfedge_mut(ohnew).face = f1;
+        topol.halfedge_mut(hnew).face = f;
+        topol.halfedge_mut(ohnew).face = of;
         // Rewire vertex -> halfedge.
-        topol.vertex_mut(v).halfedge = Some(h0);
+        topol.vertex_mut(v).halfedge = Some(h);
         topol.adjust_outgoing_halfedge(v);
-        if vfrom.halfedge(topol) == Some(h0) {
+        if vfrom.halfedge(topol) == Some(h) {
             topol.vertex_mut(vfrom).halfedge = Some(hnew);
             topol.adjust_outgoing_halfedge(vfrom);
         }
         if copy_props {
             topol.eprops.copy(e, enew)?;
-            topol.hprops.copy_many(&[h0, h1], &[hnew, ohnew])?;
+            topol.hprops.copy_many(&[h, oh], &[hnew, ohnew])?;
         }
-        Ok(enew)
+        Ok(hnew)
+    }
+
+    /// Split the face by connecting all incident vertices to the given vertex.
+    ///
+    /// This will triangulate the faces by connecting all the incident vertices
+    /// to the given vertex. The given vertex must be isolated to produce valid
+    /// topology, otherwise [`Error::ComplexVertex`] is returned.
+    fn split_face(&mut self, f: FH, v: VH, copy_props: bool) -> Result<(), Error> {
+        let topol = self.topology_mut();
+        // After we're done, this vertex will be in the interior of the
+        // face. The vertex must be isolated. Which means it must be isolated
+        // before we start.
+        if v.halfedge(topol).is_some() {
+            return Err(Error::ComplexVertex(v));
+        }
+        let valence = f.valence(topol) as u32;
+        let hend = f.halfedge(topol);
+        let num_edges_before = topol.num_edges() as u32;
+        let mut ei = 0u32;
+        let mut hh = hend.next(topol);
+        let hold = {
+            // Predetermining the indices of edges we haven't created yet. We will create them later.
+            let enext: EH = (num_edges_before + ((ei + 1) % valence)).into();
+            let eprev: EH = (num_edges_before + ((ei + valence - 1) % valence)).into();
+            let enew = topol.new_edge(
+                hend.head(topol),
+                v,
+                hend,
+                eprev.halfedge(true),
+                enext.halfedge(false),
+                hh,
+            )?;
+            ei += 1;
+            enew.halfedge(false)
+        };
+        topol.link_halfedges(hend, hold);
+        topol.halfedge_mut(hold).face = Some(f);
+        let mut hold = hold.opposite();
+        while hh != hend {
+            let hnext = hh.next(topol);
+            let fnew = topol.new_face(hh)?;
+            // Predetermining the indices of edges we may not have created yet.
+            let enext: EH = (num_edges_before + ((ei + 1) % valence)).into();
+            let enew = topol.new_edge(hh.head(topol), v, hh, hold, enext.halfedge(false), hnext)?;
+            ei += 1;
+            let hnew = enew.halfedge(false);
+            topol.link_halfedges(hnew, hold);
+            topol.link_halfedges(hold, hh);
+            topol.link_halfedges(hh, hnew);
+            topol.halfedge_mut(hnew).face = Some(fnew);
+            topol.halfedge_mut(hold).face = Some(fnew);
+            topol.halfedge_mut(hh).face = Some(fnew);
+            hold = hnew.opposite();
+            hh = hnext;
+        }
+        topol.link_halfedges(hold, hend);
+        topol.link_halfedges(hend.next(topol), hold);
+        topol.halfedge_mut(hold).face = Some(f);
+        topol.vertex_mut(v).halfedge = Some(hold);
+        if copy_props {
+            for (mesh, fnew) in topol.vf_ccw_iter_mut(v).filter(|(_m, fnew)| *fnew != f) {
+                mesh.fprops.copy(f, fnew)?;
+            }
+        }
+        Ok(())
     }
 
     /// Swap an edge counter-clockwise.
     ///
-    /// If the edge is a boundary edge, or some other topological error is
-    /// encountered, then mesh is unmodified and a `false` is
-    /// returned. Otherwise a `true` is returned.
     /// ```rust
     /// use alum::{alum_glam::PolyMeshF32, HasTopology, Handle, HasIterators, EditableTopology};
     ///
@@ -393,13 +459,13 @@ pub trait EditableTopology: HasIterators {
     /// assert_eq!(mesh.triangulated_vertices().flatten().map(|v| v.index())
     ///                .collect::<Vec<u32>>(), [3, 1, 2, 3, 0, 1]);
     /// ```
-    fn swap_edge_ccw(&mut self, e: EH) -> bool {
+    fn swap_edge_ccw(&mut self, e: EH) -> Result<(), Error> {
         let topol = self.topology_mut();
         let h = e.halfedge(false);
         let oh = e.halfedge(true);
         let (f, of) = match (h.face(topol), oh.face(topol)) {
             (Some(f), Some(of)) => (f, of),
-            _ => return false, // Cannot swap boundary edge.
+            _ => return Err(Error::CannotSwapBoundaryEdge(e)), // Cannot swap boundary edge.
         };
         let hn = h.next(topol);
         let on = oh.next(topol);
@@ -407,7 +473,7 @@ pub trait EditableTopology: HasIterators {
         let v1 = h.head(topol);
         // Check for degeneracy.
         if f == of || hn == oh || hn.head(topol) == v0 || on == h || on.head(topol) == v1 {
-            return false;
+            return Err(Error::DegenerateEdge(e));
         }
         let hp = h.prev(topol);
         let op = oh.prev(topol);
@@ -442,7 +508,7 @@ pub trait EditableTopology: HasIterators {
         if of.halfedge(topol) == on {
             topol.face_mut(of).halfedge = oh;
         }
-        true
+        Ok(())
     }
 
     /// Swap an edge clockwise.
@@ -950,9 +1016,8 @@ mod test {
         let h = e.halfedge(false);
         let oh = e.halfedge(true);
         let v = qbox.add_vertex().expect("Cannotr add vertex");
-        let enew = qbox.split_edge(e, v, false).expect("Cannot split edge");
-        let hnew = enew.halfedge(false);
-        let ohnew = enew.halfedge(true);
+        let hnew = qbox.split_edge(h, v, false).expect("Cannot split edge");
+        let ohnew = hnew.opposite();
         assert_eq!(oh.head(&qbox), ohnew.tail(&qbox));
         assert_eq!(oh.head(&qbox), v);
         assert_eq!(hnew.head(&qbox), h.tail(&qbox));
@@ -1007,9 +1072,8 @@ mod test {
         let h = e.halfedge(false);
         let oh = e.halfedge(true);
         let v = qbox.add_vertex().expect("Cannotr add vertex");
-        let enew = qbox.split_edge(e, v, true).expect("Cannot split edge");
-        let hnew = enew.halfedge(false);
-        let ohnew = enew.halfedge(true);
+        let hnew = qbox.split_edge(h, v, true).expect("Cannot split edge");
+        let ohnew = hnew.opposite();
         assert_eq!(oh.head(&qbox), ohnew.tail(&qbox));
         assert_eq!(oh.head(&qbox), v);
         assert_eq!(hnew.head(&qbox), h.tail(&qbox));
@@ -1032,7 +1096,10 @@ mod test {
                 .count()
         );
         let eprop = eprop.try_borrow().expect("Cannot borrow edge");
-        assert_eq!(eprop[e.index() as usize], eprop[enew.index() as usize]);
+        assert_eq!(
+            eprop[e.index() as usize],
+            eprop[hnew.edge().index() as usize]
+        );
         let hprop = hprop.try_borrow().expect("Cannot borrow halfedge");
         assert_eq!(hprop[h.index() as usize], hprop[hnew.index() as usize]);
         assert_eq!(hprop[oh.index() as usize], hprop[ohnew.index() as usize]);
@@ -1047,7 +1114,7 @@ mod test {
             .find_halfedge(5.into(), 7.into())
             .expect("Cannot find halfedge");
         let e = h.edge();
-        assert!(qbox.swap_edge_ccw(e), "Cannot swap edge");
+        qbox.swap_edge_ccw(e).expect("Cannot swap edge");
         assert_eq!(
             qbox.faces()
                 .flat_map(|f| qbox.fv_ccw_iter(f))
@@ -1180,5 +1247,85 @@ mod test {
         assert!(!oh.is_boundary(&mesh));
         assert_eq!(3, mesh.loop_ccw_iter(h).count());
         assert_eq!(3, mesh.loop_ccw_iter(oh).count());
+    }
+
+    #[test]
+    fn t_box_split_face() {
+        let mut mesh = quad_box();
+        const DEFAULT_PROP: u8 = 42u8;
+        let mut fprop = mesh.create_face_prop(DEFAULT_PROP);
+        {
+            // Set face indices as property values.
+            let mut fprop = fprop.try_borrow_mut().expect("Cannot borrow property");
+            for f in mesh.faces() {
+                fprop[f.index() as usize] = f.index() as u8;
+            }
+        }
+        let vnew = mesh.add_vertex().expect("Cannot add vertex");
+        mesh.split_face(5.into(), vnew, false)
+            .expect("Cannot split face");
+        let mesh = &mesh; // Immutable.
+        mesh.check_topology().expect("Topological errors found");
+        assert_eq!(
+            (4, 5),
+            mesh.faces()
+                .fold((0usize, 0usize), |(tris, quads), f| match f.valence(mesh) {
+                    3 => (tris + 1, quads),
+                    4 => (tris, quads + 1),
+                    _ => (tris, quads),
+                })
+        );
+        // Properties should not be copied to the new faces. They should get the default value.
+        let fprop = fprop.try_borrow().expect("Cannot borrow property");
+        assert_eq!(
+            (6, 3),
+            mesh.faces().fold((0usize, 0usize), |(old, new), f| {
+                if fprop[f.index() as usize] == DEFAULT_PROP {
+                    (old, 1 + new)
+                } else {
+                    (1 + old, new)
+                }
+            })
+        );
+    }
+
+    #[test]
+    fn t_box_split_face_copy_props() {
+        let mut mesh = quad_box();
+        const DEFAULT_PROP: u8 = 42u8;
+        let mut fprop = mesh.create_face_prop(DEFAULT_PROP);
+        {
+            // Set face indices as property values.
+            let mut fprop = fprop.try_borrow_mut().expect("Cannot borrow property");
+            for f in mesh.faces() {
+                fprop[f.index() as usize] = f.index() as u8;
+            }
+        }
+        let vnew = mesh.add_vertex().expect("Cannot add vertex");
+        mesh.split_face(5.into(), vnew, true)
+            .expect("Cannot split face");
+        let mesh = &mesh; // Immutable.
+        mesh.check_topology().expect("Topological errors found");
+        assert_eq!(
+            (4, 5),
+            mesh.faces()
+                .fold((0usize, 0usize), |(tris, quads), f| match f.valence(mesh) {
+                    3 => (tris + 1, quads),
+                    4 => (tris, quads + 1),
+                    _ => (tris, quads),
+                })
+        );
+        // Properties should not be copied to the new faces. They should get the default value.
+        let fprop = fprop.try_borrow().expect("Cannot borrow property");
+        assert_eq!(
+            (9, 0),
+            mesh.faces().fold((0usize, 0usize), |(old, new), f| {
+                if fprop[f.index() as usize] == DEFAULT_PROP {
+                    (old, 1 + new)
+                } else {
+                    (1 + old, new)
+                }
+            })
+        );
     }
 }
