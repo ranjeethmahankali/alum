@@ -23,7 +23,7 @@ jobs:
         - name: Run Clippy
           run: cargo clippy --all-targets --all-features
         - name: Run tests
-          run: cargo test --verbose
+          run: cargo test --all-features --verbose
   build_windows:
       runs-on: ubuntu-latest
       steps:
@@ -37,4 +37,4 @@ jobs:
         - name: Run Clippy
           run: cargo clippy --all-targets --all-features
         - name: Run tests
-          run: cargo test --verbose
+          run: cargo test --all-features --verbose

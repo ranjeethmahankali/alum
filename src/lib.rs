@@ -137,11 +137,13 @@ mod mesh;
 mod obj;
 mod property;
 mod status;
-mod subdiv;
 mod topol;
 
 #[cfg(feature = "use_glam")]
 pub mod alum_glam;
+
+#[cfg(feature = "subdiv")]
+mod subdiv;
 
 pub use edit::EditableTopology;
 pub use element::{Handle, EH, FH, HH, VH};

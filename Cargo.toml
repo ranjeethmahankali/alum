@@ -15,8 +15,9 @@ glam = { version = "0.29.2", optional = true }
 tobj = { version = "4.0.2", features = ["use_f64"] }
 
 [features]
-default = ["use_glam"]
+default = ["use_glam", "subdiv"]
 use_glam = ["dep:glam"]
+subdiv = []
 
 [dev-dependencies]
 arrayvec = "0.7.6"
