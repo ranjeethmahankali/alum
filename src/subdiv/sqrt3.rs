@@ -1,6 +1,13 @@
 use core::f64;
+use std::{
+    marker::PhantomData,
+    ops::{Add, Div, Mul},
+};
 
-use crate::{Adaptor, PolyMeshT};
+use crate::{
+    subdiv::check_for_deleted, topol::Topology, Adaptor, EditableTopology, Error,
+    FloatScalarAdaptor, Handle, HasIterators, HasTopology, PolyMeshT,
+};
 
 const WEIGHTS: [(f64, f64); 64] = [
     (f64::MAX, f64::MAX), // Should never happen.
@@ -75,11 +82,101 @@ fn compute_weight(valence: usize) -> (f64, f64) {
     (1.0 - alpha, alpha / valence)
 }
 
-impl<const DIM: usize, A> PolyMeshT<DIM, A>
+fn get_weight(valence: usize) -> (f64, f64) {
+    match WEIGHTS.get(valence) {
+        Some((a, b)) => (*a, *b),
+        None => compute_weight(valence),
+    }
+}
+
+struct Sqrt3Scheme<const DIM: usize, A>(PhantomData<A>);
+
+impl<const DIM: usize, A> Sqrt3Scheme<DIM, A>
 where
     A: Adaptor<DIM>,
 {
-    pub fn subdiv_sqrt3(iterations: usize, update_points: bool) {
+    fn compute_edge_points(mesh: &Topology, points: &[A::Vector]) -> (A::Vector, A::Vector) {
+        todo!()
+    }
+}
+
+impl<const DIM: usize, A> PolyMeshT<DIM, A>
+where
+    A: FloatScalarAdaptor<DIM>,
+    A::Vector: Add<Output = A::Vector>
+        + Mul<A::Scalar, Output = A::Vector>
+        + Div<A::Scalar, Output = A::Vector>,
+{
+    /// Subdivide the mesh using the [sqrt-3 subdivision
+    /// scheme](https://www.graphics.rwth-aachen.de/publication/03138/).
+    ///
+    /// This subdivision scheme works with triangles, so if the given mesh is
+    /// not a strictly triangle mesh, it will be triangulated before any
+    /// subdivisions are performed. Subdivision is performed for the given
+    /// number of `iterations`.
+    pub fn subdiv_sqrt3(&mut self, iterations: usize, mut phase: bool) -> Result<bool, Error> {
+        check_for_deleted(&self.topol)?;
+        self.triangulate()?;
+        let mut epoints: Vec<(A::Vector, A::Vector)> = Vec::new();
+        let mut vpoints: Vec<A::Vector> = Vec::new();
+        let mut fpoints: Vec<A::Vector> = Vec::new();
+        // TODO: Reserve all memory required at once.
+        let mut points = self.points();
+        for _ in 0..iterations {
+            {
+                let points = points.try_borrow()?;
+                // Compute edge points only if we're in phase.
+                if phase {
+                    epoints.resize(self.num_edges(), (A::zero_vector(), A::zero_vector()));
+                    for e in self.edges().filter(|e| e.is_boundary(self)) {
+                        epoints[e.index() as usize] =
+                            Sqrt3Scheme::<DIM, A>::compute_edge_points(&self.topol, &points);
+                    }
+                }
+                // Compute relaxed vertex positions.
+                vpoints.resize(self.num_vertices(), A::zero_vector());
+                for v in self.vertices() {
+                    let vi = v.index() as usize;
+                    vpoints[vi] = if let Some(h) = v.halfedge(self) {
+                        if h.is_boundary(self) {
+                            if phase {
+                                let ph = h.prev(self);
+                                debug_assert!(ph.is_boundary(self));
+                                ((points[h.head(self).index() as usize]
+                                    + points[ph.tail(self).index() as usize])
+                                    * A::scalarf64(4.0)
+                                    + points[vi] * A::scalarf64(19.0))
+                                    / A::scalarf64(27.0)
+                            } else {
+                                points[vi]
+                            }
+                        } else {
+                            let (valence, sum) = self.vv_ccw_iter(v).fold(
+                                (0usize, A::zero_vector()),
+                                |(valence, sum), nv| {
+                                    (valence + 1, sum + points[nv.index() as usize])
+                                },
+                            );
+                            let (a, b) = get_weight(valence);
+                            sum * A::scalarf64(b) + points[vi] * A::scalarf64(a)
+                        }
+                    } else {
+                        // Isolated vertices don't move.
+                        points[vi]
+                    };
+                }
+            }
+            // Make then immutable.
+            let vpoints: &[A::Vector] = &vpoints;
+            let epoints: &[(A::Vector, A::Vector)] = &epoints;
+            {
+                // Copy the vertex positions.
+                let mut points = points.try_borrow_mut()?;
+                points.copy_from_slice(&vpoints);
+            }
+            let num_old_edges = self.num_edges() as u32;
+            phase = !phase;
+        }
         todo!()
     }
 }
