@@ -263,7 +263,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::{alum_glam::PolyMeshF32, HasTopology};
+    use crate::{use_glam::PolyMeshF32, HasTopology};
 
     #[test]
     fn t_box_sqrt3_subdivision() {
@@ -288,5 +288,6 @@ mod test {
             (164, 486, 324),
             (mesh.num_vertices(), mesh.num_edges(), mesh.num_faces())
         );
+        assert!(mesh.check_topology().is_ok());
     }
 }

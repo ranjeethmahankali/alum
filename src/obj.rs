@@ -85,7 +85,7 @@ where
 
 #[cfg(all(test, feature = "use_glam"))]
 pub(crate) mod test {
-    use crate::{alum_glam::PolyMeshF32, HasTopology};
+    use crate::{use_glam::PolyMeshF32, HasTopology};
     use std::path::PathBuf;
 
     pub(crate) fn bunny_mesh() -> PolyMeshF32 {

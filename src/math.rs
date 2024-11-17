@@ -343,7 +343,7 @@ where
     /// required properties, and returns an error when borrowing fails.
     ///
     /// ```rust
-    /// use alum::alum_glam::PolyMeshF32;
+    /// use alum::use_glam::PolyMeshF32;
     ///
     /// let mesh = PolyMeshF32::unit_box().expect("Cannot create mesh");
     /// assert_eq!(6.0, mesh.try_calc_area().expect("Cannot compute area"));
@@ -370,7 +370,7 @@ where
     /// fails.
     ///
     /// ```rust
-    /// use alum::{alum_glam::PolyMeshF32, HasTopology};
+    /// use alum::{use_glam::PolyMeshF32, HasTopology};
     ///
     /// let qbox = PolyMeshF32::quad_box(glam::vec3(0.0, 0.0, 0.0), glam::vec3(1.0, 1.0, 1.0))
     ///     .expect("Cannot create a box primitive");
@@ -423,7 +423,7 @@ where
     /// fails.
     ///
     /// ```rust
-    /// use alum::alum_glam::PolyMeshF32;
+    /// use alum::use_glam::PolyMeshF32;
     ///
     /// let mesh = PolyMeshF32::unit_box().expect("Cannot create mesh");
     /// assert_eq!(1.0, mesh.try_calc_volume().expect("Cannot compute volume"));
@@ -632,7 +632,7 @@ mod test {
     use core::f32;
 
     use crate::{
-        alum_glam::PolyMeshF32, error::Error, iterator::HasIterators, macros::assert_f32_eq,
+        error::Error, iterator::HasIterators, macros::assert_f32_eq, use_glam::PolyMeshF32,
         HasTopology,
     };
 

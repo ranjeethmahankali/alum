@@ -202,7 +202,7 @@ where
     /// normals is created and returned. The vertex normals are not
     /// computed. The values are default initialized to zero vectors.
     /// ```rust
-    /// use alum::alum_glam::PolyMeshF32;
+    /// use alum::use_glam::PolyMeshF32;
     ///
     /// let mut mesh = PolyMeshF32::tetrahedron(1.0).expect("Cannot create a tetrahedron");
     /// let vnormals = mesh.request_vertex_normals();
@@ -233,7 +233,7 @@ where
     /// normals is created and returned. The face normals are not computed. The
     /// values in the property are default initialized to zero vectors.
     /// ```rust
-    /// use alum::alum_glam::PolyMeshF32;
+    /// use alum::use_glam::PolyMeshF32;
     ///
     /// let mut mesh = PolyMeshF32::tetrahedron(1.0).expect("Cannot create a tetrahedron");
     /// let fnormals = mesh.request_face_normals();
@@ -260,7 +260,7 @@ where
     /// If successful, the range of indices of the newly added vertices is
     /// returned.
     /// ```rust
-    /// use alum::alum_glam::PolyMeshF32;
+    /// use alum::use_glam::PolyMeshF32;
     ///
     /// let mut mesh = PolyMeshF32::new();
     /// let verts = [glam::vec3(0.0, 0.0, 0.0), glam::vec3(1.0, 0.0, 0.0),
@@ -426,7 +426,7 @@ impl<const DIM: usize, A> EditableTopology for PolyMeshT<DIM, A> where A: Adapto
 
 #[cfg(test)]
 mod test {
-    use crate::{alum_glam::PolyMeshF32, Handle, HasTopology};
+    use crate::{use_glam::PolyMeshF32, Handle, HasTopology};
 
     #[test]
     fn t_icosahedron_clone() {

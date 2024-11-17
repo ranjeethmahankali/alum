@@ -432,7 +432,7 @@ mod test {
     use core::f32;
 
     use crate::{
-        alum_glam::PolyMeshF32, iterator::HasIterators, macros::assert_f32_eq, HasTopology,
+        iterator::HasIterators, macros::assert_f32_eq, use_glam::PolyMeshF32, HasTopology,
     };
 
     #[test]

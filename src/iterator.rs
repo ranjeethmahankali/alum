@@ -244,7 +244,7 @@ pub trait HasIterators: HasTopology {
     face with index 2, and modifies their positions.
 
     ```rust
-    use alum::{alum_glam::PolyMeshF32, FH, HasIterators, HasTopology};
+    use alum::{use_glam::PolyMeshF32, FH, HasIterators, HasTopology};
 
     let mut boxmesh = PolyMeshF32::unit_box().expect("Cannot create a box");
     assert_eq!(1.0, boxmesh.try_calc_volume().expect("Cannot compute volume"));
@@ -731,7 +731,7 @@ pub trait HasIterators: HasTopology {
     /// The triangulation does not take the shape of the face into account. It
     /// only accounts for the topology of the face.
     /// ```rust
-    /// use alum::{alum_glam::PolyMeshF32, Handle, HasTopology, HasIterators};
+    /// use alum::{use_glam::PolyMeshF32, Handle, HasTopology, HasIterators};
     ///
     /// let mut mesh = PolyMeshF32::new();
     /// let verts = [glam::vec3(0.0, 0.0, 0.0), glam::vec3(1.0, 0.0, 0.0),
@@ -756,7 +756,7 @@ pub trait HasIterators: HasTopology {
     /// account. It only accounts for the topology.
     ///
     /// ```rust
-    /// use alum::{alum_glam::PolyMeshF32, Handle, HasTopology, HasIterators};
+    /// use alum::{use_glam::PolyMeshF32, Handle, HasTopology, HasIterators};
     ///
     /// let mut mesh = PolyMeshF32::new();
     /// let verts = [glam::vec3(0.0, 0.0, 0.0), glam::vec3(1.0, 0.0, 0.0),
@@ -794,10 +794,10 @@ pub trait HasIterators: HasTopology {
 #[cfg(test)]
 mod test {
     use crate::{
-        alum_glam::PolyMeshF32,
         element::{Handle, VH},
         iterator::HasIterators,
         topol::{HasTopology, TopolCache, Topology},
+        use_glam::PolyMeshF32,
     };
     use arrayvec::ArrayVec;
 
