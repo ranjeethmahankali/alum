@@ -351,6 +351,62 @@ where
     }
 }
 
+impl<const DIM: usize, A> Clone for PolyMeshT<DIM, A>
+where
+    A: Adaptor<DIM>,
+{
+    /// Clone the mesh. This doesn't clone all the properties.
+    ///
+    /// This clones the topology of the mesh, i.e. the vertices, halfedges,
+    /// edges, and faces, and all the built-in properties such as statuses of
+    /// all the elements, points, and normals. This does not copy any other
+    /// properties, because the mesh doesn't fully own the other properties. The
+    /// properties are owned by whoever created them, and it is their
+    /// responsibilities to properly clone the data in those
+    /// properties. Furthermore, this only copies the data in built-in
+    /// properties if they can be borrowed successfully. If someone upstream
+    /// already borrowed these properties mutably, then the borrow during clone
+    /// will fail and the data won't be copied. The new mesh will have default
+    /// initialized properties.
+    fn clone(&self) -> Self {
+        let mut topol = self.topol.clone();
+        let mut points = VProperty::new(&mut topol.vprops, A::zero_vector());
+        match (self.points.try_borrow(), points.try_borrow_mut()) {
+            (Ok(src), Ok(mut dst)) if src.len() == dst.len() => dst.copy_from_slice(&src),
+            _ => {}
+        }
+        let vnormals = match &self.vnormals {
+            Some(normals) => {
+                let mut dst = VProperty::new(&mut topol.vprops, A::zero_vector());
+                match (normals.try_borrow(), dst.try_borrow_mut()) {
+                    (Ok(src), Ok(mut dst)) if src.len() == dst.len() => dst.copy_from_slice(&src),
+                    _ => {}
+                }
+                Some(dst)
+            }
+            None => None,
+        };
+        let fnormals = match &self.fnormals {
+            Some(normals) => {
+                let mut dst = FProperty::new(&mut topol.fprops, A::zero_vector());
+                match (normals.try_borrow(), dst.try_borrow_mut()) {
+                    (Ok(src), Ok(mut dst)) if src.len() == dst.len() => dst.copy_from_slice(&src),
+                    _ => {}
+                }
+                Some(dst)
+            }
+            None => None,
+        };
+        Self {
+            topol,
+            cache: Default::default(),
+            points,
+            vnormals,
+            fnormals,
+        }
+    }
+}
+
 impl<const DIM: usize, A> HasTopology for PolyMeshT<DIM, A>
 where
     A: Adaptor<DIM>,
@@ -367,3 +423,87 @@ where
 impl<const DIM: usize, A> HasIterators for PolyMeshT<DIM, A> where A: Adaptor<DIM> {}
 
 impl<const DIM: usize, A> EditableTopology for PolyMeshT<DIM, A> where A: Adaptor<DIM> {}
+
+#[cfg(test)]
+mod test {
+    use crate::{alum_glam::PolyMeshF32, Handle, HasTopology};
+
+    #[test]
+    fn t_icosahedron_clone() {
+        let mut mesh = PolyMeshF32::icosahedron(1.0).expect("Cannot make an icosahedron");
+        let myprop = mesh.create_halfedge_prop(0u8); // Create a custom property.
+        {
+            let myprop = myprop.try_borrow().expect("Cannot borrow property");
+            assert_eq!(myprop.len(), mesh.num_halfedges());
+        }
+        // Tag the odd numbered elements.
+        for v in mesh.vertices().filter(|v| v.index() % 2 != 0) {
+            mesh.vertex_status_mut(v)
+                .expect("Cannot access vertex status")
+                .set_tagged(true);
+        }
+        for h in mesh.halfedges().filter(|h| h.index() % 2 != 0) {
+            mesh.halfedge_status_mut(h)
+                .expect("Cannot access halfedge status")
+                .set_tagged(true);
+        }
+        for e in mesh.edges().filter(|e| e.index() % 2 != 0) {
+            mesh.edge_status_mut(e)
+                .expect("Cannot access edge status")
+                .set_tagged(true);
+        }
+        for f in mesh.faces().filter(|f| f.index() % 2 != 0) {
+            mesh.face_status_mut(f)
+                .expect("Cannot access face status")
+                .set_tagged(true);
+        }
+        let copy = mesh.clone();
+        let src = mesh.points.try_borrow().expect("Cannot borrow points");
+        let dst = copy.points.try_borrow().expect("Cannot borrow points");
+        let src: &[glam::Vec3] = &src;
+        let dst: &[glam::Vec3] = &dst;
+        assert_eq!(src, dst);
+        for v in copy.vertices() {
+            assert_eq!(
+                v.index() % 2 != 0,
+                copy.vertex_status(v)
+                    .expect("Cannot access vertex status")
+                    .tagged()
+            );
+        }
+        for h in copy.halfedges() {
+            assert_eq!(
+                h.index() % 2 != 0,
+                copy.halfedge_status(h)
+                    .expect("Cannot access vertex status")
+                    .tagged()
+            );
+        }
+        for e in copy.edges() {
+            assert_eq!(
+                e.index() % 2 != 0,
+                copy.edge_status(e)
+                    .expect("Cannot access vertex status")
+                    .tagged()
+            );
+        }
+        for f in copy.faces() {
+            assert_eq!(
+                f.index() % 2 != 0,
+                copy.face_status(f)
+                    .expect("Cannot access vertex status")
+                    .tagged()
+            );
+        }
+        assert_eq!(
+            mesh.try_calc_area().expect("Cannot compute area"),
+            copy.try_calc_area().expect("Cannot compute area")
+        );
+        assert_eq!(
+            mesh.try_calc_volume().expect("Cannot compute volume"),
+            copy.try_calc_volume().expect("Cannot compute volume")
+        );
+        // Caller owned properties are not cloned. There is exactly one caller owned property.
+        assert_eq!(1 + copy.num_halfedge_props(), mesh.num_halfedge_props());
+    }
+}

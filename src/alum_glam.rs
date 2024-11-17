@@ -1,8 +1,19 @@
+/*!
+This is an optional module that is enabled by the `use_glam` feature. It
+provides mesh types that can be used out of the box, that use
+[`glam`](https://docs.rs/glam/latest/glam/) to represent the geometry.
+*/
+
 use crate::mesh::{
     self, Adaptor, CrossProductAdaptor, DotProductAdaptor, FloatScalarAdaptor, VectorAngleAdaptor,
     VectorLengthAdaptor, VectorNormalizeAdaptor,
 };
 
+/// Built-in adaptor for meshes that use 32-bit floating point numbers to
+/// represetn the geometry of the mesh.
+///
+/// This uses [`glam`](https://docs.rs/glam/latest/glam/) to represent the
+/// geometry.
 pub struct BuiltInAdaptorF32 {}
 
 impl Adaptor<3> for BuiltInAdaptorF32 {
@@ -62,6 +73,11 @@ impl FloatScalarAdaptor<3> for BuiltInAdaptorF32 {
     }
 }
 
+/// Built-in adaptor for meshes that use 64-bit floating point numbers to
+/// represent the geometry of the mesh.
+///
+/// This uses [`glam`](https://docs.rs/glam/latest/glam/) to represent the
+/// geometry.
 pub struct BuiltInAdaptorF64 {}
 
 impl Adaptor<3> for BuiltInAdaptorF64 {
@@ -121,5 +137,18 @@ impl FloatScalarAdaptor<3> for BuiltInAdaptorF64 {
     }
 }
 
+/// Mesh type that uses 32 bit floating point numbers to represent the
+/// geometry. This mesh implements all adaptors and inherits all features of
+/// this crates.
+///
+/// This uses [`glam`](https://docs.rs/glam/latest/glam/) to represent the
+/// geometry.
 pub type PolyMeshF32 = mesh::PolyMeshT<3, BuiltInAdaptorF32>;
+
+/// Mesh type that uses 64 bit floating point numbers to represent the
+/// geometry. This mesh implements all adaptors and inherits all features of
+/// this crates.
+///
+/// This uses [`glam`](https://docs.rs/glam/latest/glam/) to represent the
+/// geometry.
 pub type PolyMeshF64 = mesh::PolyMeshT<3, BuiltInAdaptorF64>;

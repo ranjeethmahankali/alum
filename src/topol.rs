@@ -162,6 +162,42 @@ pub trait HasTopology: Sized {
         FProperty::<T>::new(&mut self.topology_mut().fprops, default)
     }
 
+    /// Get the number of properties defined on vertices.
+    ///
+    /// This may include empty slots corresponding to properties that have been
+    /// dropped. Performing a garbage collection can clean up all empty slots
+    /// and provide an accurate count of the properties.
+    fn num_vertex_props(&self) -> usize {
+        self.topology().vprops.num_properties()
+    }
+
+    /// Get the number of properties defined on halfedges.
+    ///
+    /// This may include empty slots corresponding to properties that have been
+    /// dropped. Performing a garbage collection can clean up all empty slots
+    /// and provide an accurate count of the properties.
+    fn num_halfedge_props(&self) -> usize {
+        self.topology().hprops.num_properties()
+    }
+
+    /// Get the number of properties defined on edges.
+    ///
+    /// This may include empty slots corresponding to properties that have been
+    /// dropped. Performing a garbage collection can clean up all empty slots
+    /// and provide an accurate count of the properties.
+    fn num_edge_props(&self) -> usize {
+        self.topology().eprops.num_properties()
+    }
+
+    /// Get the number of properties defined on faces.
+    ///
+    /// This may include empty slots corresponding to properties that have been
+    /// dropped. Performing a garbage collection can clean up all empty slots
+    /// and provide an accurate count of the properties.
+    fn num_face_props(&self) -> usize {
+        self.topology().fprops.num_properties()
+    }
+
     /// Reserve memory for the given number of elements.
     ///
     /// The memory is also reserved for all properties.
@@ -892,6 +928,61 @@ impl Topology {
     }
 }
 
+impl Clone for Topology {
+    /// Clone the topology. This is not a full clone.
+    ///
+    /// This clones the topology, the elements and the built-in properties such
+    /// as statuses for vertices, halfedges, edges, and faces. This doesn't
+    /// clone any other properties because the topology doesn't fully own the
+    /// other properties. It is upto the owners of the property (i.e. users of
+    /// the API) to clone the other properties. Furthermore, the built-in
+    /// properties are only cloned if they can be successfully borrowed. If the
+    /// caller already borrowed the builtin properties, they may not be copied.
+    fn clone(&self) -> Self {
+        let (mut vprops, mut hprops, mut eprops, mut fprops) = (
+            PropertyContainer::new_with_size(self.num_vertices()),
+            PropertyContainer::new_with_size(self.num_halfedges()),
+            PropertyContainer::new_with_size(self.num_edges()),
+            PropertyContainer::new_with_size(self.num_faces()),
+        );
+        let (mut vstatus, mut hstatus, mut estatus, mut fstatus) = (
+            VProperty::new(&mut vprops, Default::default()),
+            HProperty::new(&mut hprops, Default::default()),
+            EProperty::new(&mut eprops, Default::default()),
+            FProperty::new(&mut fprops, Default::default()),
+        );
+        match (self.vstatus.try_borrow(), vstatus.try_borrow_mut()) {
+            (Ok(src), Ok(mut dst)) if src.len() == dst.len() => dst.copy_from_slice(&src),
+            _ => {} //
+        }
+        match (self.hstatus.try_borrow(), hstatus.try_borrow_mut()) {
+            (Ok(src), Ok(mut dst)) if src.len() == dst.len() => dst.copy_from_slice(&src),
+            _ => {} //
+        }
+        match (self.estatus.try_borrow(), estatus.try_borrow_mut()) {
+            (Ok(src), Ok(mut dst)) if src.len() == dst.len() => dst.copy_from_slice(&src),
+            _ => {} //
+        }
+        match (self.fstatus.try_borrow(), fstatus.try_borrow_mut()) {
+            (Ok(src), Ok(mut dst)) if src.len() == dst.len() => dst.copy_from_slice(&src),
+            _ => {} //
+        }
+        Self {
+            vertices: self.vertices.clone(),
+            edges: self.edges.clone(),
+            faces: self.faces.clone(),
+            vstatus,
+            hstatus,
+            estatus,
+            fstatus,
+            vprops,
+            hprops,
+            eprops,
+            fprops,
+        }
+    }
+}
+
 impl HasTopology for Topology {
     fn topology(&self) -> &Topology {
         self
@@ -1428,5 +1519,71 @@ pub(crate) mod test {
                     (b, nb + 1)
                 })
         );
+    }
+
+    #[test]
+    fn t_quad_box_clone() {
+        let mut mesh = quad_box();
+        let myprop = mesh.create_halfedge_prop(0u8); // Create custom halfedge property.
+        {
+            let myprop = myprop.try_borrow().expect("Cannot borrow property");
+            assert_eq!(myprop.len(), mesh.num_halfedges());
+        }
+        // Tag the odd numbered elements.
+        for v in mesh.vertices().filter(|v| v.index() % 2 != 0) {
+            mesh.vertex_status_mut(v)
+                .expect("Cannot access vertex status")
+                .set_tagged(true);
+        }
+        for h in mesh.halfedges().filter(|h| h.index() % 2 != 0) {
+            mesh.halfedge_status_mut(h)
+                .expect("Cannot access halfedge status")
+                .set_tagged(true);
+        }
+        for e in mesh.edges().filter(|e| e.index() % 2 != 0) {
+            mesh.edge_status_mut(e)
+                .expect("Cannot access edge status")
+                .set_tagged(true);
+        }
+        for f in mesh.faces().filter(|f| f.index() % 2 != 0) {
+            mesh.face_status_mut(f)
+                .expect("Cannot access face status")
+                .set_tagged(true);
+        }
+        let copy = mesh.clone();
+        for v in copy.vertices() {
+            assert_eq!(
+                v.index() % 2 != 0,
+                copy.vertex_status(v)
+                    .expect("Cannot access vertex status")
+                    .tagged()
+            );
+        }
+        for h in copy.halfedges() {
+            assert_eq!(
+                h.index() % 2 != 0,
+                copy.halfedge_status(h)
+                    .expect("Cannot access vertex status")
+                    .tagged()
+            );
+        }
+        for e in copy.edges() {
+            assert_eq!(
+                e.index() % 2 != 0,
+                copy.edge_status(e)
+                    .expect("Cannot access vertex status")
+                    .tagged()
+            );
+        }
+        for f in copy.faces() {
+            assert_eq!(
+                f.index() % 2 != 0,
+                copy.face_status(f)
+                    .expect("Cannot access vertex status")
+                    .tagged()
+            );
+        }
+        // Caller owned properties are not cloned. There is exactly one caller owned property.
+        assert_eq!(1 + copy.num_halfedge_props(), mesh.num_halfedge_props());
     }
 }

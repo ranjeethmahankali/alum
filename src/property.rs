@@ -31,6 +31,14 @@ impl<H> PropertyContainer<H>
 where
     H: Handle,
 {
+    pub fn new_with_size(length: usize) -> Self {
+        PropertyContainer {
+            props: Vec::new(),
+            length,
+            _phantom: PhantomData,
+        }
+    }
+
     pub fn new() -> Self {
         PropertyContainer {
             props: Vec::new(),
@@ -137,6 +145,10 @@ where
 
     pub fn garbage_collection(&mut self) {
         self.props.retain(|prop| prop.is_valid())
+    }
+
+    pub fn num_properties(&self) -> usize {
+        self.props.len()
     }
 }
 
