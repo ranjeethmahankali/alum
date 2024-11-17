@@ -239,7 +239,7 @@ where
             // Split edges.
             for (e, epos) in self.edges().map(|e| (e, epos[e.index() as usize])) {
                 let ev = self.add_vertex(epos)?;
-                self.split_edge(e, ev, true)?;
+                self.split_edge(e.halfedge(false), ev, true)?;
             }
             for f in self.faces() {
                 let hstart = self

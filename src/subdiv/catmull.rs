@@ -1,6 +1,6 @@
 use crate::{
     topol::Topology, EditableTopology, Error, FloatScalarAdaptor, Handle, HasIterators,
-    HasTopology, PolyMeshT, FH, HH,
+    HasTopology, PolyMeshT, EH, FH, HH,
 };
 use std::{
     marker::PhantomData,
@@ -285,7 +285,8 @@ where
             let num_old_verts = self.num_vertices() as u32;
             for (ei, pos) in epos.iter().enumerate() {
                 let ev = self.add_vertex(*pos)?;
-                self.split_edge((ei as u32).into(), ev, true)?;
+                let e: EH = (ei as u32).into();
+                self.split_edge(e.halfedge(false), ev, true)?;
             }
             for f in self.faces() {
                 CatmullClark::<DIM, A>::split_face(

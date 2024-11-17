@@ -336,40 +336,43 @@ pub trait EditableTopology: HasIterators {
     /// Split an edge with a new vertex at the given position.
     ///
     /// A new vertex is inserted at the given position and is used to split the
-    /// given edge. A new edge is created during this split. If successful, a
-    /// tuple containing the new vertex and the new edge is returned.
-    fn split_edge(&mut self, e: EH, v: VH, copy_props: bool) -> Result<EH, Error> {
+    /// edge. Say, the existing edge spans vertices `a` and `b`. After the
+    /// split, this edge will span vertices `v` and `b`, and a new edge is
+    /// created that spans vertices `a` and `v`. If successful, a halfedge
+    /// pointing from `a` to `v` is returned.
+    fn split_edge(&mut self, h: HH, v: VH, copy_props: bool) -> Result<HH, Error> {
         let topol = self.topology_mut();
-        let (h0, h1) = e.halfedges();
-        let vfrom = h0.tail(topol);
-        let (ph0, nh1) = (h0.prev(topol), h1.next(topol));
-        let (f0, f1) = (h0.face(topol), h1.face(topol));
+        let oh = h.opposite();
+        let e = h.edge();
+        let vfrom = h.tail(topol);
+        let (ph, on) = (h.prev(topol), oh.next(topol));
+        let (f, of) = (h.face(topol), oh.face(topol));
         // Create a new edge and rewire topology.
-        let enew = topol.new_edge(vfrom, v, ph0, h0, h1, nh1)?;
+        let enew = topol.new_edge(vfrom, v, ph, h, oh, on)?;
         let hnew = enew.halfedge(false);
         let ohnew = enew.halfedge(true);
         // Rewire halfedge -> vertex.
-        topol.halfedge_mut(h1).vertex = v;
+        topol.halfedge_mut(oh).vertex = v;
         // Rewire halfedge -> halfedge.
-        topol.link_halfedges(hnew, h0);
-        topol.link_halfedges(h1, ohnew);
-        topol.link_halfedges(ph0, hnew);
-        topol.link_halfedges(ohnew, nh1);
+        topol.link_halfedges(hnew, h);
+        topol.link_halfedges(oh, ohnew);
+        topol.link_halfedges(ph, hnew);
+        topol.link_halfedges(ohnew, on);
         // Rewire halfedge -> face.
-        topol.halfedge_mut(hnew).face = f0;
-        topol.halfedge_mut(ohnew).face = f1;
+        topol.halfedge_mut(hnew).face = f;
+        topol.halfedge_mut(ohnew).face = of;
         // Rewire vertex -> halfedge.
-        topol.vertex_mut(v).halfedge = Some(h0);
+        topol.vertex_mut(v).halfedge = Some(h);
         topol.adjust_outgoing_halfedge(v);
-        if vfrom.halfedge(topol) == Some(h0) {
+        if vfrom.halfedge(topol) == Some(h) {
             topol.vertex_mut(vfrom).halfedge = Some(hnew);
             topol.adjust_outgoing_halfedge(vfrom);
         }
         if copy_props {
             topol.eprops.copy(e, enew)?;
-            topol.hprops.copy_many(&[h0, h1], &[hnew, ohnew])?;
+            topol.hprops.copy_many(&[h, oh], &[hnew, ohnew])?;
         }
-        Ok(enew)
+        Ok(hnew)
     }
 
     /// Split the face by connecting all incident vertices to the given vertex.
@@ -1016,9 +1019,8 @@ mod test {
         let h = e.halfedge(false);
         let oh = e.halfedge(true);
         let v = qbox.add_vertex().expect("Cannotr add vertex");
-        let enew = qbox.split_edge(e, v, false).expect("Cannot split edge");
-        let hnew = enew.halfedge(false);
-        let ohnew = enew.halfedge(true);
+        let hnew = qbox.split_edge(h, v, false).expect("Cannot split edge");
+        let ohnew = hnew.opposite();
         assert_eq!(oh.head(&qbox), ohnew.tail(&qbox));
         assert_eq!(oh.head(&qbox), v);
         assert_eq!(hnew.head(&qbox), h.tail(&qbox));
@@ -1073,9 +1075,8 @@ mod test {
         let h = e.halfedge(false);
         let oh = e.halfedge(true);
         let v = qbox.add_vertex().expect("Cannotr add vertex");
-        let enew = qbox.split_edge(e, v, true).expect("Cannot split edge");
-        let hnew = enew.halfedge(false);
-        let ohnew = enew.halfedge(true);
+        let hnew = qbox.split_edge(h, v, true).expect("Cannot split edge");
+        let ohnew = hnew.opposite();
         assert_eq!(oh.head(&qbox), ohnew.tail(&qbox));
         assert_eq!(oh.head(&qbox), v);
         assert_eq!(hnew.head(&qbox), h.tail(&qbox));
@@ -1098,7 +1099,10 @@ mod test {
                 .count()
         );
         let eprop = eprop.try_borrow().expect("Cannot borrow edge");
-        assert_eq!(eprop[e.index() as usize], eprop[enew.index() as usize]);
+        assert_eq!(
+            eprop[e.index() as usize],
+            eprop[hnew.edge().index() as usize]
+        );
         let hprop = hprop.try_borrow().expect("Cannot borrow halfedge");
         assert_eq!(hprop[h.index() as usize], hprop[hnew.index() as usize]);
         assert_eq!(hprop[oh.index() as usize], hprop[ohnew.index() as usize]);
