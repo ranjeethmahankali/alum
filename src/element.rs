@@ -379,6 +379,18 @@ impl FH {
     pub fn valence(self, mesh: &impl HasIterators) -> usize {
         mesh.fh_ccw_iter(self).count()
     }
+
+    /// Check if a face is on the boundary.
+    ///
+    /// A face is considered to be on the boundary if at least one of it's edges
+    /// are on the boundary. If `check_vertex` is true, then it is also
+    /// considered to be on the boundary if at least one incident vertex is on
+    /// the boundary.
+    pub fn is_boundary(self, mesh: &impl HasIterators, check_vertex: bool) -> bool {
+        mesh.fh_ccw_iter(self)
+            .any(|h| h.opposite().is_boundary(mesh))
+            || (check_vertex && mesh.fv_ccw_iter(self).any(|v| v.is_boundary(mesh)))
+    }
 }
 
 #[derive(Debug, Copy, Clone)]
