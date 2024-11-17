@@ -262,4 +262,31 @@ where
 }
 
 #[cfg(test)]
-mod test {}
+mod test {
+    use crate::{alum_glam::PolyMeshF32, HasTopology};
+
+    #[test]
+    fn t_box_sqrt3_subdivision() {
+        let mut mesh = PolyMeshF32::unit_box().expect("Cannot make a box");
+        assert_eq!(
+            (8, 12, 6),
+            (mesh.num_vertices(), mesh.num_edges(), mesh.num_faces())
+        );
+        let mut phase = false;
+        phase = mesh.subdivide_sqrt3(1, phase).expect("Cannot subdivide");
+        assert_eq!(
+            (20, 54, 36),
+            (mesh.num_vertices(), mesh.num_edges(), mesh.num_faces())
+        );
+        phase = mesh.subdivide_sqrt3(1, phase).expect("Cannot subdivide");
+        assert_eq!(
+            (56, 162, 108),
+            (mesh.num_vertices(), mesh.num_edges(), mesh.num_faces())
+        );
+        mesh.subdivide_sqrt3(1, phase).expect("Cannot subdivide");
+        assert_eq!(
+            (164, 486, 324),
+            (mesh.num_vertices(), mesh.num_edges(), mesh.num_faces())
+        );
+    }
+}
