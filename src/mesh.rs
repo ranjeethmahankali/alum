@@ -423,3 +423,80 @@ where
 impl<const DIM: usize, A> HasIterators for PolyMeshT<DIM, A> where A: Adaptor<DIM> {}
 
 impl<const DIM: usize, A> EditableTopology for PolyMeshT<DIM, A> where A: Adaptor<DIM> {}
+
+#[cfg(test)]
+mod test {
+    use crate::{alum_glam::PolyMeshF32, Handle, HasTopology};
+
+    #[test]
+    fn t_icosahedron_clone() {
+        let mut mesh = PolyMeshF32::icosahedron(1.0).expect("Cannot make an icosahedron");
+        // Tag the odd numbered elements.
+        for v in mesh.vertices().filter(|v| v.index() % 2 != 0) {
+            mesh.vertex_status_mut(v)
+                .expect("Cannot access vertex status")
+                .set_tagged(true);
+        }
+        for h in mesh.halfedges().filter(|h| h.index() % 2 != 0) {
+            mesh.halfedge_status_mut(h)
+                .expect("Cannot access halfedge status")
+                .set_tagged(true);
+        }
+        for e in mesh.edges().filter(|e| e.index() % 2 != 0) {
+            mesh.edge_status_mut(e)
+                .expect("Cannot access edge status")
+                .set_tagged(true);
+        }
+        for f in mesh.faces().filter(|f| f.index() % 2 != 0) {
+            mesh.face_status_mut(f)
+                .expect("Cannot access face status")
+                .set_tagged(true);
+        }
+        let copy = mesh.clone();
+        let src = mesh.points.try_borrow().expect("Cannot borrow points");
+        let dst = copy.points.try_borrow().expect("Cannot borrow points");
+        let src: &[glam::Vec3] = &src;
+        let dst: &[glam::Vec3] = &dst;
+        assert_eq!(src, dst);
+        for v in copy.vertices() {
+            assert_eq!(
+                v.index() % 2 != 0,
+                copy.vertex_status(v)
+                    .expect("Cannot access vertex status")
+                    .tagged()
+            );
+        }
+        for h in copy.halfedges() {
+            assert_eq!(
+                h.index() % 2 != 0,
+                copy.halfedge_status(h)
+                    .expect("Cannot access vertex status")
+                    .tagged()
+            );
+        }
+        for e in copy.edges() {
+            assert_eq!(
+                e.index() % 2 != 0,
+                copy.edge_status(e)
+                    .expect("Cannot access vertex status")
+                    .tagged()
+            );
+        }
+        for f in copy.faces() {
+            assert_eq!(
+                f.index() % 2 != 0,
+                copy.face_status(f)
+                    .expect("Cannot access vertex status")
+                    .tagged()
+            );
+        }
+        assert_eq!(
+            mesh.try_calc_area().expect("Cannot compute area"),
+            copy.try_calc_area().expect("Cannot compute area")
+        );
+        assert_eq!(
+            mesh.try_calc_volume().expect("Cannot compute volume"),
+            copy.try_calc_volume().expect("Cannot compute volume")
+        );
+    }
+}
