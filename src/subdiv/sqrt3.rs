@@ -5,8 +5,8 @@ use std::{
 };
 
 use crate::{
-    subdiv::check_for_deleted, topol::Topology, Adaptor, EditableTopology, Error,
-    FloatScalarAdaptor, Handle, HasIterators, HasTopology, PolyMeshT,
+    subdiv::check_for_deleted, topol::Topology, EditableTopology, Error, FloatScalarAdaptor,
+    Handle, HasIterators, HasTopology, PolyMeshT, EH,
 };
 
 const WEIGHTS: [(f64, f64); 64] = [
@@ -93,16 +93,37 @@ struct Sqrt3Scheme<const DIM: usize, A>(PhantomData<A>);
 
 impl<const DIM: usize, A> Sqrt3Scheme<DIM, A>
 where
-    A: Adaptor<DIM>,
+    A: FloatScalarAdaptor<DIM>,
+    A::Scalar: Add<Output = A::Scalar>,
+    A::Vector: Add<Output = A::Vector>
+        + Mul<A::Scalar, Output = A::Vector>
+        + Div<A::Scalar, Output = A::Vector>,
 {
-    fn compute_edge_points(mesh: &Topology, points: &[A::Vector]) -> (A::Vector, A::Vector) {
-        todo!()
+    fn compute_edge_points(mesh: &Topology, e: EH, points: &[A::Vector]) -> (A::Vector, A::Vector) {
+        let h = {
+            let mut h = e.halfedge(false);
+            if !h.is_boundary(mesh) {
+                h = e.halfedge(true);
+            }
+            h
+        };
+        let (p1, p2, p3, p4) = (
+            points[h.next(mesh).head(mesh).index() as usize],
+            points[h.head(mesh).index() as usize],
+            points[h.tail(mesh).index() as usize],
+            points[h.prev(mesh).tail(mesh).index() as usize],
+        );
+        (
+            (p1 + p2 * A::scalarf64(16.0) + p3 * A::scalarf64(10.0)) / A::scalarf64(27.0),
+            (p2 * A::scalarf64(10.0) + p3 * A::scalarf64(16.0) + p4) / A::scalarf64(27.0),
+        )
     }
 }
 
 impl<const DIM: usize, A> PolyMeshT<DIM, A>
 where
     A: FloatScalarAdaptor<DIM>,
+    A::Scalar: Add<Output = A::Scalar>,
     A::Vector: Add<Output = A::Vector>
         + Mul<A::Scalar, Output = A::Vector>
         + Div<A::Scalar, Output = A::Vector>,
@@ -128,7 +149,7 @@ where
         }
         let mut epoints: Vec<(A::Vector, A::Vector)> = Vec::new();
         let mut vpoints: Vec<A::Vector> = Vec::new();
-        let mut fpoints: Vec<A::Vector> = Vec::new();
+        let mut fpoints: Vec<Option<A::Vector>> = Vec::new();
         // TODO: Reserve all memory required at once.
         let mut points = self.points();
         for _ in 0..iterations {
@@ -139,14 +160,14 @@ where
                     epoints.resize(self.num_edges(), (A::zero_vector(), A::zero_vector()));
                     for e in self.edges().filter(|e| e.is_boundary(self)) {
                         epoints[e.index() as usize] =
-                            Sqrt3Scheme::<DIM, A>::compute_edge_points(&self.topol, &points);
+                            Sqrt3Scheme::<DIM, A>::compute_edge_points(&self.topol, e, &points);
                     }
                 }
                 // Compute relaxed vertex positions.
-                vpoints.resize(self.num_vertices(), A::zero_vector());
-                for v in self.vertices() {
+                vpoints.clear();
+                vpoints.extend(self.vertices().map(|v| {
                     let vi = v.index() as usize;
-                    vpoints[vi] = if let Some(h) = v.halfedge(self) {
+                    if let Some(h) = v.halfedge(self) {
                         if h.is_boundary(self) {
                             if phase {
                                 let ph = h.prev(self);
@@ -172,30 +193,57 @@ where
                     } else {
                         // Isolated vertices don't move.
                         points[vi]
-                    };
-                }
+                    }
+                }));
+                // Compute centroids of faces not on the boundary.
+                fpoints.clear();
+                fpoints.extend(self.faces().map(|f| {
+                    if !phase || !f.is_boundary(self, false) {
+                        Some(self.calc_face_centroid(f, &points))
+                    } else {
+                        None
+                    }
+                }));
             }
             // Make then immutable.
             let vpoints: &[A::Vector] = &vpoints;
             let epoints: &[(A::Vector, A::Vector)] = &epoints;
-            for f in self.faces() {
-                if phase && f.is_boundary(self, false) {
-                    let h = self
-                        .fh_ccw_iter(f)
-                        .find(|h| h.opposite().is_boundary(self))
-                        .ok_or(Error::CannotSplitFace(f))?;
-                } else {
-                }
-            }
+            let fpoints: &[Option<A::Vector>] = &fpoints;
             {
-                // Copy the vertex positions.
+                // Update vertex positions.
                 let mut points = points.try_borrow_mut()?;
                 points.copy_from_slice(&vpoints);
             }
-            let num_old_edges = self.num_edges() as u32;
+            let num_old_edges = self.num_edges();
+            // Split faces.
+            for f in self.faces() {
+                if let Some(fpoint) = fpoints[f.index() as usize] {
+                    let fv = self.add_vertex(fpoint)?;
+                    self.split_face(f, fv, true)?;
+                } else {
+                    debug_assert!(phase && !epoints.is_empty());
+                    let hright = self
+                        .fh_ccw_iter(f)
+                        .find(|h| h.opposite().is_boundary(self))
+                        .ok_or(Error::CannotSplitFace(f))?;
+                    let (pa, pb) = epoints[hright.edge().index() as usize];
+                    let (va, vb) = (self.add_vertex(pa)?, self.add_vertex(pb)?);
+                    let hleft = self.split_edge(hright, va, true)?;
+                    self.split_edge(hright, vb, true)?;
+                    self.insert_edge(hleft, hleft.prev(self))?;
+                    self.insert_edge(hright.next(self), hright)?;
+                }
+            }
+            // Flip old edges.
+            for e in self.edges().take(num_old_edges) {
+                if e.is_boundary(self) {
+                    continue;
+                }
+                self.swap_edge_ccw(e)?;
+            }
             phase = !phase;
         }
-        todo!()
+        Ok(phase)
     }
 }
 

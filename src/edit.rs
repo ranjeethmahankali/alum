@@ -442,9 +442,6 @@ pub trait EditableTopology: HasIterators {
 
     /// Swap an edge counter-clockwise.
     ///
-    /// If the edge is a boundary edge, or some other topological error is
-    /// encountered, then mesh is unmodified and a `false` is
-    /// returned. Otherwise a `true` is returned.
     /// ```rust
     /// use alum::{alum_glam::PolyMeshF32, HasTopology, Handle, HasIterators, EditableTopology};
     ///
@@ -462,13 +459,13 @@ pub trait EditableTopology: HasIterators {
     /// assert_eq!(mesh.triangulated_vertices().flatten().map(|v| v.index())
     ///                .collect::<Vec<u32>>(), [3, 1, 2, 3, 0, 1]);
     /// ```
-    fn swap_edge_ccw(&mut self, e: EH) -> bool {
+    fn swap_edge_ccw(&mut self, e: EH) -> Result<(), Error> {
         let topol = self.topology_mut();
         let h = e.halfedge(false);
         let oh = e.halfedge(true);
         let (f, of) = match (h.face(topol), oh.face(topol)) {
             (Some(f), Some(of)) => (f, of),
-            _ => return false, // Cannot swap boundary edge.
+            _ => return Err(Error::CannotSwapBoundaryEdge(e)), // Cannot swap boundary edge.
         };
         let hn = h.next(topol);
         let on = oh.next(topol);
@@ -476,7 +473,7 @@ pub trait EditableTopology: HasIterators {
         let v1 = h.head(topol);
         // Check for degeneracy.
         if f == of || hn == oh || hn.head(topol) == v0 || on == h || on.head(topol) == v1 {
-            return false;
+            return Err(Error::DegenerateEdge(e));
         }
         let hp = h.prev(topol);
         let op = oh.prev(topol);
@@ -511,7 +508,7 @@ pub trait EditableTopology: HasIterators {
         if of.halfedge(topol) == on {
             topol.face_mut(of).halfedge = oh;
         }
-        true
+        Ok(())
     }
 
     /// Swap an edge clockwise.
@@ -1117,7 +1114,7 @@ mod test {
             .find_halfedge(5.into(), 7.into())
             .expect("Cannot find halfedge");
         let e = h.edge();
-        assert!(qbox.swap_edge_ccw(e), "Cannot swap edge");
+        qbox.swap_edge_ccw(e).expect("Cannot swap edge");
         assert_eq!(
             qbox.faces()
                 .flat_map(|f| qbox.fv_ccw_iter(f))

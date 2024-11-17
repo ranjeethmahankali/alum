@@ -75,4 +75,9 @@ pub enum Error {
 
     /// Something went wrong when trying to split a face.
     CannotSplitFace(FH),
+
+    /// Cannot swap a boundary edge.
+    CannotSwapBoundaryEdge(EH),
+    /// Degenerate edge.
+    DegenerateEdge(EH),
 }
