@@ -372,8 +372,19 @@ pub trait EditableTopology: HasIterators {
         Ok(enew)
     }
 
+    /// Split the face by connecting all incident vertices to the given vertex.
+    ///
+    /// This will triangulate the faces by connecting all the vertices incident
+    /// of the face to the given vertex. The given vertex must be isolated to
+    /// produce valid topology, otherwise [`Error::ComplexVertex`] is returned.
     fn split_face(&mut self, f: FH, v: VH, copy_props: bool) -> Result<(), Error> {
         let topol = self.topology_mut();
+        // After we're done, this vertex will be in the interior of the
+        // face. The vertex must be isolated. Which means it must be isolated
+        // before we start.
+        if let Some(_) = v.halfedge(topol) {
+            return Err(Error::ComplexVertex(v));
+        }
         let valence = f.valence(topol) as u32;
         let hend = f.halfedge(topol);
         let num_edges_before = topol.num_edges() as u32;
