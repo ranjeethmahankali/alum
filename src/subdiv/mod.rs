@@ -1,5 +1,6 @@
 mod catmull;
 mod loop_subd;
+mod sqrt3;
 
 use crate::{topol::Topology, Error, Handle, HasTopology};
 
