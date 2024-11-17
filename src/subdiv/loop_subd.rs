@@ -11,7 +11,7 @@ use crate::{
 
 use super::check_for_deleted;
 
-const LOOP_WEIGHTS: [(f64, f64); 64] = [
+const WEIGHTS: [(f64, f64); 64] = [
     (f64::MAX, f64::MAX), // Should never happen.
     (0.765625, 0.234375),
     (0.390625, 0.3046875),
@@ -78,7 +78,7 @@ const LOOP_WEIGHTS: [(f64, f64); 64] = [
     (0.7640736606262798, 0.0037448625297415907),
 ];
 
-fn compute_loop_weights(valence: usize) -> (f64, f64) {
+fn compute_weights(valence: usize) -> (f64, f64) {
     const THREE_OVER_EIGHT: f64 = 3.0 / 8.0;
     let n = valence as f64;
     let alpha =
@@ -140,9 +140,9 @@ where
                     .fold((0usize, A::zero_vector()), |(valence, sum), nv| {
                         (valence + 1, sum + points[nv.index() as usize])
                     });
-                let (a, b) = match LOOP_WEIGHTS.get(valence) {
+                let (a, b) = match WEIGHTS.get(valence) {
                     Some((a, b)) => (*a, *b),
-                    None => compute_loop_weights(valence),
+                    None => compute_weights(valence),
                 };
                 sum * A::scalarf64(b) + points[v.index() as usize] * A::scalarf64(a)
             }
