@@ -30,15 +30,15 @@ crate has an API that is very similar to OpenMesh.
 + Optionally, this crate provides some builtin adaptor implementations, and
   concrete mesh types that can be used without any boilerplate. These builtin
   geometric types use the [`glam`](https://crates.io/crates/glam) crate and can
-  be found in the [`alum_glam`] module. `use_glam` feature is required by
+  be found in the [`use_glam`] module. `use_glam` feature is required by
   these. These builtin types include:
 
-  + [`PolyMeshF32`](alum_glam::PolyMeshF32) using the
-    [`BuiltInAdaptorF32`](alum_glam::BuiltInAdaptorF32). This mesh uses 32 bit
+  + [`PolyMeshF32`](use_glam::PolyMeshF32) using the
+    [`BuiltInAdaptorF32`](use_glam::BuiltInAdaptorF32). This mesh uses 32 bit
     floating point types to represent the geometry.
 
-  + [`PolyMeshF64`](alum_glam::PolyMeshF64) using the
-    [`BuiltInAdaptorF64`](alum_glam::BuiltInAdaptorF64). This mesh uses 64 bit
+  + [`PolyMeshF64`](use_glam::PolyMeshF64) using the
+    [`BuiltInAdaptorF64`](use_glam::BuiltInAdaptorF64). This mesh uses 64 bit
     floating point types to represent the geometry.
 
 # Halfedge Mesh Representation
@@ -105,7 +105,7 @@ example, the [opposite](HH::opposite) of a halfedge, and the
 indices. This is a consequence of how the halfedges and edges are stored.
 
 ```rust
-use alum::{alum_glam::PolyMeshF32, HasTopology, HasIterators, Handle};
+use alum::{use_glam::PolyMeshF32, HasTopology, HasIterators, Handle};
 
 let mesh = PolyMeshF32::unit_box().expect("Cannot create a box");
 
@@ -140,7 +140,7 @@ mod status;
 mod topol;
 
 #[cfg(feature = "use_glam")]
-pub mod alum_glam;
+pub mod use_glam;
 
 #[cfg(feature = "subdiv")]
 mod subdiv;

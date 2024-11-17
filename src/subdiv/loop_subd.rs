@@ -193,7 +193,7 @@ where
     /// performed.
     ///
     /// ```rust
-    /// use alum::{alum_glam::PolyMeshF32, HasTopology};
+    /// use alum::{use_glam::PolyMeshF32, HasTopology};
     ///
     /// let mut mesh = PolyMeshF32::unit_box().expect("Cannot create box");
     /// assert_eq!((8, 12, 6), (mesh.num_vertices(), mesh.num_edges(), mesh.num_faces()));
@@ -260,7 +260,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::{alum_glam::PolyMeshF32, obj::test::bunny_mesh, HasTopology};
+    use crate::{obj::test::bunny_mesh, use_glam::PolyMeshF32, HasTopology};
 
     #[test]
     fn t_triangle_subdiv_loop() {

@@ -263,7 +263,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::{alum_glam::PolyMeshF32, HasTopology};
+    use crate::{use_glam::PolyMeshF32, HasTopology};
 
     #[test]
     fn t_box_sqrt3_subdivision() {
