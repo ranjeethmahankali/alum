@@ -117,6 +117,15 @@ where
     pub fn subdiv_sqrt3(&mut self, iterations: usize, mut phase: bool) -> Result<bool, Error> {
         check_for_deleted(&self.topol)?;
         self.triangulate()?;
+        // Phase cannot be true if any face has more than one boundary edge.
+        if self.faces().any(|f| {
+            self.fh_ccw_iter(f)
+                .filter(|h| h.opposite().is_boundary(self))
+                .count()
+                > 1
+        }) {
+            phase = false;
+        }
         let mut epoints: Vec<(A::Vector, A::Vector)> = Vec::new();
         let mut vpoints: Vec<A::Vector> = Vec::new();
         let mut fpoints: Vec<A::Vector> = Vec::new();
@@ -169,6 +178,15 @@ where
             // Make then immutable.
             let vpoints: &[A::Vector] = &vpoints;
             let epoints: &[(A::Vector, A::Vector)] = &epoints;
+            for f in self.faces() {
+                if phase && f.is_boundary(self, false) {
+                    let h = self
+                        .fh_ccw_iter(f)
+                        .find(|h| h.opposite().is_boundary(self))
+                        .ok_or(Error::CannotSplitFace(f))?;
+                } else {
+                }
+            }
             {
                 // Copy the vertex positions.
                 let mut points = points.try_borrow_mut()?;
