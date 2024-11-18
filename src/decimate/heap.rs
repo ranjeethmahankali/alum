@@ -28,12 +28,12 @@ where
         Heap { items: Vec::new() }
     }
 
-    fn sift_up(&mut self, index: usize, callback: &mut impl FnMut(&T, usize)) {
+    fn sift_up(&mut self, index: usize, callback: &mut impl FnMut(&T, Option<usize>)) {
         let mut index = index;
         while let Some(pi) = heap_parent(index) {
             if let Some(Ordering::Less) = self.items[index].partial_cmp(&self.items[pi]) {
-                callback(&self.items[index], pi);
-                callback(&self.items[pi], index);
+                callback(&self.items[index], Some(pi));
+                callback(&self.items[pi], Some(index));
                 self.items.swap(index, pi);
                 index = pi;
             } else {
@@ -42,7 +42,7 @@ where
         }
     }
 
-    fn sift_down(&mut self, index: usize, callback: &mut impl FnMut(&T, usize)) {
+    fn sift_down(&mut self, index: usize, callback: &mut impl FnMut(&T, Option<usize>)) {
         let mut index = index;
         while index < self.len() {
             match heap_children(index).fold(None, |prev, ci| {
@@ -61,8 +61,8 @@ where
                 Some(child) => match self.items[index].partial_cmp(&self.items[child]) {
                     Some(Ordering::Less) => break,
                     _ => {
-                        callback(&self.items[index], child);
-                        callback(&self.items[child], index);
+                        callback(&self.items[index], Some(child));
+                        callback(&self.items[child], Some(index));
                         self.items.swap(index, child);
                         index = child;
                     }
@@ -72,35 +72,46 @@ where
         }
     }
 
-    pub fn push(&mut self, val: T, mut callback: impl FnMut(&T, usize)) {
+    pub fn push(&mut self, val: T, mut callback: impl FnMut(&T, Option<usize>)) {
+        callback(&val, Some(self.items.len()));
         self.items.push(val);
         self.sift_up(self.len() - 1, &mut callback)
     }
 
-    pub fn update(&mut self, index: usize, val: T, mut callback: impl FnMut(&T, usize)) {
+    pub fn update(&mut self, index: usize, val: T, mut callback: impl FnMut(&T, Option<usize>)) {
+        callback(&val, Some(index));
         self.items[index] = val;
         self.sift_down(index, &mut callback);
         self.sift_up(index, &mut callback);
     }
 
-    pub fn remove(&mut self, index: usize, mut callback: impl FnMut(&T, usize)) {
+    pub fn remove(&mut self, index: usize, mut callback: impl FnMut(&T, Option<usize>)) {
         let last = self.len() - 1;
         if index == last {
-            self.items.pop();
+            if let Some(val) = self.items.pop() {
+                callback(&val, None);
+            }
         } else {
+            callback(&self.items[index], Some(last));
+            callback(&self.items[last], Some(index));
             self.items.swap(index, last);
-            self.items.pop();
+            if let Some(val) = self.items.pop() {
+                callback(&val, None);
+            }
             self.sift_down(index, &mut callback);
             self.sift_up(index, &mut callback);
         }
     }
 
-    pub fn pop(&mut self, mut callback: impl FnMut(&T, usize)) -> Option<T> {
+    pub fn pop(&mut self, mut callback: impl FnMut(&T, Option<usize>)) -> Option<T> {
         match self.items.pop() {
             Some(last) => {
+                callback(&last, None);
                 if self.items.is_empty() {
                     Some(last)
                 } else {
+                    callback(&self.items[0], None);
+                    callback(&last, Some(0));
                     let out = Some(std::mem::replace(&mut self.items[0], last));
                     self.sift_down(0, &mut callback);
                     out

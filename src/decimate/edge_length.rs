@@ -52,3 +52,23 @@ where
         Ok(()) // Do nothing.
     }
 }
+
+#[cfg(test)]
+mod test {
+    use crate::{obj::test::bunny_mesh, HasDecimation, HasTopology};
+
+    use super::EdgeLengthDecimater;
+
+    #[test]
+    fn t_bunny_edge_length_decimate() {
+        let mut mesh = bunny_mesh();
+        let nbefore = mesh.num_faces();
+        let mut decimater = EdgeLengthDecimater::new(0.1);
+        mesh.decimate(&mut decimater, 2000)
+            .expect("Cannot decimate");
+        mesh.garbage_collection()
+            .expect("Failed to garbage collect");
+        mesh.check_topology().expect("Topological errors found");
+        assert!(mesh.num_faces() < nbefore);
+    }
+}
