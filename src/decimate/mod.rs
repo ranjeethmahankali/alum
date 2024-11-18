@@ -44,14 +44,11 @@ fn queue_vertex_collapse(
 }
 
 fn is_collapse_legal(mesh: &Topology, h: HH, estatus: &[Status], vstatus: &mut [Status]) -> bool {
-    // Check for:
-    // - Vertex and edge are not features.
-    // - At least two incident vertices at the tail vertex.
-    // - No topological errors.
     let v = h.tail(mesh);
-    !vstatus[v.index() as usize].feature()
-        && mesh.vf_ccw_iter(v).take(2).count() == 2
-        && mesh.check_edge_collapse(h, estatus, vstatus)
+    !vstatus[v.index() as usize].feature() // Vertex not a feature.
+        && !estatus[h.edge().index() as usize].feature() // Edge not a feature.
+        && mesh.vf_ccw_iter(v).take(2).count() == 2 // Has at leaset two incident faces.
+        && mesh.check_edge_collapse(h, estatus, vstatus) // No topological errors.
 }
 
 impl<const DIM: usize, A> PolyMeshT<DIM, A>
