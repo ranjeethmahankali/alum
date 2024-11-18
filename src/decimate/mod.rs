@@ -18,16 +18,29 @@ fn queue_vertex_collapse(
     mesh: &Topology,
     v: VH,
     module: &impl DecimationModule,
+    heap_pos: &mut [Option<usize>],
     heap: &mut Heap<(f64, VH, HH)>,
 ) {
-    mesh.voh_ccw_iter(v)
+    if let (Some(h), cost) = mesh
+        .voh_ccw_iter(v)
         .fold((None, f64::MAX), |(hopt, best_cost), h| {
             match module.collapse_cost(mesh, h) {
                 Some(cost) if cost < best_cost => (Some(h), cost),
                 _ => (hopt, best_cost),
             }
+        })
+    {
+        heap_pos[v.index() as usize] = Some(match heap_pos[v.index() as usize] {
+            Some(pos) => heap.update(pos, (cost, v, h)),
+            None => heap.push((cost, v, h)),
         });
-    todo!()
+    } else {
+        let pos = &mut heap_pos[v.index() as usize];
+        if let Some(pos) = pos {
+            heap.remove(*pos);
+        }
+        *pos = None;
+    }
 }
 
 fn is_collapse_legal(mesh: &Topology, h: HH, estatus: &[Status], vstatus: &mut [Status]) -> bool {
@@ -54,6 +67,8 @@ where
         F: Fn(usize, usize, usize) -> bool,
         M: DecimationModule,
     {
+        let mut heap_pos = self.create_vertex_prop(None);
+        let mut heap_pos = heap_pos.try_borrow_mut()?;
         // Initialize heap with vertex collapses.
         let mut heap = Heap::<(f64, VH, HH)>::new();
         {
@@ -62,7 +77,7 @@ where
                 .vertices()
                 .filter(|v| !status[v.index() as usize].deleted())
             {
-                queue_vertex_collapse(&self.topol, v, module, &mut heap);
+                queue_vertex_collapse(&self.topol, v, module, &mut heap_pos, &mut heap);
             }
         }
         let mut vstatus = self.topol.vstatus.clone();
@@ -109,7 +124,7 @@ where
             {
                 // Update heap.
                 for &v in one_ring.iter() {
-                    queue_vertex_collapse(&self.topol, v, module, &mut heap);
+                    queue_vertex_collapse(&self.topol, v, module, &mut heap_pos, &mut heap);
                 }
             }
         }

@@ -15,11 +15,11 @@ fn parent(index: usize) -> Option<usize> {
     }
 }
 
-fn left(index: usize) -> usize {
+fn _left(index: usize) -> usize {
     (index << 1) + 1
 }
 
-fn right(index: usize) -> usize {
+fn _right(index: usize) -> usize {
     (index << 1) + 2
 }
 
@@ -31,10 +31,7 @@ where
         Heap { items: Vec::new() }
     }
 
-    fn sift_up(&mut self, index: usize) {
-        if index >= self.items.len() {
-            return;
-        }
+    fn sift_up(&mut self, index: usize) -> usize {
         let item = self.items[index];
         let mut index = index;
         while let Some(pi) = parent(index) {
@@ -51,12 +48,21 @@ where
             }
         }
         self.items[index] = item;
+        index
     }
 
-    pub fn push(&mut self, val: T) {
+    pub fn push(&mut self, val: T) -> usize {
         let idx = self.items.len();
         self.items.push(val);
-        self.sift_up(idx);
+        self.sift_up(idx)
+    }
+
+    pub fn update(&mut self, _index: usize, _val: T) -> usize {
+        todo!()
+    }
+
+    pub fn remove(&mut self, _index: usize) {
+        todo!()
     }
 
     pub fn pop(&mut self) -> Option<T> {
