@@ -45,13 +45,19 @@ fn queue_vertex_collapse<MeshT, DecT>(
         })
     {
         // Update or insert the found edge with the new cost.
-        heap_pos[v.index() as usize] = Some(match heap_pos[v.index() as usize] {
-            Some(pos) => heap.update(pos, (cost, v, h)),
-            None => heap.push((cost, v, h)),
-        });
+        match heap_pos[v.index() as usize] {
+            Some(pos) => heap.update(pos, (cost, v, h), |(_cost, v, _h), index| {
+                heap_pos[v.index() as usize] = Some(index)
+            }),
+            None => heap.push((cost, v, h), |(_cost, v, _h), index| {
+                heap_pos[v.index() as usize] = Some(index)
+            }),
+        }
     } else if let Some(pos) = std::mem::replace(&mut heap_pos[v.index() as usize], None) {
         // Remove the vertex from it's previous position in the heap.
-        heap.remove(pos);
+        heap.remove(pos, |(_cost, v, _h), index| {
+            heap_pos[v.index() as usize] = Some(index)
+        });
     }
 }
 
@@ -89,7 +95,9 @@ pub trait HasDecimation: EditableTopology {
         }
         let (mut nc, mut nv, mut nf) = (0usize, self.num_vertices(), self.num_faces());
         let mut one_ring = Vec::new();
-        while let Some((_, v0, h)) = heap.pop() {
+        while let Some((_, v0, h)) =
+            heap.pop(|(_cost, v, _h), index| heap_pos[v.index() as usize] = Some(index))
+        {
             heap_pos[v0.index() as usize] = None;
             if !pred(nc, nv, nf) {
                 break;

@@ -28,20 +28,21 @@ where
         Heap { items: Vec::new() }
     }
 
-    fn sift_up(&mut self, index: usize) -> usize {
+    fn sift_up(&mut self, index: usize, callback: &mut impl FnMut(&T, usize)) {
         let mut index = index;
         while let Some(pi) = heap_parent(index) {
             if let Some(Ordering::Less) = self.items[index].partial_cmp(&self.items[pi]) {
+                callback(&self.items[index], pi);
+                callback(&self.items[pi], index);
                 self.items.swap(index, pi);
                 index = pi;
             } else {
                 break;
             }
         }
-        index
     }
 
-    fn sift_down(&mut self, index: usize) -> usize {
+    fn sift_down(&mut self, index: usize, callback: &mut impl FnMut(&T, usize)) {
         let mut index = index;
         while index < self.len() {
             match heap_children(index).fold(None, |prev, ci| {
@@ -60,6 +61,8 @@ where
                 Some(child) => match self.items[index].partial_cmp(&self.items[child]) {
                     Some(Ordering::Less) => break,
                     _ => {
+                        callback(&self.items[index], child);
+                        callback(&self.items[child], index);
                         self.items.swap(index, child);
                         index = child;
                     }
@@ -67,45 +70,39 @@ where
                 None => break,
             }
         }
-        index
     }
 
-    pub fn push(&mut self, val: T) -> usize {
+    pub fn push(&mut self, val: T, mut callback: impl FnMut(&T, usize)) {
         self.items.push(val);
-        self.sift_up(self.len() - 1)
+        self.sift_up(self.len() - 1, &mut callback)
     }
 
-    pub fn update(&mut self, index: usize, val: T) -> usize {
+    pub fn update(&mut self, index: usize, val: T, mut callback: impl FnMut(&T, usize)) {
         self.items[index] = val;
-        let down = self.sift_down(index);
-        let up = self.sift_up(index);
-        if down == index {
-            up
-        } else {
-            down
-        }
+        self.sift_down(index, &mut callback);
+        self.sift_up(index, &mut callback);
     }
 
-    pub fn remove(&mut self, index: usize) {
+    pub fn remove(&mut self, index: usize, mut callback: impl FnMut(&T, usize)) {
         let last = self.len() - 1;
         if index == last {
             self.items.pop();
         } else {
             self.items.swap(index, last);
             self.items.pop();
-            self.sift_down(index);
-            self.sift_up(index);
+            self.sift_down(index, &mut callback);
+            self.sift_up(index, &mut callback);
         }
     }
 
-    pub fn pop(&mut self) -> Option<T> {
+    pub fn pop(&mut self, mut callback: impl FnMut(&T, usize)) -> Option<T> {
         match self.items.pop() {
             Some(last) => {
                 if self.items.is_empty() {
                     Some(last)
                 } else {
                     let out = Some(std::mem::replace(&mut self.items[0], last));
-                    self.sift_down(0);
+                    self.sift_down(0, &mut callback);
                     out
                 }
             }
@@ -132,7 +129,7 @@ mod test {
         T: Clone + Copy + PartialOrd,
     {
         let mut out = Vec::with_capacity(heap.len());
-        while let Some(val) = heap.pop() {
+        while let Some(val) = heap.pop(|_, _| {}) {
             out.push(val);
         }
         out
@@ -144,8 +141,7 @@ mod test {
     {
         let mut heap = Heap::new();
         for val in vals.iter() {
-            let index = heap.push(val.clone());
-            assert_eq!(&heap.items[index], val);
+            heap.push(val.clone(), |_, _| {});
         }
         heap
     }
@@ -153,8 +149,8 @@ mod test {
     #[test]
     fn t_heap_push_two() {
         let mut heap = Heap::new();
-        heap.push(5);
-        heap.push(2);
+        heap.push(5, |_, _| {});
+        heap.push(2, |_, _| {});
         assert_eq!(vec![2, 5], heap.items);
     }
 
@@ -175,7 +171,7 @@ mod test {
             .iter()
             .position(|i| *i == 3)
             .expect("Cannot find the number");
-        heap.remove(index);
+        heap.remove(index, |_, _| {});
         assert_eq!(&vec![0, 1, 2, 4, 5, 6, 7, 8, 9], &drain_heap(heap));
     }
 
@@ -188,12 +184,14 @@ mod test {
                 .iter()
                 .position(|i| *i == 3)
                 .expect("Cannot find the number"),
+            |_, _| {},
         );
         heap.remove(
             heap.items
                 .iter()
                 .position(|i| *i == 6)
                 .expect("Cannot find the number"),
+            |_, _| {},
         );
         assert_eq!(&vec![0, 1, 2, 4, 5, 7, 8, 9], &drain_heap(heap));
     }
@@ -208,6 +206,7 @@ mod test {
                 .position(|i| *i == 4)
                 .expect("Cannot find the number"),
             -1,
+            |_, _| {},
         );
         assert_eq!(&vec![-1, 0, 1, 2, 3, 5, 6, 7, 8, 9], &drain_heap(heap));
     }
@@ -222,6 +221,7 @@ mod test {
                 .position(|i| *i == 4)
                 .expect("Cannot find the number"),
             -1,
+            |_, _| {},
         );
         heap.update(
             heap.items
@@ -229,6 +229,7 @@ mod test {
                 .position(|i| *i == 2)
                 .expect("Cannot find the number"),
             13,
+            |_, _| {},
         );
         assert_eq!(&vec![-1, 0, 1, 3, 5, 6, 7, 8, 9, 13], &drain_heap(heap));
     }
