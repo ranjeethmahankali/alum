@@ -145,6 +145,9 @@ pub mod use_glam;
 #[cfg(feature = "subdiv")]
 mod subdiv;
 
+#[cfg(feature = "decimate")]
+mod decimate;
+
 pub use edit::EditableTopology;
 pub use element::{Handle, EH, FH, HH, VH};
 pub use error::Error;
