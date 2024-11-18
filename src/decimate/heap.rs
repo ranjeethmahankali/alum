@@ -22,29 +22,26 @@ fn children(index: usize) -> Range<usize> {
 
 impl<T> Heap<T>
 where
-    T: Copy + Clone + PartialOrd,
+    T: PartialOrd,
 {
     pub fn new() -> Self {
         Heap { items: Vec::new() }
     }
 
     fn sift_up(&mut self, index: usize) -> usize {
-        let item = self.items[index];
         let mut index = index;
         while let Some(pi) = parent(index) {
-            if let Some(Ordering::Less) = item.partial_cmp(&self.items[pi]) {
-                self.items[index] = self.items[pi];
+            if let Some(Ordering::Less) = self.items[index].partial_cmp(&self.items[pi]) {
+                self.items.swap(index, pi);
                 index = pi;
             } else {
                 break;
             }
         }
-        self.items[index] = item;
         index
     }
 
     fn sift_down(&mut self, index: usize) -> usize {
-        let item = self.items[index];
         let mut index = index;
         while index < self.len() {
             match children(index).fold(None, |prev, ci| {
@@ -60,17 +57,16 @@ where
                     prev
                 }
             }) {
-                Some(child) => match item.partial_cmp(&self.items[child]) {
+                Some(child) => match self.items[index].partial_cmp(&self.items[child]) {
                     Some(Ordering::Less) => break,
                     _ => {
-                        self.items[index] = self.items[child];
+                        self.items.swap(index, child);
                         index = child;
                     }
                 },
                 None => break,
             }
         }
-        self.items[index] = item;
         index
     }
 
