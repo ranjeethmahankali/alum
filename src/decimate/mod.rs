@@ -4,15 +4,15 @@ use heap::Heap;
 mod heap;
 mod quadric;
 
-pub trait DecimaterModule<M>
+pub trait DecimaterModule<Mesh>
 where
-    M: HasIterators,
+    Mesh: HasIterators,
 {
-    fn collapse_cost(&self, mesh: &M, h: HH) -> Option<f64>;
+    fn collapse_cost(&self, mesh: &Mesh, h: HH) -> Option<f64>;
 
-    fn before_collapse(&self, mesh: &M, h: HH) -> Result<(), Error>;
+    fn before_collapse(&self, mesh: &Mesh, h: HH) -> Result<(), Error>;
 
-    fn after_collapse(&self, mesh: &mut M, v: VH) -> Result<(), Error>;
+    fn after_collapse(&self, mesh: &mut Mesh, v: VH) -> Result<(), Error>;
 }
 
 fn queue_vertex_collapse<M>(
