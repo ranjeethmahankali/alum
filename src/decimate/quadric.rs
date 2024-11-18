@@ -45,6 +45,6 @@ where
                 vnormals[v.index() as usize] = mesh.calc_vertex_normal_fast(v, &fnormals);
             }
         }
-        Ok(())
+        todo!()
     }
 }
