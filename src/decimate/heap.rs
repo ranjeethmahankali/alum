@@ -7,7 +7,7 @@ where
     items: Vec<T>,
 }
 
-fn parent(index: usize) -> Option<usize> {
+const fn parent(index: usize) -> Option<usize> {
     if index > 0 {
         Some((index - 1) >> 1)
     } else {
@@ -15,7 +15,7 @@ fn parent(index: usize) -> Option<usize> {
     }
 }
 
-fn children(index: usize) -> Range<usize> {
+const fn children(index: usize) -> Range<usize> {
     let off = index << 1;
     (off + 1)..(off + 3)
 }
