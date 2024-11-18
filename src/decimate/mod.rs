@@ -21,7 +21,7 @@ fn queue_vertex_collapse(
     heap_pos: &mut [Option<usize>],
     heap: &mut Heap<(f64, VH, HH)>,
 ) {
-    if let (Some(h), cost) = mesh
+    if let (Some(h), cost) = mesh // Find the best collapsible edge around this vertex.
         .voh_ccw_iter(v)
         .fold((None, f64::MAX), |(hopt, best_cost), h| {
             match module.collapse_cost(mesh, h) {
@@ -30,11 +30,13 @@ fn queue_vertex_collapse(
             }
         })
     {
+        // Update or insert the found edge.
         heap_pos[v.index() as usize] = Some(match heap_pos[v.index() as usize] {
             Some(pos) => heap.update(pos, (cost, v, h)),
             None => heap.push((cost, v, h)),
         });
     } else {
+        // Remove the vertex.
         let pos = &mut heap_pos[v.index() as usize];
         if let Some(pos) = pos {
             heap.remove(*pos);
