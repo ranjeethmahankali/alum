@@ -1,12 +1,12 @@
-use std::cmp::Ordering;
+pub mod edge_length;
+mod heap;
+pub mod quadric;
 
 use crate::{topol::Topology, EditableTopology, Error, Handle, HasIterators, Status, HH, VH};
 use heap::Heap;
+use std::cmp::Ordering;
 
-mod heap;
-mod quadric;
-
-pub trait DecimaterModule<MeshT>
+pub trait Decimater<MeshT>
 where
     MeshT: HasIterators,
     Self::Cost: PartialOrd,
@@ -28,7 +28,7 @@ fn queue_vertex_collapse<MeshT, DecT>(
     heap: &mut Heap<(DecT::Cost, VH, HH)>,
 ) where
     MeshT: HasIterators,
-    DecT: DecimaterModule<MeshT>,
+    DecT: Decimater<MeshT>,
 {
     if let Some((h, cost)) = mesh // Find the best collapsible edge around this vertex.
         .voh_ccw_iter(v)
@@ -67,7 +67,7 @@ pub trait HasDecimation: EditableTopology {
     fn decimate_while<F, DecT>(&mut self, module: &DecT, pred: F) -> Result<usize, Error>
     where
         F: Fn(usize, usize, usize) -> bool,
-        DecT: DecimaterModule<Self>,
+        DecT: Decimater<Self>,
     {
         let mut heap_pos = self.create_vertex_prop(None);
         let mut heap_pos = heap_pos.try_borrow_mut()?;
@@ -139,7 +139,7 @@ pub trait HasDecimation: EditableTopology {
 
     fn decimate(
         &mut self,
-        module: &impl DecimaterModule<Self>,
+        module: &impl Decimater<Self>,
         num_collapses: usize,
     ) -> Result<usize, Error> {
         self.decimate_while(module, |n, _v, _f| n < num_collapses)
@@ -147,7 +147,7 @@ pub trait HasDecimation: EditableTopology {
 
     fn decimate_to_vertex_count(
         &mut self,
-        module: &impl DecimaterModule<Self>,
+        module: &impl Decimater<Self>,
         vert_target: usize,
     ) -> Result<usize, Error> {
         let vtarget = usize::min(self.num_vertices(), vert_target);
@@ -156,7 +156,7 @@ pub trait HasDecimation: EditableTopology {
 
     fn decimate_to_face_count(
         &mut self,
-        module: &impl DecimaterModule<Self>,
+        module: &impl Decimater<Self>,
         face_target: usize,
     ) -> Result<usize, Error> {
         let ftarget = usize::min(face_target, self.num_faces());

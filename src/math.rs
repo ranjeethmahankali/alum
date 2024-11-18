@@ -390,6 +390,43 @@ where
     }
 }
 
+impl<const DIM: usize, A> PolyMeshT<DIM, A>
+where
+    A: DotProductAdaptor<DIM>,
+    A::Vector: Sub<Output = A::Vector>,
+{
+    /// Compute the squared length of a mesh edge. `points` must be the
+    /// positions of the vertices.
+    pub fn calc_edge_length_sqr(&self, e: EH, points: &[A::Vector]) -> A::Scalar {
+        let ev = self.calc_halfedge_vector(e.halfedge(false), points);
+        A::dot_product(ev, ev)
+    }
+
+    /// Similar to [`Self::calc_edge_length_sqr`], except this function tries to
+    /// borrow the required properties, and returns an error when borrowing
+    /// fails.
+    ///
+    /// ```rust
+    /// use alum::{use_glam::PolyMeshF32, HasTopology};
+    ///
+    /// let qbox = PolyMeshF32::quad_box(glam::vec3(0.0, 0.0, 0.0), glam::vec3(1.0, 1.0, 1.0))
+    ///     .expect("Cannot create a box primitive");
+    /// // All edges of a unit cube must be of squared length 1.
+    /// for e in qbox.edges() {
+    ///     assert_eq!(
+    ///         1.0,
+    ///         qbox.try_calc_edge_length_sqr(e)
+    ///             .expect("Cannot compute edge squared length")
+    ///     );
+    /// }
+    /// ```
+    pub fn try_calc_edge_length_sqr(&self, e: EH) -> Result<A::Scalar, Error> {
+        let points = self.points();
+        let points = points.try_borrow()?;
+        Ok(self.calc_edge_length_sqr(e, &points))
+    }
+}
+
 impl<A> PolyMeshT<3, A>
 where
     A: CrossProductAdaptor + DotProductAdaptor<3> + FloatScalarAdaptor<3>,

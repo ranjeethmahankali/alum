@@ -1,4 +1,4 @@
-use super::DecimaterModule;
+use super::Decimater;
 use crate::{
     CrossProductAdaptor, Error, FloatScalarAdaptor, Handle, HasIterators, PolyMeshT,
     VectorNormalizeAdaptor, HH, VH,
@@ -8,7 +8,7 @@ use std::{
     ops::{Add, Div, Mul, Sub},
 };
 
-pub struct QuadricModule<A>(PhantomData<A>)
+pub struct QuadricDecimater<A>(PhantomData<A>)
 where
     A: CrossProductAdaptor + VectorNormalizeAdaptor<3> + FloatScalarAdaptor<3>,
     A::Scalar:
@@ -16,7 +16,7 @@ where
     A::Vector:
         Add<Output = A::Vector> + Sub<Output = A::Vector> + Div<A::Scalar, Output = A::Vector>;
 
-impl<A> DecimaterModule<PolyMeshT<3, A>> for QuadricModule<A>
+impl<A> Decimater<PolyMeshT<3, A>> for QuadricDecimater<A>
 where
     A: CrossProductAdaptor + VectorNormalizeAdaptor<3> + FloatScalarAdaptor<3>,
     A::Scalar:

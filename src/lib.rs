@@ -147,8 +147,11 @@ mod subdiv;
 
 #[cfg(feature = "decimate")]
 mod decimate;
+#[cfg(feature = "decimate")]
+pub use decimate::{
+    edge_length::EdgeLengthDecimater, quadric::QuadricDecimater, Decimater, HasDecimation,
+};
 
-pub use decimate::{DecimaterModule, HasDecimation};
 pub use edit::EditableTopology;
 pub use element::{Handle, EH, FH, HH, VH};
 pub use error::Error;
