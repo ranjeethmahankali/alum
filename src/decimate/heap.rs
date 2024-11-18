@@ -103,7 +103,7 @@ where
     }
 
     pub fn pop(&mut self) -> Option<T> {
-        match self.items.last().copied() {
+        match self.items.pop() {
             Some(last) => {
                 if self.items.len() > 1 {
                     let out = Some(std::mem::replace(&mut self.items[0], last));
@@ -119,5 +119,27 @@ where
 
     pub fn clear(&mut self) {
         self.items.clear();
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::Heap;
+
+    #[test]
+    fn t_heap_push() {
+        // Push integers in a weird order, and expect them to come out sorted.
+        let mut heap = Heap::new();
+        for i in [8, 1, 5, 3, 9, 2, 6, 4, 7] {
+            eprintln!("Pushing {}", i);
+            heap.push(i);
+        }
+        eprintln!("Done pushing");
+        let mut sorted = Vec::new();
+        while let Some(i) = heap.pop() {
+            eprintln!("Popped {}", i);
+            sorted.push(i);
+        }
+        assert_eq!(&sorted, &(0..10).collect::<Vec<_>>());
     }
 }
