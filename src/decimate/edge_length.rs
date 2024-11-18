@@ -44,11 +44,11 @@ where
         }
     }
 
-    fn before_collapse(&self, _mesh: &PolyMeshT<DIM, A>, _h: HH) -> Result<(), Error> {
+    fn before_collapse(&mut self, _mesh: &PolyMeshT<DIM, A>, _h: HH) -> Result<(), Error> {
         Ok(()) // Do nothing.
     }
 
-    fn after_collapse(&self, _mesh: &mut PolyMeshT<DIM, A>, _v: VH) -> Result<(), Error> {
+    fn after_collapse(&mut self, _mesh: &mut PolyMeshT<DIM, A>, _v: VH) -> Result<(), Error> {
         Ok(()) // Do nothing.
     }
 }

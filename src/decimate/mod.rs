@@ -15,9 +15,9 @@ where
 
     fn collapse_cost(&self, mesh: &MeshT, h: HH) -> Option<Self::Cost>;
 
-    fn before_collapse(&self, mesh: &MeshT, h: HH) -> Result<(), Error>;
+    fn before_collapse(&mut self, mesh: &MeshT, h: HH) -> Result<(), Error>;
 
-    fn after_collapse(&self, mesh: &mut MeshT, v: VH) -> Result<(), Error>;
+    fn after_collapse(&mut self, mesh: &mut MeshT, v: VH) -> Result<(), Error>;
 }
 
 fn queue_vertex_collapse<MeshT, DecT>(
@@ -64,7 +64,7 @@ fn is_collapse_legal(mesh: &Topology, h: HH, estatus: &[Status], vstatus: &mut [
 }
 
 pub trait HasDecimation: EditableTopology {
-    fn decimate_while<F, DecT>(&mut self, module: &DecT, pred: F) -> Result<usize, Error>
+    fn decimate_while<F, DecT>(&mut self, module: &mut DecT, pred: F) -> Result<usize, Error>
     where
         F: Fn(usize, usize, usize) -> bool,
         DecT: Decimater<Self>,
@@ -139,7 +139,7 @@ pub trait HasDecimation: EditableTopology {
 
     fn decimate(
         &mut self,
-        module: &impl Decimater<Self>,
+        module: &mut impl Decimater<Self>,
         num_collapses: usize,
     ) -> Result<usize, Error> {
         self.decimate_while(module, |n, _v, _f| n < num_collapses)
@@ -147,7 +147,7 @@ pub trait HasDecimation: EditableTopology {
 
     fn decimate_to_vertex_count(
         &mut self,
-        module: &impl Decimater<Self>,
+        module: &mut impl Decimater<Self>,
         vert_target: usize,
     ) -> Result<usize, Error> {
         let vtarget = usize::min(self.num_vertices(), vert_target);
@@ -156,7 +156,7 @@ pub trait HasDecimation: EditableTopology {
 
     fn decimate_to_face_count(
         &mut self,
-        module: &impl Decimater<Self>,
+        module: &mut impl Decimater<Self>,
         face_target: usize,
     ) -> Result<usize, Error> {
         let ftarget = usize::min(face_target, self.num_faces());
