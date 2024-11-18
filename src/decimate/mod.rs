@@ -87,6 +87,7 @@ where
         let (mut nc, mut nv, mut nf) = (0usize, self.num_vertices(), self.num_faces());
         let mut one_ring = Vec::new();
         while let Some((_, v0, h)) = heap.pop() {
+            heap_pos[v0.index() as usize] = None;
             if !pred(nc, nv, nf) {
                 break;
             }
