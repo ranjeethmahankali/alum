@@ -34,28 +34,24 @@ fn queue_vertex_collapse<MeshT, DecT>(
         .voh_ccw_iter(v)
         .fold(None, |best, h| {
             match (best, module.collapse_cost(mesh, h)) {
-                (None, None) => None,
-                (None, Some(cost)) => Some((h, cost)),
-                (Some((hbest, lowest)), None) => Some((hbest, lowest)),
+                (None, None) => None,                                   // Found nothing.
+                (None, Some(cost)) => Some((h, cost)),                  // Current wins by default.
+                (Some((hbest, lowest)), None) => Some((hbest, lowest)), // Previous wins by default.
                 (Some((hbest, lowest)), Some(cost)) => match cost.partial_cmp(&lowest) {
-                    Some(Ordering::Less) => Some((h, cost)),
-                    _ => Some((hbest, lowest)),
+                    Some(Ordering::Less) => Some((h, cost)), // Current wins by comparison
+                    _ => Some((hbest, lowest)),              // Previous wins.
                 },
             }
         })
     {
-        // Update or insert the found edge.
+        // Update or insert the found edge with the new cost.
         heap_pos[v.index() as usize] = Some(match heap_pos[v.index() as usize] {
             Some(pos) => heap.update(pos, (cost, v, h)),
             None => heap.push((cost, v, h)),
         });
-    } else {
-        // Remove the vertex.
-        let pos = &mut heap_pos[v.index() as usize];
-        if let Some(pos) = pos {
-            heap.remove(*pos);
-        }
-        *pos = None;
+    } else if let Some(pos) = std::mem::replace(&mut heap_pos[v.index() as usize], None) {
+        // Remove the vertex from it's previous position in the heap.
+        heap.remove(pos);
     }
 }
 
