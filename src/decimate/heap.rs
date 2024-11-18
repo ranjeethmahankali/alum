@@ -2,7 +2,7 @@ use std::{cmp::Ordering, ops::Range};
 
 pub struct Heap<T>
 where
-    T: Copy + Clone + PartialOrd,
+    T: PartialOrd,
 {
     items: Vec<T>,
 }
@@ -32,7 +32,7 @@ where
         let item = self.items[index];
         let mut index = index;
         while let Some(pi) = parent(index) {
-            if let Some(Ordering::Less) = self.items[pi].partial_cmp(&item) {
+            if let Some(Ordering::Less) = item.partial_cmp(&self.items[pi]) {
                 self.items[index] = self.items[pi];
                 index = pi;
             } else {
@@ -46,9 +46,9 @@ where
     fn sift_down(&mut self, index: usize) -> usize {
         let item = self.items[index];
         let mut index = index;
-        while index < self.items.len() {
+        while index < self.len() {
             match children(index).fold(None, |prev, ci| {
-                if ci < self.items.len() {
+                if ci < self.len() {
                     match prev {
                         Some(prev) => match self.items[ci].partial_cmp(&self.items[prev]) {
                             Some(Ordering::Less) => Some(ci),
@@ -76,7 +76,7 @@ where
 
     pub fn push(&mut self, val: T) -> usize {
         self.items.push(val);
-        self.sift_up(self.items.len() - 1)
+        self.sift_up(self.len() - 1)
     }
 
     pub fn update(&mut self, index: usize, val: T) -> usize {
@@ -91,7 +91,7 @@ where
     }
 
     pub fn remove(&mut self, index: usize) {
-        let last = self.items.len() - 1;
+        let last = self.len() - 1;
         if index == last {
             self.items.pop();
         } else {
@@ -105,12 +105,12 @@ where
     pub fn pop(&mut self) -> Option<T> {
         match self.items.pop() {
             Some(last) => {
-                if self.items.len() > 1 {
+                if self.items.is_empty() {
+                    Some(last)
+                } else {
                     let out = Some(std::mem::replace(&mut self.items[0], last));
                     self.sift_down(0);
                     out
-                } else {
-                    self.items.first().copied()
                 }
             }
             None => None,
@@ -120,26 +120,49 @@ where
     pub fn clear(&mut self) {
         self.items.clear();
     }
+
+    pub fn len(&self) -> usize {
+        self.items.len()
+    }
 }
 
 #[cfg(test)]
 mod test {
     use super::Heap;
 
+    fn drain_heap<T>(mut heap: Heap<T>) -> Vec<T>
+    where
+        T: Clone + Copy + PartialOrd,
+    {
+        let mut out = Vec::with_capacity(heap.len());
+        while let Some(val) = heap.pop() {
+            out.push(val);
+        }
+        out
+    }
+
+    // fn heap_from_iter<T>(iter: impl Iterator<Item = T>) -> Heap<T>
+    // where
+    //     T: Copy + Clone + PartialOrd,
+    // {
+    // }
+
     #[test]
-    fn t_heap_push() {
+    fn t_heap_push_two() {
+        let mut heap = Heap::new();
+        heap.push(5);
+        heap.push(2);
+        assert_eq!(vec![2, 5], heap.items);
+    }
+
+    #[test]
+    fn t_heap_push_many() {
         // Push integers in a weird order, and expect them to come out sorted.
         let mut heap = Heap::new();
-        for i in [8, 1, 5, 3, 9, 2, 6, 4, 7] {
-            eprintln!("Pushing {}", i);
+        for i in [8, 1, 5, 3, 9, 2, 6, 4, 0, 7] {
             heap.push(i);
         }
-        eprintln!("Done pushing");
-        let mut sorted = Vec::new();
-        while let Some(i) = heap.pop() {
-            eprintln!("Popped {}", i);
-            sorted.push(i);
-        }
-        assert_eq!(&sorted, &(0..10).collect::<Vec<_>>());
+        assert_eq!(10, heap.len());
+        assert_eq!(&(0..10).collect::<Vec<_>>(), &drain_heap(heap));
     }
 }
