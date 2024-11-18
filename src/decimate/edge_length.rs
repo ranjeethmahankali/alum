@@ -48,7 +48,7 @@ where
         Ok(()) // Do nothing.
     }
 
-    fn after_collapse(&mut self, _mesh: &mut PolyMeshT<DIM, A>, _v: VH) -> Result<(), Error> {
+    fn after_collapse(&mut self, _mesh: &PolyMeshT<DIM, A>, _v: VH) -> Result<(), Error> {
         Ok(()) // Do nothing.
     }
 }

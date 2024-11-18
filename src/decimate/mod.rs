@@ -17,7 +17,7 @@ where
 
     fn before_collapse(&mut self, mesh: &MeshT, h: HH) -> Result<(), Error>;
 
-    fn after_collapse(&mut self, mesh: &mut MeshT, v: VH) -> Result<(), Error>;
+    fn after_collapse(&mut self, mesh: &MeshT, v: VH) -> Result<(), Error>;
 }
 
 fn queue_vertex_collapse<MeshT, DecT>(

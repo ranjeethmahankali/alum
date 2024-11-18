@@ -34,7 +34,7 @@ where
         todo!()
     }
 
-    fn after_collapse(&mut self, mesh: &mut PolyMeshT<3, A>, v: VH) -> Result<(), Error> {
+    fn after_collapse(&mut self, mesh: &PolyMeshT<3, A>, v: VH) -> Result<(), Error> {
         if let Some(mut fnormals) = mesh.face_normals() {
             let mut fnormals = fnormals.try_borrow_mut()?;
             let points = mesh.points();
