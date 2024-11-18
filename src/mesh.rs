@@ -5,6 +5,7 @@ use crate::{
     iterator::HasIterators,
     property::{FProperty, VProperty},
     topol::{HasTopology, TopolCache, Topology},
+    HasDecimation,
 };
 use std::ops::Range;
 
@@ -423,6 +424,9 @@ where
 impl<const DIM: usize, A> HasIterators for PolyMeshT<DIM, A> where A: Adaptor<DIM> {}
 
 impl<const DIM: usize, A> EditableTopology for PolyMeshT<DIM, A> where A: Adaptor<DIM> {}
+
+#[cfg(feature = "decimate")]
+impl<const DIM: usize, A> HasDecimation for PolyMeshT<DIM, A> where A: Adaptor<DIM> {}
 
 #[cfg(test)]
 mod test {
