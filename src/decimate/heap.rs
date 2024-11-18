@@ -165,4 +165,71 @@ mod test {
         assert_eq!(10, heap.len());
         assert_eq!(&(0..10).collect::<Vec<_>>(), &drain_heap(heap));
     }
+
+    #[test]
+    fn t_heap_remove_one() {
+        let mut heap = heap_from_slice(&[4, 3, 5, 8, 2, 9, 1, 7, 0, 6]);
+        assert_eq!(10, heap.len());
+        let index = heap
+            .items
+            .iter()
+            .position(|i| *i == 3)
+            .expect("Cannot find the number");
+        heap.remove(index);
+        assert_eq!(&vec![0, 1, 2, 4, 5, 6, 7, 8, 9], &drain_heap(heap));
+    }
+
+    #[test]
+    fn t_heap_remove_two() {
+        let mut heap = heap_from_slice(&[4, 3, 5, 8, 2, 9, 1, 7, 0, 6]);
+        assert_eq!(10, heap.len());
+        heap.remove(
+            heap.items
+                .iter()
+                .position(|i| *i == 3)
+                .expect("Cannot find the number"),
+        );
+        heap.remove(
+            heap.items
+                .iter()
+                .position(|i| *i == 6)
+                .expect("Cannot find the number"),
+        );
+        assert_eq!(&vec![0, 1, 2, 4, 5, 7, 8, 9], &drain_heap(heap));
+    }
+
+    #[test]
+    fn t_heap_update_one() {
+        let mut heap = heap_from_slice(&[4, 3, 5, 8, 2, 9, 1, 7, 0, 6]);
+        assert_eq!(10, heap.len());
+        heap.update(
+            heap.items
+                .iter()
+                .position(|i| *i == 4)
+                .expect("Cannot find the number"),
+            -1,
+        );
+        assert_eq!(&vec![-1, 0, 1, 2, 3, 5, 6, 7, 8, 9], &drain_heap(heap));
+    }
+
+    #[test]
+    fn t_heap_update_two() {
+        let mut heap = heap_from_slice(&[4, 3, 5, 8, 2, 9, 1, 7, 0, 6]);
+        assert_eq!(10, heap.len());
+        heap.update(
+            heap.items
+                .iter()
+                .position(|i| *i == 4)
+                .expect("Cannot find the number"),
+            -1,
+        );
+        heap.update(
+            heap.items
+                .iter()
+                .position(|i| *i == 2)
+                .expect("Cannot find the number"),
+            13,
+        );
+        assert_eq!(&vec![-1, 0, 1, 3, 5, 6, 7, 8, 9, 13], &drain_heap(heap));
+    }
 }
