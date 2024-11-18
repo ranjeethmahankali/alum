@@ -125,6 +125,7 @@ where
 #[cfg(test)]
 mod test {
     use super::Heap;
+    use std::fmt::Debug;
 
     fn drain_heap<T>(mut heap: Heap<T>) -> Vec<T>
     where
@@ -137,11 +138,17 @@ mod test {
         out
     }
 
-    // fn heap_from_iter<T>(iter: impl Iterator<Item = T>) -> Heap<T>
-    // where
-    //     T: Copy + Clone + PartialOrd,
-    // {
-    // }
+    fn heap_from_slice<T>(vals: &[T]) -> Heap<T>
+    where
+        T: Clone + PartialOrd + Debug,
+    {
+        let mut heap = Heap::new();
+        for val in vals.iter() {
+            let index = heap.push(val.clone());
+            assert_eq!(&heap.items[index], val);
+        }
+        heap
+    }
 
     #[test]
     fn t_heap_push_two() {
@@ -154,10 +161,7 @@ mod test {
     #[test]
     fn t_heap_push_many() {
         // Push integers in a weird order, and expect them to come out sorted.
-        let mut heap = Heap::new();
-        for i in [8, 1, 5, 3, 9, 2, 6, 4, 0, 7] {
-            heap.push(i);
-        }
+        let heap = heap_from_slice(&[8, 1, 5, 3, 9, 2, 6, 4, 0, 7]);
         assert_eq!(10, heap.len());
         assert_eq!(&(0..10).collect::<Vec<_>>(), &drain_heap(heap));
     }
