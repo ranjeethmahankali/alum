@@ -248,6 +248,26 @@ pub trait HasTopology: Sized {
         (0..(self.num_faces() as u32)).into()
     }
 
+    /// Get the vertex status property.
+    fn vertex_status_prop(&self) -> VProperty<Status> {
+        self.topology().vstatus.clone()
+    }
+
+    /// Get the halfedge status property.
+    fn halfedge_status_prop(&self) -> HProperty<Status> {
+        self.topology().hstatus.clone()
+    }
+
+    /// Get the edge status property.
+    fn edge_status_prop(&self) -> EProperty<Status> {
+        self.topology().estatus.clone()
+    }
+
+    /// Get the face status property.
+    fn face_status_prop(&self) -> FProperty<Status> {
+        self.topology().fstatus.clone()
+    }
+
     /// The status of a vertex.
     fn vertex_status(&self, v: VH) -> Result<Status, Error> {
         self.topology().vstatus.get(v)
