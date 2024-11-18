@@ -1,35 +1,46 @@
+use std::cmp::Ordering;
+
 use crate::{topol::Topology, EditableTopology, Error, Handle, HasIterators, Status, HH, VH};
 use heap::Heap;
 
 mod heap;
 mod quadric;
 
-pub trait DecimaterModule<Mesh>
+pub trait DecimaterModule<MeshT>
 where
-    Mesh: HasIterators,
+    MeshT: HasIterators,
+    Self::Cost: PartialOrd,
 {
-    fn collapse_cost(&self, mesh: &Mesh, h: HH) -> Option<f64>;
+    type Cost;
 
-    fn before_collapse(&self, mesh: &Mesh, h: HH) -> Result<(), Error>;
+    fn collapse_cost(&self, mesh: &MeshT, h: HH) -> Option<Self::Cost>;
 
-    fn after_collapse(&self, mesh: &mut Mesh, v: VH) -> Result<(), Error>;
+    fn before_collapse(&self, mesh: &MeshT, h: HH) -> Result<(), Error>;
+
+    fn after_collapse(&self, mesh: &mut MeshT, v: VH) -> Result<(), Error>;
 }
 
-fn queue_vertex_collapse<M>(
-    mesh: &M,
+fn queue_vertex_collapse<MeshT, DecT>(
+    mesh: &MeshT,
     v: VH,
-    module: &impl DecimaterModule<M>,
+    module: &DecT,
     heap_pos: &mut [Option<usize>],
-    heap: &mut Heap<(f64, VH, HH)>,
+    heap: &mut Heap<(DecT::Cost, VH, HH)>,
 ) where
-    M: HasIterators,
+    MeshT: HasIterators,
+    DecT: DecimaterModule<MeshT>,
 {
-    if let (Some(h), cost) = mesh // Find the best collapsible edge around this vertex.
+    if let Some((h, cost)) = mesh // Find the best collapsible edge around this vertex.
         .voh_ccw_iter(v)
-        .fold((None, f64::MAX), |(hopt, best_cost), h| {
-            match module.collapse_cost(mesh, h) {
-                Some(cost) if cost < best_cost => (Some(h), cost),
-                _ => (hopt, best_cost),
+        .fold(None, |best, h| {
+            match (best, module.collapse_cost(mesh, h)) {
+                (None, None) => None,
+                (None, Some(cost)) => Some((h, cost)),
+                (Some((hbest, lowest)), None) => Some((hbest, lowest)),
+                (Some((hbest, lowest)), Some(cost)) => match cost.partial_cmp(&lowest) {
+                    Some(Ordering::Less) => Some((h, cost)),
+                    _ => Some((hbest, lowest)),
+                },
             }
         })
     {
@@ -57,13 +68,10 @@ fn is_collapse_legal(mesh: &Topology, h: HH, estatus: &[Status], vstatus: &mut [
 }
 
 pub trait HasDecimation: EditableTopology {
-    fn decimate_while<F>(
-        &mut self,
-        module: &impl DecimaterModule<Self>,
-        pred: F,
-    ) -> Result<usize, Error>
+    fn decimate_while<F, DecT>(&mut self, module: &DecT, pred: F) -> Result<usize, Error>
     where
         F: Fn(usize, usize, usize) -> bool,
+        DecT: DecimaterModule<Self>,
     {
         let mut heap_pos = self.create_vertex_prop(None);
         let mut heap_pos = heap_pos.try_borrow_mut()?;
@@ -73,7 +81,7 @@ pub trait HasDecimation: EditableTopology {
         let mut estatus = self.edge_status_prop();
         let mut fstatus = self.face_status_prop();
         // Initialize heap with vertex collapses.
-        let mut heap = Heap::<(f64, VH, HH)>::new();
+        let mut heap = Heap::<(DecT::Cost, VH, HH)>::new();
         {
             let vstatus = vstatus.try_borrow()?;
             for v in self

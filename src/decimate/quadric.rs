@@ -24,6 +24,8 @@ where
     A::Vector:
         Add<Output = A::Vector> + Sub<Output = A::Vector> + Div<A::Scalar, Output = A::Vector>,
 {
+    type Cost = f64;
+
     fn collapse_cost(&self, _mesh: &PolyMeshT<3, A>, _h: HH) -> Option<f64> {
         todo!()
     }
