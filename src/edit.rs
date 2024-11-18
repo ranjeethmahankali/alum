@@ -70,12 +70,14 @@ pub trait EditableTopology: HasIterators {
                 return false;
             }
         }
+        let v0_boundary = v0.is_boundary(self);
+        let v1_boundary = v1.is_boundary(self);
         // Check if we're collapsing across two different boundaries.
-        if v0.is_boundary(self)
-            && v1.is_boundary(self)
-            && !h.is_boundary(self)
-            && !oh.is_boundary(self)
-        {
+        if v0_boundary && v1_boundary && !h.is_boundary(self) && !oh.is_boundary(self) {
+            return false;
+        }
+        // A boundary vertex should not be collapsed inward.
+        if v0_boundary && !v1_boundary {
             return false;
         }
         // Check the 'Link condition' Edelsbrunner [2006]. The intersection of
