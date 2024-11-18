@@ -7,7 +7,7 @@ where
     items: Vec<T>,
 }
 
-const fn parent(index: usize) -> Option<usize> {
+const fn heap_parent(index: usize) -> Option<usize> {
     if index > 0 {
         Some((index - 1) >> 1)
     } else {
@@ -15,7 +15,7 @@ const fn parent(index: usize) -> Option<usize> {
     }
 }
 
-const fn children(index: usize) -> Range<usize> {
+const fn heap_children(index: usize) -> Range<usize> {
     let off = index << 1;
     (off + 1)..(off + 3)
 }
@@ -30,7 +30,7 @@ where
 
     fn sift_up(&mut self, index: usize) -> usize {
         let mut index = index;
-        while let Some(pi) = parent(index) {
+        while let Some(pi) = heap_parent(index) {
             if let Some(Ordering::Less) = self.items[index].partial_cmp(&self.items[pi]) {
                 self.items.swap(index, pi);
                 index = pi;
@@ -44,7 +44,7 @@ where
     fn sift_down(&mut self, index: usize) -> usize {
         let mut index = index;
         while index < self.len() {
-            match children(index).fold(None, |prev, ci| {
+            match heap_children(index).fold(None, |prev, ci| {
                 if ci < self.len() {
                     match prev {
                         Some(prev) => match self.items[ci].partial_cmp(&self.items[prev]) {
