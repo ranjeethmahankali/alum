@@ -254,6 +254,7 @@ where
         Add<Output = A::Vector> + Sub<Output = A::Vector> + Div<A::Scalar, Output = A::Vector>,
 {
     quadrics: Vec<Quadric<A>>,
+    next: A::Vector,
 }
 
 impl<A> QuadricDecimater<A>
@@ -286,6 +287,7 @@ where
                         })
                 })
                 .collect(),
+            next: A::zero_vector(),
         })
     }
 }
@@ -317,15 +319,19 @@ where
         Some(q.residual(q.minimizer()))
     }
 
-    fn before_collapse(&mut self, _mesh: &PolyMeshT<3, A>, _h: HH) -> Result<(), Error> {
+    fn before_collapse(&mut self, mesh: &PolyMeshT<3, A>, h: HH) -> Result<(), Error> {
+        self.next = (self.quadrics[h.tail(mesh).index() as usize]
+            + self.quadrics[h.head(mesh).index() as usize])
+            .minimizer();
         Ok(())
     }
 
     fn after_collapse(&mut self, mesh: &PolyMeshT<3, A>, v: VH) -> Result<(), Error> {
         let mut fnormals = mesh.face_normals().ok_or(Error::FaceNormalsNotAvailable)?;
         let mut fnormals = fnormals.try_borrow_mut()?;
-        let points = mesh.points();
-        let points = points.try_borrow()?;
+        let mut points = mesh.points();
+        let mut points = points.try_borrow_mut()?;
+        points[v.index() as usize] = self.next;
         // Update face normals.
         for f in mesh.vf_ccw_iter(v) {
             fnormals[f.index() as usize] = mesh.calc_face_normal(f, &points);
