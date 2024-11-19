@@ -207,6 +207,7 @@ where
         }
     }
 
+    /// Remove an element from the queue, if it is present.
     pub fn remove(&mut self, val: H) {
         let index = match self.map.ensure_get(val) {
             Some(i) => i,
@@ -223,6 +224,7 @@ where
         }
     }
 
+    /// Remove the item from the front of the queue and return it.
     pub fn pop(&mut self) -> Option<(H, Cost)> {
         if self.len() > 1 {
             self.swap(0, self.len() - 1);
@@ -240,7 +242,7 @@ mod test {
     use super::Queue;
     use crate::{Handle, VH};
 
-    fn drain_heap<H, Cost>(mut heap: Queue<H, Cost>) -> Vec<H>
+    fn drain_queue<H, Cost>(mut heap: Queue<H, Cost>) -> Vec<H>
     where
         H: Handle,
         Cost: PartialOrd,
@@ -253,13 +255,14 @@ mod test {
     }
 
     #[test]
-    fn t_heap_push_two() {
-        let mut heap: Queue<VH, f64> = Queue::new(2);
-        heap.insert(0.into(), 5.0);
-        heap.insert(1.into(), 2.0);
+    fn t_queue_push_two() {
+        let mut queue: Queue<VH, f64> = Queue::new(2);
+        queue.insert(0.into(), 5.0);
+        queue.insert(1.into(), 2.0);
         assert_eq!(
             vec![1, 0],
-            heap.items
+            queue
+                .items
                 .iter()
                 .map(|item| item.0.index())
                 .collect::<Vec<_>>()
@@ -267,16 +270,16 @@ mod test {
     }
 
     #[test]
-    fn t_heap_push_many() {
-        let mut heap: Queue<VH, f64> = Queue::new(10);
+    fn t_queue_push_many() {
+        let mut queue: Queue<VH, f64> = Queue::new(10);
         for i in [8u32, 1, 5, 3, 9, 2, 6, 4, 0, 7] {
-            heap.insert(i.into(), i as f64);
+            queue.insert(i.into(), i as f64);
         }
         // Push integers in a weird order, and expect them to come out sorted.
-        assert_eq!(10, heap.len());
+        assert_eq!(10, queue.len());
         assert_eq!(
             &(0..10).collect::<Vec<_>>(),
-            &drain_heap(heap)
+            &drain_queue(queue)
                 .iter()
                 .map(|v| v.index())
                 .collect::<Vec<_>>()
@@ -284,16 +287,16 @@ mod test {
     }
 
     #[test]
-    fn t_heap_remove_one() {
-        let mut heap: Queue<VH, f64> = Queue::new(10);
+    fn t_queue_remove_one() {
+        let mut queue: Queue<VH, f64> = Queue::new(10);
         for i in [4, 3, 5, 8, 2, 9, 1, 7, 0, 6] {
-            heap.insert(i.into(), i as f64);
+            queue.insert(i.into(), i as f64);
         }
-        assert_eq!(10, heap.len());
-        heap.remove(3.into());
+        assert_eq!(10, queue.len());
+        queue.remove(3.into());
         assert_eq!(
             &vec![0, 1, 2, 4, 5, 6, 7, 8, 9],
-            &drain_heap(heap)
+            &drain_queue(queue)
                 .iter()
                 .map(|v| v.index())
                 .collect::<Vec<_>>()
@@ -301,17 +304,17 @@ mod test {
     }
 
     #[test]
-    fn t_heap_remove_two() {
-        let mut heap: Queue<VH, f64> = Queue::new(10);
+    fn t_queue_remove_two() {
+        let mut queue: Queue<VH, f64> = Queue::new(10);
         for i in [4, 3, 5, 8, 2, 9, 1, 7, 0, 6] {
-            heap.insert(i.into(), i as f64);
+            queue.insert(i.into(), i as f64);
         }
-        assert_eq!(10, heap.len());
-        heap.remove(3.into());
-        heap.remove(6.into());
+        assert_eq!(10, queue.len());
+        queue.remove(3.into());
+        queue.remove(6.into());
         assert_eq!(
             &vec![0, 1, 2, 4, 5, 7, 8, 9],
-            &drain_heap(heap)
+            &drain_queue(queue)
                 .iter()
                 .map(|v| v.index())
                 .collect::<Vec<_>>()
@@ -319,16 +322,16 @@ mod test {
     }
 
     #[test]
-    fn t_heap_update_one() {
-        let mut heap: Queue<VH, f64> = Queue::new(10);
+    fn t_queue_update_one() {
+        let mut queue: Queue<VH, f64> = Queue::new(10);
         for i in [4, 3, 5, 8, 2, 9, 1, 7, 6] {
-            heap.insert(i.into(), i as f64);
+            queue.insert(i.into(), i as f64);
         }
-        assert_eq!(9, heap.len());
-        heap.insert(0.into(), 0.0);
+        assert_eq!(9, queue.len());
+        queue.insert(0.into(), 0.0);
         assert_eq!(
             &vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
-            &drain_heap(heap)
+            &drain_queue(queue)
                 .iter()
                 .map(|v| v.index())
                 .collect::<Vec<_>>()
@@ -336,17 +339,17 @@ mod test {
     }
 
     #[test]
-    fn t_heap_update_two() {
-        let mut heap: Queue<VH, f64> = Queue::new(10);
+    fn t_queue_update_two() {
+        let mut queue: Queue<VH, f64> = Queue::new(10);
         for i in [4, 3, 5, 8, 2, 9, 1, 7, 0, 6] {
-            heap.insert(i.into(), i as f64);
+            queue.insert(i.into(), i as f64);
         }
-        assert_eq!(10, heap.len());
-        heap.insert(4.into(), -1.0);
-        heap.insert(2.into(), 13.0);
+        assert_eq!(10, queue.len());
+        queue.insert(4.into(), -1.0);
+        queue.insert(2.into(), 13.0);
         assert_eq!(
             vec![4, 0, 1, 3, 5, 6, 7, 8, 9, 2],
-            drain_heap(heap)
+            drain_queue(queue)
                 .iter()
                 .map(|v| v.index())
                 .collect::<Vec<_>>()
