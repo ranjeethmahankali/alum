@@ -35,10 +35,14 @@ where
         }
     }
 
+    fn compare(&self, i: usize, j: usize) -> Option<Ordering> {
+        self.items[i].1.partial_cmp(&self.items[j].1)
+    }
+
     fn sift_up(&mut self, index: usize) {
         let mut index = index;
         while let Some(pi) = heap_parent(index) {
-            if let Some(Ordering::Less) = self.items[index].1.partial_cmp(&self.items[pi].1) {
+            if let Some(Ordering::Less) = self.compare(index, pi) {
                 self.index_map[self.items[index].0.index() as usize] = Some(pi);
                 self.index_map[self.items[pi].0.index() as usize] = Some(index);
                 self.items.swap(index, pi);
@@ -55,7 +59,7 @@ where
             match heap_children(index).fold(None, |prev: Option<usize>, ci| {
                 if ci < self.len() {
                     match prev {
-                        Some(prev) => match self.items[ci].1.partial_cmp(&self.items[prev].1) {
+                        Some(prev) => match self.compare(ci, prev) {
                             Some(Ordering::Less) => Some(ci),
                             _ => Some(prev),
                         },
@@ -65,7 +69,7 @@ where
                     prev
                 }
             }) {
-                Some(child) => match self.items[index].1.partial_cmp(&self.items[child].1) {
+                Some(child) => match self.compare(index, child) {
                     Some(Ordering::Less) => break,
                     _ => {
                         self.index_map[self.items[index].0.index() as usize] = Some(child);

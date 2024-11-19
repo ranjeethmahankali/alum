@@ -90,6 +90,7 @@ pub trait HasDecimation: EditableTopology {
             if !pred(nc, nv, nf) {
                 break;
             }
+            // Get the collapse target and check if it is legal.
             let h =
                 collapse_targets[v0.index() as usize].ok_or(Error::UndefinedCollapseTarget(v0))?;
             {
