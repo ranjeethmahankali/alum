@@ -7,7 +7,7 @@ where
     Cost: PartialOrd,
 {
     items: Vec<(H, Cost)>,
-    track: Box<[Option<usize>]>,
+    index_map: Box<[Option<usize>]>,
 }
 
 const fn heap_parent(index: usize) -> Option<usize> {
@@ -31,7 +31,7 @@ where
     pub fn new(num_items: usize) -> Self {
         Heap {
             items: Vec::with_capacity(num_items),
-            track: vec![None; num_items].into_boxed_slice(),
+            index_map: vec![None; num_items].into_boxed_slice(),
         }
     }
 
@@ -39,8 +39,8 @@ where
         let mut index = index;
         while let Some(pi) = heap_parent(index) {
             if let Some(Ordering::Less) = self.items[index].1.partial_cmp(&self.items[pi].1) {
-                self.track[self.items[index].0.index() as usize] = Some(pi);
-                self.track[self.items[pi].0.index() as usize] = Some(index);
+                self.index_map[self.items[index].0.index() as usize] = Some(pi);
+                self.index_map[self.items[pi].0.index() as usize] = Some(index);
                 self.items.swap(index, pi);
                 index = pi;
             } else {
@@ -68,8 +68,8 @@ where
                 Some(child) => match self.items[index].1.partial_cmp(&self.items[child].1) {
                     Some(Ordering::Less) => break,
                     _ => {
-                        self.track[self.items[index].0.index() as usize] = Some(child);
-                        self.track[self.items[child].0.index() as usize] = Some(index);
+                        self.index_map[self.items[index].0.index() as usize] = Some(child);
+                        self.index_map[self.items[child].0.index() as usize] = Some(index);
                         self.items.swap(index, child);
                         index = child;
                     }
@@ -80,17 +80,17 @@ where
     }
 
     pub fn insert(&mut self, val: H, cost: Cost) {
-        match self.track[val.index() as usize] {
+        match self.index_map[val.index() as usize] {
             Some(index) => {
                 // Update existing item.
-                self.track[val.index() as usize] = Some(index);
+                self.index_map[val.index() as usize] = Some(index);
                 self.items[index] = (val, cost);
                 self.sift_down(index);
                 self.sift_up(index);
             }
             None => {
                 // Push new item.
-                self.track[val.index() as usize] = Some(self.items.len());
+                self.index_map[val.index() as usize] = Some(self.items.len());
                 self.items.push((val, cost));
                 self.sift_up(self.len() - 1)
             }
@@ -98,21 +98,21 @@ where
     }
 
     pub fn remove(&mut self, index: usize) {
-        let index = match self.track[index] {
+        let index = match self.index_map[index] {
             Some(i) => i,
             None => return, // The item isn't present in the heap.
         };
         let last = self.len() - 1;
         if index == last {
             if let Some(val) = self.items.pop() {
-                self.track[val.0.index() as usize] = None;
+                self.index_map[val.0.index() as usize] = None;
             }
         } else {
-            self.track[self.items[index].0.index() as usize] = Some(last);
-            self.track[self.items[last].0.index() as usize] = Some(index);
+            self.index_map[self.items[index].0.index() as usize] = Some(last);
+            self.index_map[self.items[last].0.index() as usize] = Some(index);
             self.items.swap(index, last);
             if let Some(val) = self.items.pop() {
-                self.track[val.0.index() as usize] = None;
+                self.index_map[val.0.index() as usize] = None;
             }
             self.sift_down(index);
             self.sift_up(index);
@@ -122,12 +122,12 @@ where
     pub fn pop(&mut self) -> Option<(H, Cost)> {
         match self.items.pop() {
             Some(last) => {
-                self.track[last.0.index() as usize] = None;
+                self.index_map[last.0.index() as usize] = None;
                 if self.items.is_empty() {
                     Some(last)
                 } else {
-                    self.track[self.items[0].0.index() as usize] = None;
-                    self.track[last.0.index() as usize] = Some(0);
+                    self.index_map[self.items[0].0.index() as usize] = None;
+                    self.index_map[last.0.index() as usize] = Some(0);
                     let out = Some(std::mem::replace(&mut self.items[0], last));
                     self.sift_down(0);
                     out
@@ -139,7 +139,7 @@ where
 
     pub fn clear(&mut self) {
         self.items.clear();
-        self.track.fill(None);
+        self.index_map.fill(None);
     }
 
     pub fn len(&self) -> usize {
