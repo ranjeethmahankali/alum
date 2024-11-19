@@ -39,13 +39,25 @@ where
         self.items[i].1.partial_cmp(&self.items[j].1)
     }
 
+    fn swap(&mut self, i: usize, j: usize) {
+        self.index_map[self.items[i].0.index() as usize] = Some(j);
+        self.index_map[self.items[j].0.index() as usize] = Some(i);
+        self.items.swap(i, j);
+    }
+
+    fn remove_last(&mut self) -> Option<(H, Cost)> {
+        let last = self.items.pop();
+        if let Some((val, _cost)) = &last {
+            self.index_map[val.index() as usize] = None;
+        }
+        last
+    }
+
     fn sift_up(&mut self, index: usize) {
         let mut index = index;
         while let Some(pi) = heap_parent(index) {
             if let Some(Ordering::Less) = self.compare(index, pi) {
-                self.index_map[self.items[index].0.index() as usize] = Some(pi);
-                self.index_map[self.items[pi].0.index() as usize] = Some(index);
-                self.items.swap(index, pi);
+                self.swap(index, pi);
                 index = pi;
             } else {
                 break;
@@ -72,9 +84,7 @@ where
                 Some(child) => match self.compare(index, child) {
                     Some(Ordering::Less) => break,
                     _ => {
-                        self.index_map[self.items[index].0.index() as usize] = Some(child);
-                        self.index_map[self.items[child].0.index() as usize] = Some(index);
-                        self.items.swap(index, child);
+                        self.swap(index, child);
                         index = child;
                     }
                 },
@@ -108,36 +118,23 @@ where
         };
         let last = self.len() - 1;
         if index == last {
-            if let Some(val) = self.items.pop() {
-                self.index_map[val.0.index() as usize] = None;
-            }
+            self.remove_last();
         } else {
-            self.index_map[self.items[index].0.index() as usize] = Some(last);
-            self.index_map[self.items[last].0.index() as usize] = Some(index);
-            self.items.swap(index, last);
-            if let Some(val) = self.items.pop() {
-                self.index_map[val.0.index() as usize] = None;
-            }
+            self.swap(index, last);
+            self.remove_last();
             self.sift_down(index);
             self.sift_up(index);
         }
     }
 
     pub fn pop(&mut self) -> Option<(H, Cost)> {
-        match self.items.pop() {
-            Some(last) => {
-                self.index_map[last.0.index() as usize] = None;
-                if self.items.is_empty() {
-                    Some(last)
-                } else {
-                    self.index_map[self.items[0].0.index() as usize] = None;
-                    self.index_map[last.0.index() as usize] = Some(0);
-                    let out = Some(std::mem::replace(&mut self.items[0], last));
-                    self.sift_down(0);
-                    out
-                }
-            }
-            None => None,
+        if self.len() > 1 {
+            self.swap(0, self.len() - 1);
+            let out = self.remove_last();
+            self.sift_down(0);
+            out
+        } else {
+            self.remove_last()
         }
     }
 
