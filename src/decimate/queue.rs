@@ -1,15 +1,86 @@
+/*!
+This priority queue uses an implementation of heap that efficiently allows
+updating the priority of an element. It accomplishes this by keeping track of
+the positions of all elements in the heap, and then using sift-up and sift-down
+operations to update the heap.
+*/
+
 use crate::Handle;
 use std::{cmp::Ordering, ops::Range};
 
-pub struct Heap<H, Cost>
+struct IndexMap {
+    map: Vec<Option<usize>>,
+}
+
+impl IndexMap {
+    fn new(num_items: usize) -> Self {
+        IndexMap {
+            map: vec![None; num_items],
+        }
+    }
+
+    fn ensure_get<H>(&mut self, val: H) -> Option<usize>
+    where
+        H: Handle,
+    {
+        let vi = val.index() as usize;
+        if vi < self.map.len() {
+            unsafe { *self.map.get_unchecked(vi) }
+        } else {
+            self.map.resize(vi + 1, None);
+            None
+        }
+    }
+
+    fn set<H>(&mut self, val: H, index: usize)
+    where
+        H: Handle,
+    {
+        let vi = val.index() as usize;
+        if vi < self.map.len() {
+            unsafe {
+                *self.map.get_unchecked_mut(vi) = Some(index);
+            }
+        } else {
+            self.map.resize(vi + 1, None);
+            unsafe {
+                *self.map.get_unchecked_mut(vi) = Some(index);
+            }
+        }
+    }
+
+    fn unset_all(&mut self) {
+        self.map.fill(None);
+    }
+
+    fn unset<H>(&mut self, val: H)
+    where
+        H: Handle,
+    {
+        let vi = val.index() as usize;
+        if vi < self.map.len() {
+            unsafe {
+                *self.map.get_unchecked_mut(vi) = None;
+            }
+        } else {
+            self.map.resize(vi + 1, None);
+            unsafe {
+                *self.map.get_unchecked_mut(vi) = None;
+            }
+        }
+    }
+}
+
+pub struct Queue<H, Cost>
 where
     H: Handle,
     Cost: PartialOrd,
 {
     items: Vec<(H, Cost)>,
-    index_map: Box<[Option<usize>]>,
+    map: IndexMap,
 }
 
+/// Get the index of the parent in the binary heap.
 const fn heap_parent(index: usize) -> Option<usize> {
     if index > 0 {
         Some((index - 1) >> 1)
@@ -18,26 +89,31 @@ const fn heap_parent(index: usize) -> Option<usize> {
     }
 }
 
+/// Get the indices of the children in the binary heap.
 const fn heap_children(index: usize) -> Range<usize> {
     let off = index << 1;
     (off + 1)..(off + 3)
 }
 
-impl<H, Cost> Heap<H, Cost>
+impl<H, Cost> Queue<H, Cost>
 where
     H: Handle,
     Cost: PartialOrd,
 {
+    /// Create a new heap with the number of elements.
+    ///
+    /// For example, if the heap is meant to be used to queue up vertices of a
+    /// mesh, provide the number of vertices in that mesh.
     pub fn new(num_items: usize) -> Self {
-        Heap {
+        Queue {
             items: Vec::with_capacity(num_items),
-            index_map: vec![None; num_items].into_boxed_slice(),
+            map: IndexMap::new(num_items),
         }
     }
 
     pub fn clear(&mut self) {
         self.items.clear();
-        self.index_map.fill(None);
+        self.map.unset_all();
     }
 
     pub fn len(&self) -> usize {
@@ -49,31 +125,26 @@ where
     }
 
     fn swap(&mut self, i: usize, j: usize) {
-        self.index_map[self.items[i].0.index() as usize] = Some(j);
-        self.index_map[self.items[j].0.index() as usize] = Some(i);
+        self.map.set(self.items[i].0, j);
+        self.map.set(self.items[j].0, i);
         self.items.swap(i, j);
     }
 
     fn remove_last(&mut self) -> Option<(H, Cost)> {
-        let last = self.items.pop();
-        if let Some((val, _cost)) = &last {
-            self.index_map[val.index() as usize] = None;
-        }
-        last
+        self.items.pop().map(|last| {
+            self.map.unset(last.0);
+            last
+        })
     }
 
     fn write(&mut self, index: usize, val: H, cost: Cost) {
-        self.index_map[val.index() as usize] = Some(index);
+        self.map.set(val, index);
         self.items[index] = (val, cost);
     }
 
     fn push(&mut self, val: H, cost: Cost) {
-        self.index_map[val.index() as usize] = Some(self.items.len());
+        self.map.set(val, self.items.len());
         self.items.push((val, cost));
-    }
-
-    fn position(&self, val: H) -> Option<usize> {
-        self.index_map[val.index() as usize]
     }
 
     fn sift_up(&mut self, index: usize) {
@@ -116,8 +187,12 @@ where
         }
     }
 
+    /// Insert the given handle `val` and `cost` into the heap.
+    ///
+    /// If the handle is already present in the heap, it will be updated to have
+    /// the new cost.
     pub fn insert(&mut self, val: H, cost: Cost) {
-        match self.position(val) {
+        match self.map.ensure_get(val) {
             Some(index) => {
                 // Update existing item.
                 self.write(index, val, cost);
@@ -133,7 +208,7 @@ where
     }
 
     pub fn remove(&mut self, val: H) {
-        let index = match self.position(val) {
+        let index = match self.map.ensure_get(val) {
             Some(i) => i,
             None => return, // The item isn't present in the heap.
         };
@@ -162,10 +237,10 @@ where
 
 #[cfg(test)]
 mod test {
-    use super::Heap;
+    use super::Queue;
     use crate::{Handle, VH};
 
-    fn drain_heap<H, Cost>(mut heap: Heap<H, Cost>) -> Vec<H>
+    fn drain_heap<H, Cost>(mut heap: Queue<H, Cost>) -> Vec<H>
     where
         H: Handle,
         Cost: PartialOrd,
@@ -179,7 +254,7 @@ mod test {
 
     #[test]
     fn t_heap_push_two() {
-        let mut heap: Heap<VH, f64> = Heap::new(2);
+        let mut heap: Queue<VH, f64> = Queue::new(2);
         heap.insert(0.into(), 5.0);
         heap.insert(1.into(), 2.0);
         assert_eq!(
@@ -193,7 +268,7 @@ mod test {
 
     #[test]
     fn t_heap_push_many() {
-        let mut heap: Heap<VH, f64> = Heap::new(10);
+        let mut heap: Queue<VH, f64> = Queue::new(10);
         for i in [8u32, 1, 5, 3, 9, 2, 6, 4, 0, 7] {
             heap.insert(i.into(), i as f64);
         }
@@ -210,7 +285,7 @@ mod test {
 
     #[test]
     fn t_heap_remove_one() {
-        let mut heap: Heap<VH, f64> = Heap::new(10);
+        let mut heap: Queue<VH, f64> = Queue::new(10);
         for i in [4, 3, 5, 8, 2, 9, 1, 7, 0, 6] {
             heap.insert(i.into(), i as f64);
         }
@@ -227,7 +302,7 @@ mod test {
 
     #[test]
     fn t_heap_remove_two() {
-        let mut heap: Heap<VH, f64> = Heap::new(10);
+        let mut heap: Queue<VH, f64> = Queue::new(10);
         for i in [4, 3, 5, 8, 2, 9, 1, 7, 0, 6] {
             heap.insert(i.into(), i as f64);
         }
@@ -245,7 +320,7 @@ mod test {
 
     #[test]
     fn t_heap_update_one() {
-        let mut heap: Heap<VH, f64> = Heap::new(10);
+        let mut heap: Queue<VH, f64> = Queue::new(10);
         for i in [4, 3, 5, 8, 2, 9, 1, 7, 6] {
             heap.insert(i.into(), i as f64);
         }
@@ -262,7 +337,7 @@ mod test {
 
     #[test]
     fn t_heap_update_two() {
-        let mut heap: Heap<VH, f64> = Heap::new(10);
+        let mut heap: Queue<VH, f64> = Queue::new(10);
         for i in [4, 3, 5, 8, 2, 9, 1, 7, 0, 6] {
             heap.insert(i.into(), i as f64);
         }

@@ -1,9 +1,9 @@
 pub mod edge_length;
-mod heap;
+mod queue;
 pub mod quadric;
 
 use crate::{topol::Topology, EditableTopology, Error, Handle, HasIterators, Status, HH, VH};
-use heap::Heap;
+use queue::Queue;
 use std::cmp::Ordering;
 
 pub trait Decimater<MeshT>
@@ -24,7 +24,7 @@ fn queue_vertex_collapse<MeshT, DecT>(
     mesh: &MeshT,
     v: VH,
     module: &DecT,
-    heap: &mut Heap<VH, DecT::Cost>,
+    heap: &mut Queue<VH, DecT::Cost>,
     collapse_targets: &mut [Option<HH>],
 ) where
     MeshT: HasIterators,
@@ -74,7 +74,7 @@ pub trait HasDecimation: EditableTopology {
         let mut estatus = self.edge_status_prop();
         let mut fstatus = self.face_status_prop();
         // Initialize heap with vertex collapses.
-        let mut heap = Heap::<VH, DecT::Cost>::new(self.num_vertices());
+        let mut heap = Queue::<VH, DecT::Cost>::new(self.num_vertices());
         {
             let vstatus = vstatus.try_borrow()?;
             for v in self
