@@ -99,6 +99,10 @@ where
     }
 
     pub fn remove(&mut self, index: usize) {
+        let index = match self.track[index] {
+            Some(i) => i,
+            None => return, // The item isn't present in the heap.
+        };
         let last = self.len() - 1;
         if index == last {
             if let Some(val) = self.items.pop() {
@@ -177,12 +181,39 @@ mod test {
         }
     }
 
+    #[derive(Clone, Copy)]
+    struct Item {
+        idx: usize,
+        cost: f64,
+    }
+
+    impl PartialEq for Item {
+        fn eq(&self, other: &Self) -> bool {
+            self.idx == other.idx
+        }
+    }
+
+    impl PartialOrd for Item {
+        fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+            self.cost.partial_cmp(&other.cost)
+        }
+    }
+
+    impl HeapItem for Item {
+        fn index(&self) -> usize {
+            self.idx
+        }
+    }
+
     #[test]
     fn t_heap_push_two() {
         let mut heap = Heap::new(2);
-        heap.insert(5);
-        heap.insert(2);
-        assert_eq!(vec![2, 5], heap.items);
+        heap.insert(Item { idx: 0, cost: 5.0 });
+        heap.insert(Item { idx: 1, cost: 2.0 });
+        assert_eq!(
+            vec![1, 0],
+            heap.items.iter().map(|item| item.idx).collect::<Vec<_>>()
+        );
     }
 
     #[test]
@@ -213,32 +244,9 @@ mod test {
     #[test]
     fn t_heap_update_one() {
         let mut heap = heap_from_slice(&[4, 3, 5, 8, 2, 9, 1, 7, 6], 10);
-        assert_eq!(10, heap.len());
+        assert_eq!(9, heap.len());
         heap.insert(0);
         assert_eq!(&vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9], &drain_heap(heap));
-    }
-
-    struct Item {
-        idx: usize,
-        cost: f64,
-    }
-
-    impl PartialEq for Item {
-        fn eq(&self, other: &Self) -> bool {
-            self.idx == other.idx
-        }
-    }
-
-    impl PartialOrd for Item {
-        fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-            self.cost.partial_cmp(&other.cost)
-        }
-    }
-
-    impl HeapItem for Item {
-        fn index(&self) -> usize {
-            self.idx
-        }
     }
 
     #[test]
@@ -254,8 +262,11 @@ mod test {
         heap.insert(Item { idx: 4, cost: -1.0 });
         heap.insert(Item { idx: 2, cost: 13.0 });
         assert_eq!(
-            &vec![4, 0, 1, 3, 5, 6, 7, 8, 9, 2],
-            &heap.items.iter().map(|item| item.idx).collect::<Vec<_>>()
+            vec![4, 0, 1, 3, 5, 6, 7, 8, 9, 2],
+            drain_heap(heap)
+                .iter()
+                .map(|item| item.idx)
+                .collect::<Vec<_>>()
         );
     }
 }
