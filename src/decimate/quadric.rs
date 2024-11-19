@@ -254,7 +254,7 @@ where
         Add<Output = A::Vector> + Sub<Output = A::Vector> + Div<A::Scalar, Output = A::Vector>,
 {
     quadrics: Vec<Quadric<A>>,
-    next: A::Vector,
+    next: Quadric<A>,
 }
 
 impl<A> QuadricDecimater<A>
@@ -274,8 +274,10 @@ where
     pub fn new(mesh: &PolyMeshT<3, A>) -> Result<Self, Error> {
         let points = mesh.points();
         let points = points.try_borrow()?;
-        let fnormals = mesh.face_normals().ok_or(Error::FaceNormalsNotAvailable)?;
-        let fnormals = fnormals.try_borrow()?;
+        let fnormals: Vec<_> = mesh
+            .faces()
+            .map(|f| mesh.calc_face_normal(f, &points))
+            .collect();
         Ok(Self {
             quadrics: mesh
                 .vertices()
@@ -287,7 +289,7 @@ where
                         })
                 })
                 .collect(),
-            next: A::zero_vector(),
+            next: Default::default(),
         })
     }
 }
@@ -320,41 +322,16 @@ where
     }
 
     fn before_collapse(&mut self, mesh: &PolyMeshT<3, A>, h: HH) -> Result<(), Error> {
-        self.next = (self.quadrics[h.tail(mesh).index() as usize]
-            + self.quadrics[h.head(mesh).index() as usize])
-            .minimizer();
+        self.next = self.quadrics[h.tail(mesh).index() as usize]
+            + self.quadrics[h.head(mesh).index() as usize];
         Ok(())
     }
 
     fn after_collapse(&mut self, mesh: &PolyMeshT<3, A>, v: VH) -> Result<(), Error> {
-        let mut fnormals = mesh.face_normals().ok_or(Error::FaceNormalsNotAvailable)?;
-        let mut fnormals = fnormals.try_borrow_mut()?;
         let mut points = mesh.points();
         let mut points = points.try_borrow_mut()?;
-        points[v.index() as usize] = self.next;
-        // Update face normals.
-        for f in mesh.vf_ccw_iter(v) {
-            fnormals[f.index() as usize] = mesh.calc_face_normal(f, &points);
-        }
-        // Update quadrics. Use tags to avoid double assignment.
-        let mut vstatus = mesh.vertex_status_prop();
-        let mut vstatus = vstatus.try_borrow_mut()?;
-        for f in mesh.vf_ccw_iter(v) {
-            for v in mesh.fv_ccw_iter(f) {
-                let vi = v.index() as usize;
-                let vs = &mut vstatus[vi];
-                if vs.tagged() {
-                    continue;
-                }
-                vs.set_tagged(true);
-                let pos = points[vi];
-                self.quadrics[vi] =
-                    mesh.vf_ccw_iter(v)
-                        .fold(Quadric::<A>::default(), |quadric, f| {
-                            quadric + Quadric::<A>::plane_quadric(pos, fnormals[f.index() as usize])
-                        })
-            }
-        }
+        points[v.index() as usize] = self.next.minimizer();
+        self.quadrics[v.index() as usize] = self.next;
         Ok(())
     }
 }
