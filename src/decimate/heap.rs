@@ -97,8 +97,8 @@ where
         }
     }
 
-    pub fn remove(&mut self, index: usize) {
-        let index = match self.index_map[index] {
+    pub fn remove(&mut self, val: H) {
+        let index = match self.index_map[val.index() as usize] {
             Some(i) => i,
             None => return, // The item isn't present in the heap.
         };
@@ -202,7 +202,7 @@ mod test {
             heap.insert(i.into(), i as f64);
         }
         assert_eq!(10, heap.len());
-        heap.remove(3);
+        heap.remove(3.into());
         assert_eq!(
             &vec![0, 1, 2, 4, 5, 6, 7, 8, 9],
             &drain_heap(heap)
@@ -219,8 +219,8 @@ mod test {
             heap.insert(i.into(), i as f64);
         }
         assert_eq!(10, heap.len());
-        heap.remove(3);
-        heap.remove(6);
+        heap.remove(3.into());
+        heap.remove(6.into());
         assert_eq!(
             &vec![0, 1, 2, 4, 5, 7, 8, 9],
             &drain_heap(heap)

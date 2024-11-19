@@ -47,7 +47,7 @@ fn queue_vertex_collapse<MeshT, DecT>(
         heap.insert(v, cost);
         collapse_targets[v.index() as usize] = Some(h);
     } else {
-        heap.remove(v.index() as usize);
+        heap.remove(v);
         collapse_targets[v.index() as usize] = None;
     }
 }
