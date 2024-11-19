@@ -8,76 +8,13 @@ operations to update the heap.
 use crate::Handle;
 use std::{cmp::Ordering, ops::Range};
 
-struct IndexMap {
-    map: Vec<Option<usize>>,
-}
-
-impl IndexMap {
-    fn new(num_items: usize) -> Self {
-        IndexMap {
-            map: vec![None; num_items],
-        }
-    }
-
-    fn ensure_get<H>(&mut self, val: H) -> Option<usize>
-    where
-        H: Handle,
-    {
-        let vi = val.index() as usize;
-        if vi < self.map.len() {
-            unsafe { *self.map.get_unchecked(vi) }
-        } else {
-            self.map.resize(vi + 1, None);
-            None
-        }
-    }
-
-    fn set<H>(&mut self, val: H, index: usize)
-    where
-        H: Handle,
-    {
-        let vi = val.index() as usize;
-        if vi < self.map.len() {
-            unsafe {
-                *self.map.get_unchecked_mut(vi) = Some(index);
-            }
-        } else {
-            self.map.resize(vi + 1, None);
-            unsafe {
-                *self.map.get_unchecked_mut(vi) = Some(index);
-            }
-        }
-    }
-
-    fn unset_all(&mut self) {
-        self.map.fill(None);
-    }
-
-    fn unset<H>(&mut self, val: H)
-    where
-        H: Handle,
-    {
-        let vi = val.index() as usize;
-        if vi < self.map.len() {
-            unsafe {
-                *self.map.get_unchecked_mut(vi) = None;
-            }
-        } else {
-            self.map.resize(vi + 1, None);
-            unsafe {
-                *self.map.get_unchecked_mut(vi) = None;
-            }
-        }
-    }
-}
-
 pub struct Queue<H, Cost>
 where
     H: Handle,
     Cost: PartialOrd,
 {
     items: Vec<(H, Cost)>,
-    map: IndexMap,
+    map: Vec<Option<usize>>,
 }
 
 /// Get the index of the parent in the binary heap.
@@ -107,13 +44,13 @@ where
     pub fn new(num_items: usize) -> Self {
         Queue {
             items: Vec::with_capacity(num_items),
-            map: IndexMap::new(num_items),
+            map: vec![None; num_items],
         }
     }
 
     pub fn clear(&mut self) {
         self.items.clear();
-        self.map.unset_all();
+        self.map.fill(None);
     }
 
     pub fn len(&self) -> usize {
@@ -124,26 +61,46 @@ where
         self.items[i].1.partial_cmp(&self.items[j].1)
     }
 
+    fn position(&self, val: H) -> Option<usize> {
+        self.map.get(val.index() as usize).copied().flatten()
+    }
+
+    fn set_position(&mut self, val: H, index: usize) {
+        let vi = val.index() as usize;
+        if vi >= self.map.len() {
+            self.map.resize(vi + 1, None);
+        }
+        unsafe {
+            *self.map.get_unchecked_mut(vi) = Some(index);
+        }
+    }
+
+    fn unset_position(&mut self, val: H) {
+        if let Some(i) = self.map.get_mut(val.index() as usize) {
+            *i = None;
+        }
+    }
+
     fn swap(&mut self, i: usize, j: usize) {
-        self.map.set(self.items[i].0, j);
-        self.map.set(self.items[j].0, i);
+        self.set_position(self.items[i].0, j);
+        self.set_position(self.items[j].0, i);
         self.items.swap(i, j);
     }
 
     fn remove_last(&mut self) -> Option<(H, Cost)> {
         self.items.pop().map(|last| {
-            self.map.unset(last.0);
+            self.unset_position(last.0);
             last
         })
     }
 
     fn write(&mut self, index: usize, val: H, cost: Cost) {
-        self.map.set(val, index);
+        self.set_position(val, index);
         self.items[index] = (val, cost);
     }
 
     fn push(&mut self, val: H, cost: Cost) {
-        self.map.set(val, self.items.len());
+        self.set_position(val, self.items.len());
         self.items.push((val, cost));
     }
 
@@ -192,7 +149,7 @@ where
     /// If the handle is already present in the heap, it will be updated to have
     /// the new cost.
     pub fn insert(&mut self, val: H, cost: Cost) {
-        match self.map.ensure_get(val) {
+        match self.position(val) {
             Some(index) => {
                 // Update existing item.
                 self.write(index, val, cost);
@@ -209,7 +166,7 @@ where
 
     /// Remove an element from the queue, if it is present.
     pub fn remove(&mut self, val: H) {
-        let index = match self.map.ensure_get(val) {
+        let index = match self.position(val) {
             Some(i) => i,
             None => return, // The item isn't present in the heap.
         };
