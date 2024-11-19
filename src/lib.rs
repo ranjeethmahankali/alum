@@ -146,7 +146,7 @@ pub mod use_glam;
 mod subdiv;
 
 #[cfg(feature = "decimate")]
-mod decimate;
+pub mod decimate;
 #[cfg(feature = "decimate")]
 pub use decimate::{
     edge_length::EdgeLengthDecimater, quadric::QuadricDecimater, Decimater, HasDecimation,

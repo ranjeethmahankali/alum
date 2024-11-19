@@ -1,3 +1,25 @@
+/*!
+# Mesh Decimation
+
+This module provides a framework for mesh decimation, and functions to decimate
+meshes such as [`decimate`](HasDecimation::decimate),
+[`decimate_to_vertex_count`](HasDecimation::decimate_to_vertex_count),
+[`decimate_to_face_count`](HasDecimation::decimate_to_face_count).
+
+The decimation functions take a `decimater` as an argument. This decimater must
+implement the [`Decimater<MeshT>`] trait. It is responsible for determining the
+validity and priority of edge collapses. It can also keep track of the changes
+being made to the mesh during decimation.
+
+Out of the box, this module also provides the following implementations of
+[`Decimater<MeshT>`]:
+
+- [`EdgeLengthDecimater`](edge_length::EdgeLengthDecimater) prioritzes collapsing short edges.
+
+- [`QuadricDecimater`](quadric::QuadricDecimater) prioritizes collapsing edges
+  that minimize the probabilistic quadratic error function.
+*/
+
 pub mod edge_length;
 pub mod quadric;
 mod queue;
@@ -20,10 +42,12 @@ where
     fn after_collapse(&mut self, mesh: &MeshT, v: VH) -> Result<(), Error>;
 }
 
+/// Find the best collapse target for this vertex, queue up the vertex with the
+/// associated cost, and return the target halfedge.
 fn queue_vertex_collapse<MeshT, DecT>(
     mesh: &MeshT,
     v: VH,
-    module: &DecT,
+    decimater: &DecT,
     heap: &mut Queue<VH, DecT::Cost>,
 ) -> Option<HH>
 where
@@ -32,7 +56,7 @@ where
 {
     // Find the best collapsible edge around this vertex, it's collapse cost and update the queue.
     match mesh.voh_ccw_iter(v).fold(None, |best, h| {
-        match (best, module.collapse_cost(mesh, h)) {
+        match (best, decimater.collapse_cost(mesh, h)) {
             (None, None) => None,                                   // Found nothing.
             (None, Some(cost)) => Some((h, cost)),                  // Current wins by default.
             (Some((hbest, lowest)), None) => Some((hbest, lowest)), // Previous wins by default.
@@ -62,7 +86,13 @@ fn is_collapse_legal(mesh: &Topology, h: HH, estatus: &[Status], vstatus: &mut [
 }
 
 pub trait HasDecimation: EditableTopology {
-    fn decimate_while<F, DecT>(&mut self, module: &mut DecT, pred: F) -> Result<usize, Error>
+    /// Decimate the mesh by collapsing the halfedge, until either we run out of
+    /// halfedges to collapse, or if the given predicate returns `false`.
+    ///
+    /// The predicate will be called with three arguments: number of collapses
+    /// done so far, number of vertices left in the mesh, and number of faces
+    /// left in the mesh.
+    fn decimate_while<F, DecT>(&mut self, decimater: &mut DecT, pred: F) -> Result<usize, Error>
     where
         F: Fn(usize, usize, usize) -> bool,
         DecT: Decimater<Self>,
@@ -78,12 +108,12 @@ pub trait HasDecimation: EditableTopology {
         let mut heap = Queue::<VH, DecT::Cost>::new(self.num_vertices());
         {
             let vstatus = vstatus.try_borrow()?;
-            for v in self
+            for (v, target) in self
                 .vertices()
-                .filter(|v| !vstatus[v.index() as usize].deleted())
+                .zip(collapse_targets.iter_mut())
+                .filter(|(v, _target)| !vstatus[v.index() as usize].deleted())
             {
-                collapse_targets[v.index() as usize] =
-                    queue_vertex_collapse(self, v, module, &mut heap);
+                *target = queue_vertex_collapse(self, v, decimater, &mut heap);
             }
         }
         let (mut nc, mut nv, mut nf) = (0usize, self.num_vertices(), self.num_faces());
@@ -111,7 +141,7 @@ pub trait HasDecimation: EditableTopology {
                 nf - if h.edge().is_boundary(self) { 1 } else { 2 },
             );
             let v1 = h.head(self);
-            module.before_collapse(self, h)?;
+            decimater.before_collapse(self, h)?;
             {
                 let mut vstatus = vstatus.try_borrow_mut()?;
                 let mut hstatus = hstatus.try_borrow_mut()?;
@@ -126,40 +156,60 @@ pub trait HasDecimation: EditableTopology {
                     &mut cache,
                 );
             }
-            module.after_collapse(self, v1)?;
+            decimater.after_collapse(self, v1)?;
             // Update heap.
             for &v in one_ring.iter() {
                 collapse_targets[v.index() as usize] =
-                    queue_vertex_collapse(self, v, module, &mut heap);
+                    queue_vertex_collapse(self, v, decimater, &mut heap);
             }
         }
         heap.clear();
         Ok(nc)
     }
 
+    /// Decimate the mesh by collapsing the given number of edges.
+    ///
+    /// The `decimater` controls the priority of the edges to be collapsed, and
+    /// can also keep track of the changes being made to the mesh. Read [this
+    /// explanation](crate::decimate#mesh-decimation) for more on how to use the
+    /// decimater.
     fn decimate(
         &mut self,
-        module: &mut impl Decimater<Self>,
+        decimater: &mut impl Decimater<Self>,
         num_collapses: usize,
     ) -> Result<usize, Error> {
-        self.decimate_while(module, |n, _v, _f| n < num_collapses)
+        self.decimate_while(decimater, |n, _v, _f| n < num_collapses)
     }
 
+    /// Try to decimate the mesh till the target vertex count is achieved.
+    ///
+    /// The decimation may stop sooner due to other criteria. The `decimater`
+    /// controls the priority of the edges to be collapsed, and can also keep
+    /// track of the changes being made to the mesh. Read [this
+    /// explanation](crate::decimate#mesh-decimation) for more on how to use the
+    /// decimater.
     fn decimate_to_vertex_count(
         &mut self,
-        module: &mut impl Decimater<Self>,
+        decimater: &mut impl Decimater<Self>,
         vert_target: usize,
     ) -> Result<usize, Error> {
         let vtarget = usize::min(self.num_vertices(), vert_target);
-        self.decimate_while(module, |_n, v, _f| v > vtarget)
+        self.decimate_while(decimater, |_n, v, _f| v > vtarget)
     }
 
+    /// Try to decimate the mesh till the target mesh count is achieved.
+    ///
+    /// The decimation may stop sooner due to other criteria. The `decimater`
+    /// controls the priority of the edges to be collapsed, and can also keep
+    /// track of the changes being made to the mesh. Read [this
+    /// explanation](crate::decimate#mesh-decimation) for more on how to use the
+    /// decimater.
     fn decimate_to_face_count(
         &mut self,
-        module: &mut impl Decimater<Self>,
+        decimater: &mut impl Decimater<Self>,
         face_target: usize,
     ) -> Result<usize, Error> {
         let ftarget = usize::min(face_target, self.num_faces());
-        self.decimate_while(module, |_n, _v, f| f > ftarget)
+        self.decimate_while(decimater, |_n, _v, f| f > ftarget)
     }
 }
