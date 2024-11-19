@@ -1,14 +1,12 @@
+use crate::Handle;
 use std::{cmp::Ordering, ops::Range};
 
-pub trait HeapItem: PartialOrd {
-    fn index(&self) -> usize;
-}
-
-pub struct Heap<T>
+pub struct Heap<H, Cost>
 where
-    T: HeapItem,
+    H: Handle,
+    Cost: PartialOrd,
 {
-    items: Vec<T>,
+    items: Vec<(H, Cost)>,
     track: Box<[Option<usize>]>,
 }
 
@@ -25,9 +23,10 @@ const fn heap_children(index: usize) -> Range<usize> {
     (off + 1)..(off + 3)
 }
 
-impl<T> Heap<T>
+impl<H, Cost> Heap<H, Cost>
 where
-    T: HeapItem,
+    H: Handle,
+    Cost: PartialOrd,
 {
     pub fn new(num_items: usize) -> Self {
         Heap {
@@ -39,9 +38,9 @@ where
     fn sift_up(&mut self, index: usize) {
         let mut index = index;
         while let Some(pi) = heap_parent(index) {
-            if let Some(Ordering::Less) = self.items[index].partial_cmp(&self.items[pi]) {
-                self.track[self.items[index].index()] = Some(pi);
-                self.track[self.items[pi].index()] = Some(index);
+            if let Some(Ordering::Less) = self.items[index].1.partial_cmp(&self.items[pi].1) {
+                self.track[self.items[index].0.index() as usize] = Some(pi);
+                self.track[self.items[pi].0.index() as usize] = Some(index);
                 self.items.swap(index, pi);
                 index = pi;
             } else {
@@ -53,10 +52,10 @@ where
     fn sift_down(&mut self, index: usize) {
         let mut index = index;
         while index < self.len() {
-            match heap_children(index).fold(None, |prev, ci| {
+            match heap_children(index).fold(None, |prev: Option<usize>, ci| {
                 if ci < self.len() {
                     match prev {
-                        Some(prev) => match self.items[ci].partial_cmp(&self.items[prev]) {
+                        Some(prev) => match self.items[ci].1.partial_cmp(&self.items[prev].1) {
                             Some(Ordering::Less) => Some(ci),
                             _ => Some(prev),
                         },
@@ -66,11 +65,11 @@ where
                     prev
                 }
             }) {
-                Some(child) => match self.items[index].partial_cmp(&self.items[child]) {
+                Some(child) => match self.items[index].1.partial_cmp(&self.items[child].1) {
                     Some(Ordering::Less) => break,
                     _ => {
-                        self.track[self.items[index].index()] = Some(child);
-                        self.track[self.items[child].index()] = Some(index);
+                        self.track[self.items[index].0.index() as usize] = Some(child);
+                        self.track[self.items[child].0.index() as usize] = Some(index);
                         self.items.swap(index, child);
                         index = child;
                     }
@@ -80,19 +79,19 @@ where
         }
     }
 
-    pub fn insert(&mut self, val: T) {
-        match self.track[val.index()] {
+    pub fn insert(&mut self, val: H, cost: Cost) {
+        match self.track[val.index() as usize] {
             Some(index) => {
                 // Update existing item.
-                self.track[val.index()] = Some(index);
-                self.items[index] = val;
+                self.track[val.index() as usize] = Some(index);
+                self.items[index] = (val, cost);
                 self.sift_down(index);
                 self.sift_up(index);
             }
             None => {
                 // Push new item.
-                self.track[val.index()] = Some(self.items.len());
-                self.items.push(val);
+                self.track[val.index() as usize] = Some(self.items.len());
+                self.items.push((val, cost));
                 self.sift_up(self.len() - 1)
             }
         }
@@ -106,29 +105,29 @@ where
         let last = self.len() - 1;
         if index == last {
             if let Some(val) = self.items.pop() {
-                self.track[val.index()] = None;
+                self.track[val.0.index() as usize] = None;
             }
         } else {
-            self.track[self.items[index].index()] = Some(last);
-            self.track[self.items[last].index()] = Some(index);
+            self.track[self.items[index].0.index() as usize] = Some(last);
+            self.track[self.items[last].0.index() as usize] = Some(index);
             self.items.swap(index, last);
             if let Some(val) = self.items.pop() {
-                self.track[val.index()] = None;
+                self.track[val.0.index() as usize] = None;
             }
             self.sift_down(index);
             self.sift_up(index);
         }
     }
 
-    pub fn pop(&mut self) -> Option<T> {
+    pub fn pop(&mut self) -> Option<(H, Cost)> {
         match self.items.pop() {
             Some(last) => {
-                self.track[last.index()] = None;
+                self.track[last.0.index() as usize] = None;
                 if self.items.is_empty() {
                     Some(last)
                 } else {
-                    self.track[self.items[0].index()] = None;
-                    self.track[last.index()] = Some(0);
+                    self.track[self.items[0].0.index() as usize] = None;
+                    self.track[last.0.index() as usize] = Some(0);
                     let out = Some(std::mem::replace(&mut self.items[0], last));
                     self.sift_down(0);
                     out
@@ -150,122 +149,118 @@ where
 
 #[cfg(test)]
 mod test {
-    use super::{Heap, HeapItem};
-    use std::fmt::Debug;
+    use super::Heap;
+    use crate::{Handle, VH};
 
-    fn drain_heap<T>(mut heap: Heap<T>) -> Vec<T>
+    fn drain_heap<H, Cost>(mut heap: Heap<H, Cost>) -> Vec<H>
     where
-        T: Clone + Copy + HeapItem,
+        H: Handle,
+        Cost: PartialOrd,
     {
         let mut out = Vec::with_capacity(heap.len());
         while let Some(val) = heap.pop() {
-            out.push(val);
+            out.push(val.0);
         }
         out
     }
 
-    fn heap_from_slice<T>(vals: &[T], size: usize) -> Heap<T>
-    where
-        T: Clone + HeapItem + Debug,
-    {
-        let mut heap = Heap::new(usize::max(size, vals.len()));
-        for val in vals.iter() {
-            heap.insert(val.clone());
-        }
-        heap
-    }
-
-    impl HeapItem for i32 {
-        fn index(&self) -> usize {
-            *self as usize
-        }
-    }
-
-    #[derive(Clone, Copy)]
-    struct Item {
-        idx: usize,
-        cost: f64,
-    }
-
-    impl PartialEq for Item {
-        fn eq(&self, other: &Self) -> bool {
-            self.idx == other.idx
-        }
-    }
-
-    impl PartialOrd for Item {
-        fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-            self.cost.partial_cmp(&other.cost)
-        }
-    }
-
-    impl HeapItem for Item {
-        fn index(&self) -> usize {
-            self.idx
-        }
-    }
-
     #[test]
     fn t_heap_push_two() {
-        let mut heap = Heap::new(2);
-        heap.insert(Item { idx: 0, cost: 5.0 });
-        heap.insert(Item { idx: 1, cost: 2.0 });
+        let mut heap: Heap<VH, f64> = Heap::new(2);
+        heap.insert(0.into(), 5.0);
+        heap.insert(1.into(), 2.0);
         assert_eq!(
             vec![1, 0],
-            heap.items.iter().map(|item| item.idx).collect::<Vec<_>>()
+            heap.items
+                .iter()
+                .map(|item| item.0.index())
+                .collect::<Vec<_>>()
         );
     }
 
     #[test]
     fn t_heap_push_many() {
+        let mut heap: Heap<VH, f64> = Heap::new(10);
+        for i in [8u32, 1, 5, 3, 9, 2, 6, 4, 0, 7] {
+            heap.insert(i.into(), i as f64);
+        }
         // Push integers in a weird order, and expect them to come out sorted.
-        let heap = heap_from_slice(&[8, 1, 5, 3, 9, 2, 6, 4, 0, 7], 10);
         assert_eq!(10, heap.len());
-        assert_eq!(&(0..10).collect::<Vec<_>>(), &drain_heap(heap));
+        assert_eq!(
+            &(0..10).collect::<Vec<_>>(),
+            &drain_heap(heap)
+                .iter()
+                .map(|v| v.index())
+                .collect::<Vec<_>>()
+        );
     }
 
     #[test]
     fn t_heap_remove_one() {
-        let mut heap = heap_from_slice(&[4, 3, 5, 8, 2, 9, 1, 7, 0, 6], 10);
+        let mut heap: Heap<VH, f64> = Heap::new(10);
+        for i in [4, 3, 5, 8, 2, 9, 1, 7, 0, 6] {
+            heap.insert(i.into(), i as f64);
+        }
         assert_eq!(10, heap.len());
         heap.remove(3);
-        assert_eq!(&vec![0, 1, 2, 4, 5, 6, 7, 8, 9], &drain_heap(heap));
+        assert_eq!(
+            &vec![0, 1, 2, 4, 5, 6, 7, 8, 9],
+            &drain_heap(heap)
+                .iter()
+                .map(|v| v.index())
+                .collect::<Vec<_>>()
+        );
     }
 
     #[test]
     fn t_heap_remove_two() {
-        let mut heap = heap_from_slice(&[4, 3, 5, 8, 2, 9, 1, 7, 0, 6], 10);
+        let mut heap: Heap<VH, f64> = Heap::new(10);
+        for i in [4, 3, 5, 8, 2, 9, 1, 7, 0, 6] {
+            heap.insert(i.into(), i as f64);
+        }
         assert_eq!(10, heap.len());
         heap.remove(3);
         heap.remove(6);
-        assert_eq!(&vec![0, 1, 2, 4, 5, 7, 8, 9], &drain_heap(heap));
+        assert_eq!(
+            &vec![0, 1, 2, 4, 5, 7, 8, 9],
+            &drain_heap(heap)
+                .iter()
+                .map(|v| v.index())
+                .collect::<Vec<_>>()
+        );
     }
 
     #[test]
     fn t_heap_update_one() {
-        let mut heap = heap_from_slice(&[4, 3, 5, 8, 2, 9, 1, 7, 6], 10);
+        let mut heap: Heap<VH, f64> = Heap::new(10);
+        for i in [4, 3, 5, 8, 2, 9, 1, 7, 6] {
+            heap.insert(i.into(), i as f64);
+        }
         assert_eq!(9, heap.len());
-        heap.insert(0);
-        assert_eq!(&vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9], &drain_heap(heap));
+        heap.insert(0.into(), 0.0);
+        assert_eq!(
+            &vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+            &drain_heap(heap)
+                .iter()
+                .map(|v| v.index())
+                .collect::<Vec<_>>()
+        );
     }
 
     #[test]
     fn t_heap_update_two() {
-        let mut heap = Heap::new(10);
-        for item in [4, 3, 5, 8, 2, 9, 1, 7, 0, 6].iter().map(|i| Item {
-            idx: *i as usize,
-            cost: *i as f64,
-        }) {
-            heap.insert(item);
+        let mut heap: Heap<VH, f64> = Heap::new(10);
+        for i in [4, 3, 5, 8, 2, 9, 1, 7, 0, 6] {
+            heap.insert(i.into(), i as f64);
         }
         assert_eq!(10, heap.len());
-        heap.insert(Item { idx: 4, cost: -1.0 });
-        heap.insert(Item { idx: 2, cost: 13.0 });
+        heap.insert(4.into(), -1.0);
+        heap.insert(2.into(), 13.0);
         assert_eq!(
             vec![4, 0, 1, 3, 5, 6, 7, 8, 9, 2],
             drain_heap(heap)
                 .iter()
-                .map(|item| item.idx)
+                .map(|v| v.index())
                 .collect::<Vec<_>>()
         );
     }

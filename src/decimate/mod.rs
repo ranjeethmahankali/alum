@@ -3,52 +3,8 @@ mod heap;
 pub mod quadric;
 
 use crate::{topol::Topology, EditableTopology, Error, Handle, HasIterators, Status, HH, VH};
-use heap::{Heap, HeapItem};
+use heap::Heap;
 use std::cmp::Ordering;
-
-struct Candidate<DecT, MeshT>
-where
-    MeshT: HasIterators,
-    DecT: Decimater<MeshT>,
-    DecT::Cost: PartialOrd,
-{
-    cost: DecT::Cost,
-    vertex: VH,
-    target: HH,
-}
-
-impl<DecT, MeshT> PartialOrd for Candidate<DecT, MeshT>
-where
-    MeshT: HasIterators,
-    DecT: Decimater<MeshT>,
-    DecT::Cost: PartialOrd,
-{
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.cost.partial_cmp(&other.cost)
-    }
-}
-
-impl<DecT, MeshT> PartialEq for Candidate<DecT, MeshT>
-where
-    MeshT: HasIterators,
-    DecT: Decimater<MeshT>,
-    DecT::Cost: PartialOrd,
-{
-    fn eq(&self, other: &Self) -> bool {
-        self.vertex == other.vertex
-    }
-}
-
-impl<DecT, MeshT> HeapItem for Candidate<DecT, MeshT>
-where
-    MeshT: HasIterators,
-    DecT: Decimater<MeshT>,
-    DecT::Cost: PartialOrd,
-{
-    fn index(&self) -> usize {
-        self.vertex.index() as usize
-    }
-}
 
 pub trait Decimater<MeshT>
 where
@@ -68,7 +24,8 @@ fn queue_vertex_collapse<MeshT, DecT>(
     mesh: &MeshT,
     v: VH,
     module: &DecT,
-    heap: &mut Heap<Candidate<DecT, MeshT>>,
+    heap: &mut Heap<VH, DecT::Cost>,
+    collapse_targets: &mut [Option<HH>],
 ) where
     MeshT: HasIterators,
     DecT: Decimater<MeshT>,
@@ -87,14 +44,11 @@ fn queue_vertex_collapse<MeshT, DecT>(
             }
         })
     {
-        heap.insert(Candidate {
-            cost,
-            vertex: v,
-            target: h,
-        });
+        heap.insert(v, cost);
+        collapse_targets[v.index() as usize] = Some(h);
     } else {
-        // Remove the vertex from it's previous position in the heap.
         heap.remove(v.index() as usize);
+        collapse_targets[v.index() as usize] = None;
     }
 }
 
@@ -112,33 +66,32 @@ pub trait HasDecimation: EditableTopology {
         F: Fn(usize, usize, usize) -> bool,
         DecT: Decimater<Self>,
     {
+        let mut collapse_targets = self.create_vertex_prop::<Option<HH>>(None);
+        let mut collapse_targets = collapse_targets.try_borrow_mut()?;
         let mut cache = Vec::new();
         let mut vstatus = self.vertex_status_prop();
         let mut hstatus = self.halfedge_status_prop();
         let mut estatus = self.edge_status_prop();
         let mut fstatus = self.face_status_prop();
         // Initialize heap with vertex collapses.
-        let mut heap = Heap::<Candidate<DecT, Self>>::new(self.num_vertices());
+        let mut heap = Heap::<VH, DecT::Cost>::new(self.num_vertices());
         {
             let vstatus = vstatus.try_borrow()?;
             for v in self
                 .vertices()
                 .filter(|v| !vstatus[v.index() as usize].deleted())
             {
-                queue_vertex_collapse(self, v, module, &mut heap);
+                queue_vertex_collapse(self, v, module, &mut heap, &mut collapse_targets);
             }
         }
         let (mut nc, mut nv, mut nf) = (0usize, self.num_vertices(), self.num_faces());
         let mut one_ring = Vec::new();
-        while let Some(Candidate {
-            cost: _,
-            vertex: v0,
-            target: h,
-        }) = heap.pop()
-        {
+        while let Some((v0, _cost)) = heap.pop() {
             if !pred(nc, nv, nf) {
                 break;
             }
+            let h =
+                collapse_targets[v0.index() as usize].ok_or(Error::UndefinedCollapseTarget(v0))?;
             {
                 let estatus = estatus.try_borrow()?;
                 let mut vstatus = vstatus.try_borrow_mut()?;
@@ -174,7 +127,7 @@ pub trait HasDecimation: EditableTopology {
             {
                 // Update heap.
                 for &v in one_ring.iter() {
-                    queue_vertex_collapse(self, v, module, &mut heap);
+                    queue_vertex_collapse(self, v, module, &mut heap, &mut collapse_targets);
                 }
             }
         }
