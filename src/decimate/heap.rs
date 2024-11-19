@@ -35,6 +35,15 @@ where
         }
     }
 
+    pub fn clear(&mut self) {
+        self.items.clear();
+        self.index_map.fill(None);
+    }
+
+    pub fn len(&self) -> usize {
+        self.items.len()
+    }
+
     fn compare(&self, i: usize, j: usize) -> Option<Ordering> {
         self.items[i].1.partial_cmp(&self.items[j].1)
     }
@@ -51,6 +60,20 @@ where
             self.index_map[val.index() as usize] = None;
         }
         last
+    }
+
+    fn write(&mut self, index: usize, val: H, cost: Cost) {
+        self.index_map[val.index() as usize] = Some(index);
+        self.items[index] = (val, cost);
+    }
+
+    fn push(&mut self, val: H, cost: Cost) {
+        self.index_map[val.index() as usize] = Some(self.items.len());
+        self.items.push((val, cost));
+    }
+
+    fn position(&self, val: H) -> Option<usize> {
+        self.index_map[val.index() as usize]
     }
 
     fn sift_up(&mut self, index: usize) {
@@ -94,25 +117,23 @@ where
     }
 
     pub fn insert(&mut self, val: H, cost: Cost) {
-        match self.index_map[val.index() as usize] {
+        match self.position(val) {
             Some(index) => {
                 // Update existing item.
-                self.index_map[val.index() as usize] = Some(index);
-                self.items[index] = (val, cost);
+                self.write(index, val, cost);
                 self.sift_down(index);
                 self.sift_up(index);
             }
             None => {
                 // Push new item.
-                self.index_map[val.index() as usize] = Some(self.items.len());
-                self.items.push((val, cost));
+                self.push(val, cost);
                 self.sift_up(self.len() - 1)
             }
         }
     }
 
     pub fn remove(&mut self, val: H) {
-        let index = match self.index_map[val.index() as usize] {
+        let index = match self.position(val) {
             Some(i) => i,
             None => return, // The item isn't present in the heap.
         };
@@ -136,15 +157,6 @@ where
         } else {
             self.remove_last()
         }
-    }
-
-    pub fn clear(&mut self) {
-        self.items.clear();
-        self.index_map.fill(None);
-    }
-
-    pub fn len(&self) -> usize {
-        self.items.len()
     }
 }
 
