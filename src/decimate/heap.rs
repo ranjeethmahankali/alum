@@ -1,10 +1,15 @@
 use std::{cmp::Ordering, ops::Range};
 
+pub trait HeapItem: PartialOrd {
+    fn index(&self) -> usize;
+}
+
 pub struct Heap<T>
 where
-    T: PartialOrd,
+    T: HeapItem,
 {
     items: Vec<T>,
+    track: Box<[Option<usize>]>,
 }
 
 const fn heap_parent(index: usize) -> Option<usize> {
@@ -22,18 +27,21 @@ const fn heap_children(index: usize) -> Range<usize> {
 
 impl<T> Heap<T>
 where
-    T: PartialOrd,
+    T: HeapItem,
 {
-    pub fn new() -> Self {
-        Heap { items: Vec::new() }
+    pub fn new(num_items: usize) -> Self {
+        Heap {
+            items: Vec::with_capacity(num_items),
+            track: vec![None; num_items].into_boxed_slice(),
+        }
     }
 
-    fn sift_up(&mut self, index: usize, callback: &mut impl FnMut(&T, Option<usize>)) {
+    fn sift_up(&mut self, index: usize) {
         let mut index = index;
         while let Some(pi) = heap_parent(index) {
             if let Some(Ordering::Less) = self.items[index].partial_cmp(&self.items[pi]) {
-                callback(&self.items[index], Some(pi));
-                callback(&self.items[pi], Some(index));
+                self.track[self.items[index].index()] = Some(pi);
+                self.track[self.items[pi].index()] = Some(index);
                 self.items.swap(index, pi);
                 index = pi;
             } else {
@@ -42,7 +50,7 @@ where
         }
     }
 
-    fn sift_down(&mut self, index: usize, callback: &mut impl FnMut(&T, Option<usize>)) {
+    fn sift_down(&mut self, index: usize) {
         let mut index = index;
         while index < self.len() {
             match heap_children(index).fold(None, |prev, ci| {
@@ -61,8 +69,8 @@ where
                 Some(child) => match self.items[index].partial_cmp(&self.items[child]) {
                     Some(Ordering::Less) => break,
                     _ => {
-                        callback(&self.items[index], Some(child));
-                        callback(&self.items[child], Some(index));
+                        self.track[self.items[index].index()] = Some(child);
+                        self.track[self.items[child].index()] = Some(index);
                         self.items.swap(index, child);
                         index = child;
                     }
@@ -72,48 +80,53 @@ where
         }
     }
 
-    pub fn push(&mut self, val: T, mut callback: impl FnMut(&T, Option<usize>)) {
-        callback(&val, Some(self.items.len()));
-        self.items.push(val);
-        self.sift_up(self.len() - 1, &mut callback)
-    }
-
-    pub fn update(&mut self, index: usize, val: T, mut callback: impl FnMut(&T, Option<usize>)) {
-        callback(&val, Some(index));
-        self.items[index] = val;
-        self.sift_down(index, &mut callback);
-        self.sift_up(index, &mut callback);
-    }
-
-    pub fn remove(&mut self, index: usize, mut callback: impl FnMut(&T, Option<usize>)) {
-        let last = self.len() - 1;
-        if index == last {
-            if let Some(val) = self.items.pop() {
-                callback(&val, None);
+    pub fn insert(&mut self, val: T) {
+        match self.track[val.index()] {
+            Some(index) => {
+                // Update existing item.
+                self.track[val.index()] = Some(index);
+                self.items[index] = val;
+                self.sift_down(index);
+                self.sift_up(index);
             }
-        } else {
-            callback(&self.items[index], Some(last));
-            callback(&self.items[last], Some(index));
-            self.items.swap(index, last);
-            if let Some(val) = self.items.pop() {
-                callback(&val, None);
+            None => {
+                // Push new item.
+                self.track[val.index()] = Some(self.items.len());
+                self.items.push(val);
+                self.sift_up(self.len() - 1)
             }
-            self.sift_down(index, &mut callback);
-            self.sift_up(index, &mut callback);
         }
     }
 
-    pub fn pop(&mut self, mut callback: impl FnMut(&T, Option<usize>)) -> Option<T> {
+    pub fn remove(&mut self, index: usize) {
+        let last = self.len() - 1;
+        if index == last {
+            if let Some(val) = self.items.pop() {
+                self.track[val.index()] = None;
+            }
+        } else {
+            self.track[self.items[index].index()] = Some(last);
+            self.track[self.items[last].index()] = Some(index);
+            self.items.swap(index, last);
+            if let Some(val) = self.items.pop() {
+                self.track[val.index()] = None;
+            }
+            self.sift_down(index);
+            self.sift_up(index);
+        }
+    }
+
+    pub fn pop(&mut self) -> Option<T> {
         match self.items.pop() {
             Some(last) => {
-                callback(&last, None);
+                self.track[last.index()] = None;
                 if self.items.is_empty() {
                     Some(last)
                 } else {
-                    callback(&self.items[0], None);
-                    callback(&last, Some(0));
+                    self.track[self.items[0].index()] = None;
+                    self.track[last.index()] = Some(0);
                     let out = Some(std::mem::replace(&mut self.items[0], last));
-                    self.sift_down(0, &mut callback);
+                    self.sift_down(0);
                     out
                 }
             }
@@ -123,6 +136,7 @@ where
 
     pub fn clear(&mut self) {
         self.items.clear();
+        self.track.fill(None);
     }
 
     pub fn len(&self) -> usize {
@@ -132,116 +146,116 @@ where
 
 #[cfg(test)]
 mod test {
-    use super::Heap;
+    use super::{Heap, HeapItem};
     use std::fmt::Debug;
 
     fn drain_heap<T>(mut heap: Heap<T>) -> Vec<T>
     where
-        T: Clone + Copy + PartialOrd,
+        T: Clone + Copy + HeapItem,
     {
         let mut out = Vec::with_capacity(heap.len());
-        while let Some(val) = heap.pop(|_, _| {}) {
+        while let Some(val) = heap.pop() {
             out.push(val);
         }
         out
     }
 
-    fn heap_from_slice<T>(vals: &[T]) -> Heap<T>
+    fn heap_from_slice<T>(vals: &[T], size: usize) -> Heap<T>
     where
-        T: Clone + PartialOrd + Debug,
+        T: Clone + HeapItem + Debug,
     {
-        let mut heap = Heap::new();
+        let mut heap = Heap::new(usize::max(size, vals.len()));
         for val in vals.iter() {
-            heap.push(val.clone(), |_, _| {});
+            heap.insert(val.clone());
         }
         heap
     }
 
+    impl HeapItem for i32 {
+        fn index(&self) -> usize {
+            *self as usize
+        }
+    }
+
     #[test]
     fn t_heap_push_two() {
-        let mut heap = Heap::new();
-        heap.push(5, |_, _| {});
-        heap.push(2, |_, _| {});
+        let mut heap = Heap::new(2);
+        heap.insert(5);
+        heap.insert(2);
         assert_eq!(vec![2, 5], heap.items);
     }
 
     #[test]
     fn t_heap_push_many() {
         // Push integers in a weird order, and expect them to come out sorted.
-        let heap = heap_from_slice(&[8, 1, 5, 3, 9, 2, 6, 4, 0, 7]);
+        let heap = heap_from_slice(&[8, 1, 5, 3, 9, 2, 6, 4, 0, 7], 10);
         assert_eq!(10, heap.len());
         assert_eq!(&(0..10).collect::<Vec<_>>(), &drain_heap(heap));
     }
 
     #[test]
     fn t_heap_remove_one() {
-        let mut heap = heap_from_slice(&[4, 3, 5, 8, 2, 9, 1, 7, 0, 6]);
+        let mut heap = heap_from_slice(&[4, 3, 5, 8, 2, 9, 1, 7, 0, 6], 10);
         assert_eq!(10, heap.len());
-        let index = heap
-            .items
-            .iter()
-            .position(|i| *i == 3)
-            .expect("Cannot find the number");
-        heap.remove(index, |_, _| {});
+        heap.remove(3);
         assert_eq!(&vec![0, 1, 2, 4, 5, 6, 7, 8, 9], &drain_heap(heap));
     }
 
     #[test]
     fn t_heap_remove_two() {
-        let mut heap = heap_from_slice(&[4, 3, 5, 8, 2, 9, 1, 7, 0, 6]);
+        let mut heap = heap_from_slice(&[4, 3, 5, 8, 2, 9, 1, 7, 0, 6], 10);
         assert_eq!(10, heap.len());
-        heap.remove(
-            heap.items
-                .iter()
-                .position(|i| *i == 3)
-                .expect("Cannot find the number"),
-            |_, _| {},
-        );
-        heap.remove(
-            heap.items
-                .iter()
-                .position(|i| *i == 6)
-                .expect("Cannot find the number"),
-            |_, _| {},
-        );
+        heap.remove(3);
+        heap.remove(6);
         assert_eq!(&vec![0, 1, 2, 4, 5, 7, 8, 9], &drain_heap(heap));
     }
 
     #[test]
     fn t_heap_update_one() {
-        let mut heap = heap_from_slice(&[4, 3, 5, 8, 2, 9, 1, 7, 0, 6]);
+        let mut heap = heap_from_slice(&[4, 3, 5, 8, 2, 9, 1, 7, 6], 10);
         assert_eq!(10, heap.len());
-        heap.update(
-            heap.items
-                .iter()
-                .position(|i| *i == 4)
-                .expect("Cannot find the number"),
-            -1,
-            |_, _| {},
-        );
-        assert_eq!(&vec![-1, 0, 1, 2, 3, 5, 6, 7, 8, 9], &drain_heap(heap));
+        heap.insert(0);
+        assert_eq!(&vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9], &drain_heap(heap));
+    }
+
+    struct Item {
+        idx: usize,
+        cost: f64,
+    }
+
+    impl PartialEq for Item {
+        fn eq(&self, other: &Self) -> bool {
+            self.idx == other.idx
+        }
+    }
+
+    impl PartialOrd for Item {
+        fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+            self.cost.partial_cmp(&other.cost)
+        }
+    }
+
+    impl HeapItem for Item {
+        fn index(&self) -> usize {
+            self.idx
+        }
     }
 
     #[test]
     fn t_heap_update_two() {
-        let mut heap = heap_from_slice(&[4, 3, 5, 8, 2, 9, 1, 7, 0, 6]);
+        let mut heap = Heap::new(10);
+        for item in [4, 3, 5, 8, 2, 9, 1, 7, 0, 6].iter().map(|i| Item {
+            idx: *i as usize,
+            cost: *i as f64,
+        }) {
+            heap.insert(item);
+        }
         assert_eq!(10, heap.len());
-        heap.update(
-            heap.items
-                .iter()
-                .position(|i| *i == 4)
-                .expect("Cannot find the number"),
-            -1,
-            |_, _| {},
+        heap.insert(Item { idx: 4, cost: -1.0 });
+        heap.insert(Item { idx: 2, cost: 13.0 });
+        assert_eq!(
+            &vec![4, 0, 1, 3, 5, 6, 7, 8, 9, 2],
+            &heap.items.iter().map(|item| item.idx).collect::<Vec<_>>()
         );
-        heap.update(
-            heap.items
-                .iter()
-                .position(|i| *i == 2)
-                .expect("Cannot find the number"),
-            13,
-            |_, _| {},
-        );
-        assert_eq!(&vec![-1, 0, 1, 3, 5, 6, 7, 8, 9, 13], &drain_heap(heap));
     }
 }

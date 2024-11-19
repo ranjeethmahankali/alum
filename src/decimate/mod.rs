@@ -3,8 +3,52 @@ mod heap;
 pub mod quadric;
 
 use crate::{topol::Topology, EditableTopology, Error, Handle, HasIterators, Status, HH, VH};
-use heap::Heap;
+use heap::{Heap, HeapItem};
 use std::cmp::Ordering;
+
+struct Candidate<DecT, MeshT>
+where
+    MeshT: HasIterators,
+    DecT: Decimater<MeshT>,
+    DecT::Cost: PartialOrd,
+{
+    cost: DecT::Cost,
+    vertex: VH,
+    target: HH,
+}
+
+impl<DecT, MeshT> PartialOrd for Candidate<DecT, MeshT>
+where
+    MeshT: HasIterators,
+    DecT: Decimater<MeshT>,
+    DecT::Cost: PartialOrd,
+{
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.cost.partial_cmp(&other.cost)
+    }
+}
+
+impl<DecT, MeshT> PartialEq for Candidate<DecT, MeshT>
+where
+    MeshT: HasIterators,
+    DecT: Decimater<MeshT>,
+    DecT::Cost: PartialOrd,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.vertex == other.vertex
+    }
+}
+
+impl<DecT, MeshT> HeapItem for Candidate<DecT, MeshT>
+where
+    MeshT: HasIterators,
+    DecT: Decimater<MeshT>,
+    DecT::Cost: PartialOrd,
+{
+    fn index(&self) -> usize {
+        self.vertex.index() as usize
+    }
+}
 
 pub trait Decimater<MeshT>
 where
@@ -24,8 +68,7 @@ fn queue_vertex_collapse<MeshT, DecT>(
     mesh: &MeshT,
     v: VH,
     module: &DecT,
-    heap_pos: &mut [Option<usize>],
-    heap: &mut Heap<(DecT::Cost, VH, HH)>,
+    heap: &mut Heap<Candidate<DecT, MeshT>>,
 ) where
     MeshT: HasIterators,
     DecT: Decimater<MeshT>,
@@ -44,20 +87,14 @@ fn queue_vertex_collapse<MeshT, DecT>(
             }
         })
     {
-        // Update or insert the found edge with the new cost.
-        match heap_pos[v.index() as usize] {
-            Some(pos) => heap.update(pos, (cost, v, h), |(_cost, v, _h), index| {
-                heap_pos[v.index() as usize] = index
-            }),
-            None => heap.push((cost, v, h), |(_cost, v, _h), index| {
-                heap_pos[v.index() as usize] = index
-            }),
-        }
-    } else if let Some(pos) = std::mem::replace(&mut heap_pos[v.index() as usize], None) {
-        // Remove the vertex from it's previous position in the heap.
-        heap.remove(pos, |(_cost, v, _h), index| {
-            heap_pos[v.index() as usize] = index
+        heap.insert(Candidate {
+            cost,
+            vertex: v,
+            target: h,
         });
+    } else {
+        // Remove the vertex from it's previous position in the heap.
+        heap.remove(v.index() as usize);
     }
 }
 
@@ -75,28 +112,29 @@ pub trait HasDecimation: EditableTopology {
         F: Fn(usize, usize, usize) -> bool,
         DecT: Decimater<Self>,
     {
-        let mut heap_pos = self.create_vertex_prop(None);
-        let mut heap_pos = heap_pos.try_borrow_mut()?;
         let mut cache = Vec::new();
         let mut vstatus = self.vertex_status_prop();
         let mut hstatus = self.halfedge_status_prop();
         let mut estatus = self.edge_status_prop();
         let mut fstatus = self.face_status_prop();
         // Initialize heap with vertex collapses.
-        let mut heap = Heap::<(DecT::Cost, VH, HH)>::new();
+        let mut heap = Heap::<Candidate<DecT, Self>>::new(self.num_vertices());
         {
             let vstatus = vstatus.try_borrow()?;
             for v in self
                 .vertices()
                 .filter(|v| !vstatus[v.index() as usize].deleted())
             {
-                queue_vertex_collapse(self, v, module, &mut heap_pos, &mut heap);
+                queue_vertex_collapse(self, v, module, &mut heap);
             }
         }
         let (mut nc, mut nv, mut nf) = (0usize, self.num_vertices(), self.num_faces());
         let mut one_ring = Vec::new();
-        while let Some((_, v0, h)) =
-            heap.pop(|(_cost, v, _h), index| heap_pos[v.index() as usize] = index)
+        while let Some(Candidate {
+            cost: _,
+            vertex: v0,
+            target: h,
+        }) = heap.pop()
         {
             if !pred(nc, nv, nf) {
                 break;
@@ -136,12 +174,11 @@ pub trait HasDecimation: EditableTopology {
             {
                 // Update heap.
                 for &v in one_ring.iter() {
-                    queue_vertex_collapse(self, v, module, &mut heap_pos, &mut heap);
+                    queue_vertex_collapse(self, v, module, &mut heap);
                 }
             }
         }
         heap.clear();
-        heap_pos.fill(None);
         Ok(nc)
     }
 
