@@ -48,14 +48,18 @@ where
         }
     }
 
+    /// Clear the queue.
     pub fn clear(&mut self) {
         self.items.clear();
         self.map.fill(None);
     }
 
+    /// Number of items currently in the queue.
     pub fn len(&self) -> usize {
         self.items.len()
     }
+
+    // Low level functions for moving things around inside the heap.
 
     fn compare(&self, i: usize, j: usize) -> Option<Ordering> {
         self.items[i].1.partial_cmp(&self.items[j].1)
@@ -143,6 +147,8 @@ where
             }
         }
     }
+
+    // High level functions to work with the queue.
 
     /// Insert the given handle `val` and `cost` into the heap.
     ///
