@@ -1,6 +1,6 @@
 pub mod edge_length;
-mod queue;
 pub mod quadric;
+mod queue;
 
 use crate::{topol::Topology, EditableTopology, Error, Handle, HasIterators, Status, HH, VH};
 use queue::Queue;
@@ -25,30 +25,31 @@ fn queue_vertex_collapse<MeshT, DecT>(
     v: VH,
     module: &DecT,
     heap: &mut Queue<VH, DecT::Cost>,
-    collapse_targets: &mut [Option<HH>],
-) where
+) -> Option<HH>
+where
     MeshT: HasIterators,
     DecT: Decimater<MeshT>,
 {
-    if let Some((h, cost)) = mesh // Find the best collapsible edge around this vertex.
-        .voh_ccw_iter(v)
-        .fold(None, |best, h| {
-            match (best, module.collapse_cost(mesh, h)) {
-                (None, None) => None,                                   // Found nothing.
-                (None, Some(cost)) => Some((h, cost)),                  // Current wins by default.
-                (Some((hbest, lowest)), None) => Some((hbest, lowest)), // Previous wins by default.
-                (Some((hbest, lowest)), Some(cost)) => match cost.partial_cmp(&lowest) {
-                    Some(Ordering::Less) => Some((h, cost)), // Current wins by comparison
-                    _ => Some((hbest, lowest)),              // Previous wins.
-                },
-            }
-        })
-    {
-        heap.insert(v, cost);
-        collapse_targets[v.index() as usize] = Some(h);
-    } else {
-        heap.remove(v);
-        collapse_targets[v.index() as usize] = None;
+    // Find the best collapsible edge around this vertex, it's collapse cost and update the queue.
+    match mesh.voh_ccw_iter(v).fold(None, |best, h| {
+        match (best, module.collapse_cost(mesh, h)) {
+            (None, None) => None,                                   // Found nothing.
+            (None, Some(cost)) => Some((h, cost)),                  // Current wins by default.
+            (Some((hbest, lowest)), None) => Some((hbest, lowest)), // Previous wins by default.
+            (Some((hbest, lowest)), Some(cost)) => match cost.partial_cmp(&lowest) {
+                Some(Ordering::Less) => Some((h, cost)), // Current wins by comparison
+                _ => Some((hbest, lowest)),              // Previous wins.
+            },
+        }
+    }) {
+        Some((h, cost)) => {
+            heap.insert(v, cost);
+            Some(h)
+        }
+        None => {
+            heap.remove(v);
+            None
+        }
     }
 }
 
@@ -81,7 +82,8 @@ pub trait HasDecimation: EditableTopology {
                 .vertices()
                 .filter(|v| !vstatus[v.index() as usize].deleted())
             {
-                queue_vertex_collapse(self, v, module, &mut heap, &mut collapse_targets);
+                collapse_targets[v.index() as usize] =
+                    queue_vertex_collapse(self, v, module, &mut heap);
             }
         }
         let (mut nc, mut nv, mut nf) = (0usize, self.num_vertices(), self.num_faces());
@@ -125,11 +127,10 @@ pub trait HasDecimation: EditableTopology {
                 );
             }
             module.after_collapse(self, v1)?;
-            {
-                // Update heap.
-                for &v in one_ring.iter() {
-                    queue_vertex_collapse(self, v, module, &mut heap, &mut collapse_targets);
-                }
+            // Update heap.
+            for &v in one_ring.iter() {
+                collapse_targets[v.index() as usize] =
+                    queue_vertex_collapse(self, v, module, &mut heap);
             }
         }
         heap.clear();
