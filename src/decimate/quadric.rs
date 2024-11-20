@@ -121,6 +121,87 @@ where
         }
     }
 
+    fn cross_product_squared_transpose(v: A::Vector) -> [A::Scalar; 6]
+    where
+        A::Scalar: Add<Output = A::Scalar> + Neg<Output = A::Scalar> + Mul<Output = A::Scalar>,
+    {
+        let a = A::vector_coord(&v, 0);
+        let b = A::vector_coord(&v, 1);
+        let c = A::vector_coord(&v, 2);
+        let a2 = a * a;
+        let b2 = b * b;
+        let c2 = c * c;
+        [b2 + c2, -a * b, -a * c, a2 + c2, -b * c, a2 + b2]
+    }
+
+    fn probabilistic_triangle_quadric(
+        p: A::Vector,
+        q: A::Vector,
+        r: A::Vector,
+        stddev: A::Scalar,
+    ) -> Self
+    where
+        A: CrossProductAdaptor + DotProductAdaptor<3>,
+        A::Vector:
+            Sub<Output = A::Vector> + Add<Output = A::Vector> + Mul<A::Scalar, Output = A::Vector>,
+        A::Scalar: Mul<Output = A::Scalar> + Add<Output = A::Scalar> + Neg<Output = A::Scalar>,
+    {
+        let sigma = stddev * stddev;
+        let pxq = A::cross_product(p, q);
+        let qxr = A::cross_product(q, r);
+        let rxp = A::cross_product(r, p);
+        let det_pqr = A::dot_product(pxq, r);
+        let cross_pqr = pxq + qxr + rxp;
+        let pmq = p - q;
+        let qmr = q - r;
+        let rmp = r - p;
+        let ss = sigma * sigma;
+        let ss6 = ss * A::scalarf64(6.0);
+        let ss2 = ss * A::scalarf64(2.0);
+        let amat = {
+            let cout = {
+                let x = A::vector_coord(&cross_pqr, 0);
+                let y = A::vector_coord(&cross_pqr, 1);
+                let z = A::vector_coord(&cross_pqr, 2);
+                [x * x, x * y, x * z, y * y, y * z, z * z]
+            };
+            let pmat = Self::cross_product_squared_transpose(pmq);
+            let qmat = Self::cross_product_squared_transpose(qmr);
+            let rmat = Self::cross_product_squared_transpose(rmp);
+            let mut amat = [A::scalarf64(0.); 6];
+            for i in 0..6 {
+                amat[i] = cout[i] + (pmat[i] + qmat[i] + rmat[i]) * sigma;
+            }
+            amat[0] = amat[0] + ss6;
+            amat[3] = amat[3] + ss6;
+            amat[5] = amat[5] + ss6;
+            amat
+        };
+        let b = (cross_pqr * det_pqr)
+            - (A::cross_product(pmq, pxq)
+                + A::cross_product(qmr, qxr)
+                + A::cross_product(rmp, rxp))
+                * sigma
+            + (p + q + r) * ss2;
+        let c = (det_pqr * det_pqr)
+            + (A::dot_product(pxq, pxq) + A::dot_product(qxr, qxr) + A::dot_product(rxp, rxp))
+                * sigma
+            + (A::dot_product(p, p) + A::dot_product(q, q) + A::dot_product(r, r)) * ss2
+            + ss6 * sigma;
+        Self {
+            a00: amat[0],
+            a01: amat[1],
+            a02: amat[2],
+            a11: amat[3],
+            a12: amat[4],
+            a22: amat[5],
+            b0: A::vector_coord(&b, 0),
+            b1: A::vector_coord(&b, 1),
+            b2: A::vector_coord(&b, 2),
+            c,
+        }
+    }
+
     fn minimizer(&self) -> A::Vector
     where
         A::Scalar: Div<Output = A::Scalar>
@@ -233,6 +314,11 @@ where
     next: Quadric<A>,
 }
 
+pub enum QuadricType {
+    Triangle,
+    ProbabilisticTriangle,
+}
+
 impl<A> QuadricDecimater<A>
 where
     A: CrossProductAdaptor
@@ -240,26 +326,44 @@ where
         + VectorNormalizeAdaptor<3>
         + FloatScalarAdaptor<3>
         + VectorLengthAdaptor<3>,
-    A::Scalar:
-        Mul<Output = A::Scalar> + Add<Output = A::Scalar> + Div<Output = A::Scalar> + PartialOrd,
+    A::Scalar: Mul<Output = A::Scalar>
+        + Add<Output = A::Scalar>
+        + Div<Output = A::Scalar>
+        + PartialOrd
+        + Neg<Output = A::Scalar>,
     A::Vector: Add<Output = A::Vector>
         + Sub<Output = A::Vector>
         + Div<A::Scalar, Output = A::Vector>
         + Mul<A::Scalar, Output = A::Vector>,
 {
-    pub fn new(mesh: &PolyMeshT<3, A>) -> Result<Self, Error> {
+    pub fn new(mesh: &PolyMeshT<3, A>, qtype: QuadricType) -> Result<Self, Error> {
         let points = mesh.points();
         let points = points.try_borrow()?;
+        const EDGE_RATIO: f64 = 0.1;
         let fqs: Vec<_> = mesh
             .faces()
             .map(|f| {
                 mesh.triangulated_face_vertices(f)
                     .fold(Quadric::<A>::default(), |q, vs| {
-                        q + Quadric::<A>::triangle_quadric(
-                            points[vs[0].index() as usize],
-                            points[vs[1].index() as usize],
-                            points[vs[2].index() as usize],
-                        )
+                        q + match qtype {
+                            QuadricType::Triangle => Quadric::<A>::triangle_quadric(
+                                points[vs[0].index() as usize],
+                                points[vs[1].index() as usize],
+                                points[vs[2].index() as usize],
+                            ),
+                            QuadricType::ProbabilisticTriangle => {
+                                Quadric::<A>::probabilistic_triangle_quadric(
+                                    points[vs[0].index() as usize],
+                                    points[vs[1].index() as usize],
+                                    points[vs[2].index() as usize],
+                                    A::scalarf64(EDGE_RATIO)
+                                        * mesh.fe_ccw_iter(f).fold(A::scalarf64(0.), |total, e| {
+                                            total + mesh.calc_edge_length(e, &points)
+                                        })
+                                        / A::scalarf64(f.valence(mesh) as f64),
+                                )
+                            }
+                        }
                     })
             })
             .collect();
@@ -322,12 +426,15 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::{obj::test::bunny_mesh, HasDecimation, HasTopology, QuadricDecimater};
+    use crate::{
+        decimate::quadric::QuadricType, obj::test::bunny_mesh, HasDecimation, HasTopology,
+        QuadricDecimater,
+    };
 
     #[test]
     fn t_bunny_quadrics() {
         let mut mesh = bunny_mesh();
-        let mut decimater = QuadricDecimater::new(&mesh).unwrap();
+        let mut decimater = QuadricDecimater::new(&mesh, QuadricType::Triangle).unwrap();
         let (nv, ne, nf) = (mesh.num_vertices(), mesh.num_edges(), mesh.num_faces());
         mesh.decimate(&mut decimater, 500).unwrap();
         mesh.garbage_collection()
