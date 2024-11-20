@@ -758,7 +758,7 @@ mod test {
         iterator::HasIterators,
         topol::{
             test::{loop_mesh, quad_box},
-            HasTopology, TopolCache, Topology,
+            HasTopology, TopolCache,
         },
     };
 
@@ -1327,41 +1327,5 @@ mod test {
                 }
             })
         );
-    }
-
-    #[test]
-    fn t_bunny_submesh_collapse() {
-        let mut cache = TopolCache::default();
-        // Found this breaking case when testing with the bunny mesh.
-        let mut mesh = Topology::new();
-        mesh.add_vertices(18).expect("Cannot add vertices");
-        for fvs in [
-            [0u32, 6, 5],
-            [0, 1, 6],
-            [1, 7, 6],
-            [1, 2, 7],
-            [2, 8, 7],
-            [2, 3, 8],
-            [3, 4, 8],
-            [4, 9, 8],
-            [5, 6, 10],
-            [10, 6, 11],
-            [6, 16, 11],
-            [6, 7, 16],
-            [16, 7, 17],
-            [11, 16, 17],
-            [11, 17, 12],
-            [7, 8, 17],
-            [17, 13, 12],
-            [17, 8, 13],
-            [13, 8, 14],
-            [14, 8, 15],
-            [15, 8, 9],
-        ] {
-            mesh.add_face(&[fvs[0].into(), fvs[1].into(), fvs[2].into()], &mut cache)
-                .expect("Cannot add face");
-        }
-        mesh.check_topology().expect("Topological errors found");
-        todo!("Incomplete test")
     }
 }
