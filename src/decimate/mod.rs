@@ -37,7 +37,10 @@ pub mod edge_length;
 pub mod quadric;
 mod queue;
 
-use crate::{topol::Topology, EditableTopology, Error, Handle, HasIterators, Status, HH, VH};
+use crate::{
+    topol::Topology, Adaptor, EditableTopology, Error, Handle, HasIterators, PolyMeshT, Status, HH,
+    VH,
+};
 use queue::Queue;
 use std::cmp::Ordering;
 
@@ -122,6 +125,9 @@ fn is_collapse_legal(mesh: &Topology, h: HH, estatus: &[Status], vstatus: &mut [
         && mesh.check_edge_collapse(h, estatus, vstatus) // No topological errors.
 }
 
+/// Mesh types can support decimation by implementing this trait.
+///
+/// The built in types implement this trait.
 pub trait HasDecimation: EditableTopology {
     /// Decimate the mesh by collapsing the halfedge, until either we run out of
     /// halfedges to collapse, or if the given predicate returns `false`.
@@ -250,3 +256,7 @@ pub trait HasDecimation: EditableTopology {
         self.decimate_while(decimater, |_n, _v, f| f > ftarget)
     }
 }
+
+impl<const DIM: usize, A> HasDecimation for PolyMeshT<DIM, A> where A: Adaptor<DIM> {}
+
+impl HasDecimation for Topology {}
