@@ -3,7 +3,8 @@ use crate::{
     error::Error,
     iterator::HasIterators,
     status::Status,
-    HasTopology,
+    topol::Topology,
+    Adaptor, HasTopology, PolyMeshT,
 };
 
 /// This trait defines functions to edit the topology of a mesh, with typical
@@ -749,6 +750,10 @@ pub trait EditableTopology: HasIterators {
         Ok(enew)
     }
 }
+
+impl<const DIM: usize, A> EditableTopology for PolyMeshT<DIM, A> where A: Adaptor<DIM> {}
+
+impl EditableTopology for Topology {}
 
 #[cfg(test)]
 mod test {
