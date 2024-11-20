@@ -3,7 +3,10 @@ use crate::{
     Adaptor, CrossProductAdaptor, DotProductAdaptor, Error, FloatScalarAdaptor, Handle,
     HasIterators, HasTopology, PolyMeshT, VectorLengthAdaptor, VectorNormalizeAdaptor, HH, VH,
 };
-use std::ops::{Add, AddAssign, Div, Mul, Neg, Sub, SubAssign};
+use std::{
+    fmt::Display,
+    ops::{Add, AddAssign, Div, Mul, Neg, Sub, SubAssign},
+};
 
 // Credit to:
 // https://github.com/Philip-Trettner/probabilistic-quadrics/blob/master/probabilistic-quadrics.hh
@@ -75,7 +78,7 @@ impl<A> Quadric<A>
 where
     A: FloatScalarAdaptor<3>,
 {
-    fn plane_quadric(pos: A::Vector, normal: A::Vector) -> Self
+    fn _plane_quadric(pos: A::Vector, normal: A::Vector) -> Self
     where
         A: DotProductAdaptor<3>,
         A::Scalar: Mul<Output = A::Scalar>,
@@ -99,6 +102,36 @@ where
             b1: A::vector_coord(&ndv, 1),
             b2: A::vector_coord(&ndv, 2),
             c: dot * dot,
+        }
+    }
+
+    fn triangle_quadric(p: A::Vector, q: A::Vector, r: A::Vector) -> Self
+    where
+        A: CrossProductAdaptor + DotProductAdaptor<3>,
+        A::Vector: Add<Output = A::Vector>,
+        A::Scalar: Mul<Output = A::Scalar>,
+    {
+        let pxq = A::cross_product(p, q);
+        let qxr = A::cross_product(q, r);
+        let rxp = A::cross_product(r, p);
+        let xsum = pxq + qxr + rxp;
+        let det = A::dot_product(pxq, r);
+        {
+            let x = A::vector_coord(&xsum, 0);
+            let y = A::vector_coord(&xsum, 1);
+            let z = A::vector_coord(&xsum, 2);
+            Self {
+                a00: x * x,
+                a01: x * y,
+                a02: x * z,
+                a11: y * y,
+                a12: y * z,
+                a22: z * z,
+                b0: x * det,
+                b1: y * det,
+                b2: z * det,
+                c: det * det,
+            }
         }
     }
 
@@ -271,21 +304,42 @@ where
         + Div<A::Scalar, Output = A::Vector>
         + Mul<A::Scalar, Output = A::Vector>,
 {
-    pub fn new(mesh: &PolyMeshT<3, A>) -> Result<Self, Error> {
+    pub fn new(mesh: &PolyMeshT<3, A>) -> Result<Self, Error>
+    where
+        A::Scalar: Display,
+    {
         let points = mesh.points();
         let points = points.try_borrow()?;
-        let fnormals: Vec<_> = mesh
+        let fqs: Vec<_> = mesh
             .faces()
-            .map(|f| mesh.calc_face_normal(f, &points))
+            .map(|f| {
+                mesh.triangulated_face_vertices(f)
+                    .fold(Quadric::<A>::default(), |q, vs| {
+                        q + Quadric::<A>::triangle_quadric(
+                            points[vs[0].index() as usize],
+                            points[vs[1].index() as usize],
+                            points[vs[2].index() as usize],
+                        )
+                    })
+            })
             .collect();
+
+        // DEBUG
+        eprintln!("============================");
+        for fq in fqs.iter() {
+            eprintln!(
+                "{}, {}, {}, {}, {}, {}, {}, {}, {}, {}",
+                fq.a00, fq.a01, fq.a02, fq.a11, fq.a12, fq.a22, fq.b0, fq.b1, fq.b2, fq.c
+            );
+        }
+
         Ok(Self {
             quadrics: mesh
                 .vertices()
                 .map(|v| {
-                    let pos = points[v.index() as usize];
                     mesh.vf_ccw_iter(v)
                         .fold(Quadric::<A>::default(), |quadric, f| {
-                            quadric + Quadric::<A>::plane_quadric(pos, fnormals[f.index() as usize])
+                            quadric + fqs[f.index() as usize]
                         })
                 })
                 .collect(),
@@ -333,5 +387,29 @@ where
         points[v.index() as usize] = self.next.minimizer();
         self.quadrics[v.index() as usize] = self.next;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::fs;
+
+    #[test]
+    fn t_bunny_quadrics() {
+        let reference = fs::read_to_string("/home/rnjth94/dev/alum/reference.txt").unwrap();
+        let actual = fs::read_to_string("/home/rnjth94/dev/alum/actual.txt").unwrap();
+        assert_eq!(reference.lines().count(), actual.lines().count());
+        for (li, (lref, lact)) in reference.lines().zip(actual.lines()).enumerate() {
+            for (lword, rword) in lref.split(", ").zip(lact.split(", ")) {
+                let lval: f64 = lword.parse().unwrap();
+                let rval: f64 = rword.parse().unwrap();
+                let err = f64::abs(lval - rval);
+                println!(
+                    "Line: {}, Error:{}; left: {}; right: {}",
+                    li, err, lword, rword
+                );
+                assert!(err < 1e-7);
+            }
+        }
     }
 }
