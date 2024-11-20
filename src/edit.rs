@@ -627,7 +627,7 @@ pub trait EditableTopology: HasIterators {
         let mut fstatus = fstatus.try_borrow_mut()?;
         let mut hstatus = topol.hstatus.clone();
         let mut hstatus = hstatus.try_borrow_mut()?;
-        if estatus[e.index() as usize].deleted() {
+        if estatus[e].deleted() {
             return Err(Error::DeletedEdge(e));
         }
         if !topol.edge_is_unique_link(e) {
@@ -659,10 +659,10 @@ pub trait EditableTopology: HasIterators {
         for (mesh, h) in topol.loop_ccw_iter_mut(n1).take_while(|(_, h)| *h != n0) {
             mesh.halfedge_mut(h).face = Some(f0);
         }
-        estatus[e.index() as usize].set_deleted(true);
-        hstatus[h0.index() as usize].set_deleted(true);
-        hstatus[h1.index() as usize].set_deleted(true);
-        fstatus[f1.index() as usize].set_deleted(true);
+        estatus[e].set_deleted(true);
+        hstatus[h0].set_deleted(true);
+        hstatus[h1].set_deleted(true);
+        fstatus[f1].set_deleted(true);
         Ok(f0)
     }
 
@@ -826,7 +826,7 @@ mod test {
             assert_eq!(
                 (1, 11),
                 qbox.edges().fold((0usize, 0usize), |(del, ndel), e| {
-                    if estatus[e.index() as usize].deleted() {
+                    if estatus[e].deleted() {
                         (del + 1, ndel)
                     } else {
                         (del, 1 + ndel)
@@ -842,7 +842,7 @@ mod test {
             assert_eq!(
                 (2, 22),
                 qbox.halfedges().fold((0usize, 0usize), |(del, ndel), h| {
-                    if hstatus[h.index() as usize].deleted() {
+                    if hstatus[h].deleted() {
                         (del + 1, ndel)
                     } else {
                         (del, 1 + ndel)
@@ -875,7 +875,7 @@ mod test {
             assert_eq!(
                 (3, 9),
                 qbox.edges().fold((0usize, 0usize), |(del, ndel), e| {
-                    if estatus[e.index() as usize].deleted() {
+                    if estatus[e].deleted() {
                         (del + 1, ndel)
                     } else {
                         (del, 1 + ndel)
@@ -891,7 +891,7 @@ mod test {
             assert_eq!(
                 (6, 18),
                 qbox.halfedges().fold((0usize, 0usize), |(del, ndel), h| {
-                    if hstatus[h.index() as usize].deleted() {
+                    if hstatus[h].deleted() {
                         (del + 1, ndel)
                     } else {
                         (del, 1 + ndel)
@@ -907,7 +907,7 @@ mod test {
             assert_eq!(
                 (1, 5),
                 qbox.faces().fold((0usize, 0usize), |(del, ndel), h| {
-                    if fstatus[h.index() as usize].deleted() {
+                    if fstatus[h].deleted() {
                         (del + 1, ndel)
                     } else {
                         (del, 1 + ndel)
@@ -917,7 +917,7 @@ mod test {
             assert_eq!(
                 (2, 3),
                 qbox.faces().fold((0usize, 0usize), |(t, q), f| {
-                    if fstatus[f.index() as usize].deleted() {
+                    if fstatus[f].deleted() {
                         (t, q)
                     } else {
                         match f.valence(&qbox) {
@@ -1101,13 +1101,10 @@ mod test {
                 .count()
         );
         let eprop = eprop.try_borrow().expect("Cannot borrow edge");
-        assert_eq!(
-            eprop[e.index() as usize],
-            eprop[hnew.edge().index() as usize]
-        );
+        assert_eq!(eprop[e], eprop[hnew.edge()]);
         let hprop = hprop.try_borrow().expect("Cannot borrow halfedge");
-        assert_eq!(hprop[h.index() as usize], hprop[hnew.index() as usize]);
-        assert_eq!(hprop[oh.index() as usize], hprop[ohnew.index() as usize]);
+        assert_eq!(hprop[h], hprop[hnew]);
+        assert_eq!(hprop[oh], hprop[ohnew]);
         qbox.check().expect("Topological errors found");
     }
 
@@ -1263,7 +1260,7 @@ mod test {
             // Set face indices as property values.
             let mut fprop = fprop.try_borrow_mut().expect("Cannot borrow property");
             for f in mesh.faces() {
-                fprop[f.index() as usize] = f.index() as u8;
+                fprop[f] = f.index() as u8;
             }
         }
         let vnew = mesh.add_vertex().expect("Cannot add vertex");
@@ -1285,7 +1282,7 @@ mod test {
         assert_eq!(
             (6, 3),
             mesh.faces().fold((0usize, 0usize), |(old, new), f| {
-                if fprop[f.index() as usize] == DEFAULT_PROP {
+                if fprop[f] == DEFAULT_PROP {
                     (old, 1 + new)
                 } else {
                     (1 + old, new)
@@ -1303,7 +1300,7 @@ mod test {
             // Set face indices as property values.
             let mut fprop = fprop.try_borrow_mut().expect("Cannot borrow property");
             for f in mesh.faces() {
-                fprop[f.index() as usize] = f.index() as u8;
+                fprop[f] = f.index() as u8;
             }
         }
         let vnew = mesh.add_vertex().expect("Cannot add vertex");
@@ -1325,7 +1322,7 @@ mod test {
         assert_eq!(
             (9, 0),
             mesh.faces().fold((0usize, 0usize), |(old, new), f| {
-                if fprop[f.index() as usize] == DEFAULT_PROP {
+                if fprop[f] == DEFAULT_PROP {
                     (old, 1 + new)
                 } else {
                     (1 + old, new)

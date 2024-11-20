@@ -1,6 +1,7 @@
 use std::{
     cell::{Ref, RefCell, RefMut},
     marker::PhantomData,
+    ops::{Deref, DerefMut, Index, IndexMut},
     rc::{Rc, Weak},
 };
 
@@ -242,13 +243,16 @@ where
     /// enforce runtime borrow checking rules. If borrowing fails,
     /// [`Error::BorrowedPropertyAccess`] is returned, otherwise a reference to
     /// the property is returned.
-    pub fn try_borrow(&self) -> Result<Ref<[T]>, Error> {
-        Ok(Ref::map(
-            self.data
-                .try_borrow()
-                .map_err(|_| Error::BorrowedPropertyAccess)?,
-            |p| -> &[T] { p },
-        ))
+    pub fn try_borrow(&self) -> Result<PropRef<'_, H, T>, Error> {
+        Ok(PropRef {
+            buf: Ref::map(
+                self.data
+                    .try_borrow()
+                    .map_err(|_| Error::BorrowedPropertyAccess)?,
+                |p| -> &[T] { p },
+            ),
+            _phantom: PhantomData,
+        })
     }
 
     /// Try to borrow the property with mutable access.
@@ -257,13 +261,16 @@ where
     /// enforce runtime borrow checking rules. If borrowing fails,
     /// [`Error::BorrowedPropertyAccess`] is returned, otherwise a mutable
     /// reference to the property is returned.
-    pub fn try_borrow_mut(&mut self) -> Result<RefMut<[T]>, Error> {
-        Ok(RefMut::map(
-            self.data
-                .try_borrow_mut()
-                .map_err(|_| Error::BorrowedPropertyAccess)?,
-            |p| -> &mut [T] { p },
-        ))
+    pub fn try_borrow_mut(&mut self) -> Result<PropRefMut<'_, H, T>, Error> {
+        Ok(PropRefMut {
+            buf: RefMut::map(
+                self.data
+                    .try_borrow_mut()
+                    .map_err(|_| Error::BorrowedPropertyAccess)?,
+                |p| -> &mut [T] { p },
+            ),
+            _phantom: PhantomData,
+        })
     }
 
     /// Read the property value of a mesh element.
@@ -271,10 +278,7 @@ where
     /// This function internally tries to borrow the property and returns an
     /// error if borrowing fails.
     pub fn get(&self, h: H) -> Result<T, Error> {
-        Ok(*self
-            .try_borrow()?
-            .get(h.index() as usize)
-            .ok_or(Error::OutOfBoundsAccess)?)
+        Ok(*self.try_borrow()?.get(h).ok_or(Error::OutOfBoundsAccess)?)
     }
 
     /// Get a mutable reference to the property value of a mesh element.
@@ -297,6 +301,116 @@ where
     pub fn set(&mut self, h: H, val: T) -> Result<(), Error> {
         (*self.get_mut(h)?) = val;
         Ok(())
+    }
+}
+
+pub struct PropRef<'a, H, T>
+where
+    H: Handle,
+    T: Copy + Clone + 'static,
+{
+    buf: Ref<'a, [T]>,
+    _phantom: PhantomData<H>,
+}
+
+impl<'a, H, T> Index<H> for PropRef<'a, H, T>
+where
+    H: Handle,
+    T: Copy + Clone + 'static,
+{
+    type Output = T;
+
+    fn index(&self, h: H) -> &Self::Output {
+        &self.buf[h.index() as usize]
+    }
+}
+
+impl<'a, H, T> PropRef<'a, H, T>
+where
+    H: Handle,
+    T: Copy + Clone + 'static,
+{
+    pub fn get(&self, h: H) -> Option<&T> {
+        self.buf.get(h.index() as usize)
+    }
+}
+
+impl<'a, H, T> Deref for PropRef<'a, H, T>
+where
+    H: Handle,
+    T: Copy + Clone + 'static,
+{
+    type Target = [T];
+
+    fn deref(&self) -> &Self::Target {
+        &self.buf
+    }
+}
+
+pub struct PropRefMut<'a, H, T>
+where
+    H: Handle,
+    T: Copy + Clone + 'static,
+{
+    buf: RefMut<'a, [T]>,
+    _phantom: PhantomData<H>,
+}
+
+impl<'a, H, T> Index<H> for PropRefMut<'a, H, T>
+where
+    H: Handle,
+    T: Copy + Clone + 'static,
+{
+    type Output = T;
+
+    fn index(&self, h: H) -> &Self::Output {
+        &self.buf[h.index() as usize]
+    }
+}
+
+impl<'a, H, T> IndexMut<H> for PropRefMut<'a, H, T>
+where
+    H: Handle,
+    T: Copy + Clone + 'static,
+{
+    fn index_mut(&mut self, h: H) -> &mut Self::Output {
+        &mut self.buf[h.index() as usize]
+    }
+}
+
+impl<'a, H, T> PropRefMut<'a, H, T>
+where
+    H: Handle,
+    T: Copy + Clone + 'static,
+{
+    pub fn get(&self, h: H) -> Option<&T> {
+        self.buf.get(h.index() as usize)
+    }
+
+    pub fn get_mut(&mut self, h: H) -> Option<&mut T> {
+        self.buf.get_mut(h.index() as usize)
+    }
+}
+
+impl<'a, H, T> Deref for PropRefMut<'a, H, T>
+where
+    H: Handle,
+    T: Copy + Clone + 'static,
+{
+    type Target = [T];
+
+    fn deref(&self) -> &Self::Target {
+        &self.buf
+    }
+}
+
+impl<'a, H, T> DerefMut for PropRefMut<'a, H, T>
+where
+    H: Handle,
+    T: Copy + Clone + 'static,
+{
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.buf
     }
 }
 
@@ -367,6 +481,16 @@ pub type EProperty<T> = Property<EH, T>;
 /// assert_eq!(42, fprop.get(f).expect("Cannot read face property"));
 /// ```
 pub type FProperty<T> = Property<FH, T>;
+
+pub type VPropRef<'a, T> = PropRef<'a, VH, T>;
+pub type HPropRef<'a, T> = PropRef<'a, HH, T>;
+pub type EPropRef<'a, T> = PropRef<'a, EH, T>;
+pub type FPropRef<'a, T> = PropRef<'a, FH, T>;
+
+pub type VPropRefMut<'a, T> = PropRefMut<'a, VH, T>;
+pub type HPropRefMut<'a, T> = PropRefMut<'a, HH, T>;
+pub type EPropRefMut<'a, T> = PropRefMut<'a, EH, T>;
+pub type FPropRefMut<'a, T> = PropRefMut<'a, FH, T>;
 
 struct WeakProperty<T>
 where

@@ -101,7 +101,7 @@ where
         let points = points.try_borrow()?;
         let fstatus = self.topol.fstatus.try_borrow()?;
         for f in self.faces() {
-            if fstatus[f.index() as usize].deleted() {
+            if fstatus[f].deleted() {
                 return Err(Error::DeletedFace(f));
             }
             outmesh.add_vertex(self.calc_face_centroid(f, &points))?;

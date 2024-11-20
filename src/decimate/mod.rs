@@ -154,7 +154,7 @@ pub trait HasDecimation: EditableTopology {
             for (v, target) in self
                 .vertices()
                 .zip(collapse_targets.iter_mut())
-                .filter(|(v, _target)| !vstatus[v.index() as usize].deleted())
+                .filter(|(v, _target)| !vstatus[*v].deleted())
             {
                 *target = queue_vertex_collapse(self, v, decimater, &mut heap);
             }
@@ -166,8 +166,7 @@ pub trait HasDecimation: EditableTopology {
                 break;
             }
             // Get the collapse target and check if it is legal.
-            let h =
-                collapse_targets[v0.index() as usize].ok_or(Error::UndefinedCollapseTarget(v0))?;
+            let h = collapse_targets[v0].ok_or(Error::UndefinedCollapseTarget(v0))?;
             {
                 let estatus = estatus.try_borrow()?;
                 let mut vstatus = vstatus.try_borrow_mut()?;
@@ -202,8 +201,7 @@ pub trait HasDecimation: EditableTopology {
             decimater.after_collapse(self, v1)?;
             // Update heap.
             for &v in one_ring.iter() {
-                collapse_targets[v.index() as usize] =
-                    queue_vertex_collapse(self, v, decimater, &mut heap);
+                collapse_targets[v] = queue_vertex_collapse(self, v, decimater, &mut heap);
             }
         }
         heap.clear();

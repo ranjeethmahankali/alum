@@ -734,8 +734,8 @@ impl Topology {
             self.edge_status_mut(e)?.set_deleted(true);
             {
                 let mut hstatus = self.hstatus.try_borrow_mut()?;
-                hstatus[h0.index() as usize].set_deleted(true);
-                hstatus[h1.index() as usize].set_deleted(true);
+                hstatus[h0].set_deleted(true);
+                hstatus[h1].set_deleted(true);
             }
         }
         Ok(())
@@ -782,8 +782,8 @@ impl Topology {
             self.edge_status_mut(e)?.set_deleted(true);
             {
                 let mut hstatus = self.hstatus.try_borrow_mut()?;
-                hstatus[h0.index() as usize].set_deleted(true);
-                hstatus[h1.index() as usize].set_deleted(true);
+                hstatus[h0].set_deleted(true);
+                hstatus[h1].set_deleted(true);
             }
             // Update vertices.
             if v0.halfedge(self) == Some(h1) {
@@ -839,6 +839,7 @@ impl Topology {
                 // Use scope to borrow the status vector.
                 {
                     let status = self.vstatus.try_borrow()?;
+                    let status: &[Status] = &status;
                     while !status[left].deleted() && left < right {
                         left += 1;
                     }
@@ -866,6 +867,7 @@ impl Topology {
                 // Use scope to borrow the status vector.
                 {
                     let status = self.estatus.try_borrow()?;
+                    let status: &[Status] = &status;
                     while !status[left].deleted() && left < right {
                         left += 1;
                     }
@@ -897,6 +899,7 @@ impl Topology {
                 // Use scope to borrow the status vector.
                 {
                     let status = self.fstatus.try_borrow()?;
+                    let status: &[Status] = &status;
                     while !status[left].deleted() && left < right {
                         left += 1;
                     }

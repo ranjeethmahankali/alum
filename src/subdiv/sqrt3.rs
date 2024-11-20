@@ -180,33 +180,29 @@ where
                 // Compute relaxed vertex positions.
                 vpoints.clear();
                 vpoints.extend(self.vertices().map(|v| {
-                    let vi = v.index() as usize;
                     if let Some(h) = v.halfedge(self) {
                         if h.is_boundary(self) {
                             if phase {
                                 let ph = h.prev(self);
                                 debug_assert!(ph.is_boundary(self));
-                                ((points[h.head(self).index() as usize]
-                                    + points[ph.tail(self).index() as usize])
-                                    * A::scalarf64(4.0)
-                                    + points[vi] * A::scalarf64(19.0))
+                                ((points[h.head(self)] + points[ph.tail(self)]) * A::scalarf64(4.0)
+                                    + points[v] * A::scalarf64(19.0))
                                     / A::scalarf64(27.0)
                             } else {
-                                points[vi]
+                                points[v]
                             }
                         } else {
-                            let (valence, sum) = self.vv_ccw_iter(v).fold(
-                                (0usize, A::zero_vector()),
-                                |(valence, sum), nv| {
-                                    (valence + 1, sum + points[nv.index() as usize])
-                                },
-                            );
+                            let (valence, sum) = self
+                                .vv_ccw_iter(v)
+                                .fold((0usize, A::zero_vector()), |(valence, sum), nv| {
+                                    (valence + 1, sum + points[nv])
+                                });
                             let (a, b) = get_weight(valence);
-                            sum * A::scalarf64(b) + points[vi] * A::scalarf64(a)
+                            sum * A::scalarf64(b) + points[v] * A::scalarf64(a)
                         }
                     } else {
                         // Isolated vertices don't move.
-                        points[vi]
+                        points[v]
                     }
                 }));
                 // Compute centroids of faces not on the boundary.
