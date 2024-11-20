@@ -163,7 +163,7 @@ pub use mesh::{
 };
 pub use property::{
     EPropRef, EPropRefMut, EProperty, FPropRef, FPropRefMut, FProperty, HPropRef, HPropRefMut,
-    HProperty, Property, VPropRef, VPropRefMut, VProperty,
+    HProperty, PropRef, PropRefMut, Property, VPropRef, VPropRefMut, VProperty,
 };
 pub use status::Status;
 pub use topol::HasTopology;
