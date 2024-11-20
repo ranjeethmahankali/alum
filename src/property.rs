@@ -304,6 +304,11 @@ where
     }
 }
 
+/// Borrowed reference to a property.
+///
+/// While this reference is alive, the property cannot be borrowed mutably by
+/// anyone else. This property ref can be indexed into with the handle of type
+/// `H` corresponding to the mesh element.
 pub struct PropRef<'a, H, T>
 where
     H: Handle,
@@ -320,6 +325,7 @@ where
 {
     type Output = T;
 
+    /// Get the refernce to the property of element corresponding to handle `h`.
     fn index(&self, h: H) -> &Self::Output {
         &self.buf[h.index() as usize]
     }
@@ -330,6 +336,8 @@ where
     H: Handle,
     T: Copy + Clone + 'static,
 {
+    /// Get the reference to the property of element corresponding to handle
+    /// `h`.
     pub fn get(&self, h: H) -> Option<&T> {
         self.buf.get(h.index() as usize)
     }
@@ -342,11 +350,17 @@ where
 {
     type Target = [T];
 
+    /// Borrow the underlying property buffer as a slice.
     fn deref(&self) -> &Self::Target {
         &self.buf
     }
 }
 
+/// Borrowed mutable reference to a property.
+///
+/// While this is alive, no one else can borrow the property either mutably or
+/// otherwise. This property ref can be indexed into with the handle of type `H`
+/// corresponding to the mesh element.
 pub struct PropRefMut<'a, H, T>
 where
     H: Handle,
@@ -363,6 +377,8 @@ where
 {
     type Output = T;
 
+    /// Get the reference to the property of the element corresponding to handle
+    /// `h`.
     fn index(&self, h: H) -> &Self::Output {
         &self.buf[h.index() as usize]
     }
@@ -373,6 +389,8 @@ where
     H: Handle,
     T: Copy + Clone + 'static,
 {
+    /// Get the mutable reference to the property of the element corresponding
+    /// to handle `h`.
     fn index_mut(&mut self, h: H) -> &mut Self::Output {
         &mut self.buf[h.index() as usize]
     }
@@ -383,10 +401,14 @@ where
     H: Handle,
     T: Copy + Clone + 'static,
 {
+    /// Get the reference to the property of the element corresponding to handle
+    /// `h`.
     pub fn get(&self, h: H) -> Option<&T> {
         self.buf.get(h.index() as usize)
     }
 
+    /// Get the mutable reference to the property of the element corresponding
+    /// to handle `h`.
     pub fn get_mut(&mut self, h: H) -> Option<&mut T> {
         self.buf.get_mut(h.index() as usize)
     }
@@ -399,6 +421,7 @@ where
 {
     type Target = [T];
 
+    /// Borrow the underlying property buffer as a slice.
     fn deref(&self) -> &Self::Target {
         &self.buf
     }
@@ -409,6 +432,7 @@ where
     H: Handle,
     T: Copy + Clone + 'static,
 {
+    /// Mutably borrow the underlying property buffer as a slice.
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.buf
     }
@@ -482,14 +506,52 @@ pub type EProperty<T> = Property<EH, T>;
 /// ```
 pub type FProperty<T> = Property<FH, T>;
 
+/// Borrowed reference to a vertex property of type `T`.
+///
+/// While this is alive, any attempt to borrow the property mutably will result
+/// in an error.
 pub type VPropRef<'a, T> = PropRef<'a, VH, T>;
+
+/// Borrowed reference to a halfedge property of type `T`.
+///
+/// While this is alive, any attempt to borrow the property mutably will result
+/// in an error.
 pub type HPropRef<'a, T> = PropRef<'a, HH, T>;
+
+/// Borrowed reference to a edge property of type `T`.
+///
+/// While this is alive, any attempt to borrow the property mutably will result
+/// in an error.
 pub type EPropRef<'a, T> = PropRef<'a, EH, T>;
+
+/// Borrowed reference to a face property of type `T`.
+///
+/// While this is alive, any attempt to borrow the property mutably will result
+/// in an error.
 pub type FPropRef<'a, T> = PropRef<'a, FH, T>;
 
+/// Borrowed mutable reference to a vertex property of type `T`.
+///
+/// While this is alive, any attempt to borrow the property mutably or
+/// otherwise, will result in an error.
 pub type VPropRefMut<'a, T> = PropRefMut<'a, VH, T>;
+
+/// Borrowed mutable reference to a halfedge property of type `T`.
+///
+/// While this is alive, any attempt to borrow the property mutably or
+/// otherwise, will result in an error.
 pub type HPropRefMut<'a, T> = PropRefMut<'a, HH, T>;
+
+/// Borrowed mutable reference to a edge property of type `T`.
+///
+/// While this is alive, any attempt to borrow the property mutably or
+/// otherwise, will result in an error.
 pub type EPropRefMut<'a, T> = PropRefMut<'a, EH, T>;
+
+/// Borrowed mutable reference to a face property of type `T`.
+///
+/// While this is alive, any attempt to borrow the property mutably or
+/// otherwise, will result in an error.
 pub type FPropRefMut<'a, T> = PropRefMut<'a, FH, T>;
 
 struct WeakProperty<T>
