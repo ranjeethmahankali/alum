@@ -17,7 +17,20 @@ Out of the box, this module also provides the following implementations of
 - [`EdgeLengthDecimater`](edge_length::EdgeLengthDecimater) prioritzes collapsing short edges.
 
 - [`QuadricDecimater`](quadric::QuadricDecimater) prioritizes collapsing edges
-  that minimize the probabilistic quadratic error function.
+  that minimize the quadric error. This decimater can be initialized as one of
+  two variants, decided by the enum [`QuadricType`](quadric::QuadricType). The
+  probabilistic quadrics use [this
+  implementation](https://github.com/Philip-Trettner/probabilistic-quadrics) by Philip Trettner.
+
+## Writing You Own Decimater Implementation
+
+- [`Decimater<MeshT>::collapse_cost`] must return the cost of a collapse. The
+  collapses with low cost will be prioritized.
+
+- [`Decimater<MeshT>::before_collapse`], [`Decimater<MeshT>::after_collapse`]
+  functions can be used to keep track of the mesh, update the locations of
+  vertices, normals etc.
+
 */
 
 pub mod edge_length;
