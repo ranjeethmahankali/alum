@@ -145,6 +145,14 @@ pub mod use_glam;
 #[cfg(feature = "subdiv")]
 mod subdiv;
 
+#[cfg(feature = "decimate")]
+pub mod decimate;
+#[cfg(feature = "decimate")]
+pub use decimate::{
+    edge_length::EdgeLengthDecimater, quadric::QuadricDecimater, quadric::QuadricType, Decimater,
+    HasDecimation,
+};
+
 pub use edit::EditableTopology;
 pub use element::{Handle, EH, FH, HH, VH};
 pub use error::Error;

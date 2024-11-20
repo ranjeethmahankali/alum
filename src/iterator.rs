@@ -1,7 +1,7 @@
 use crate::{
     element::{EH, FH, HH, VH},
     topol::Topology,
-    HasTopology,
+    Adaptor, HasTopology, PolyMeshT,
 };
 use std::{marker::PhantomData, ptr::NonNull};
 
@@ -790,6 +790,10 @@ pub trait HasIterators: HasTopology {
         }
     }
 }
+
+impl<const DIM: usize, A> HasIterators for PolyMeshT<DIM, A> where A: Adaptor<DIM> {}
+
+impl HasIterators for Topology {}
 
 #[cfg(test)]
 mod test {

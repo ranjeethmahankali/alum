@@ -80,4 +80,7 @@ pub enum Error {
     CannotSwapBoundaryEdge(EH),
     /// Degenerate edge.
     DegenerateEdge(EH),
+
+    /// Undefined collapse target during decimation.
+    UndefinedCollapseTarget(VH),
 }

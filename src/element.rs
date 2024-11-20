@@ -7,7 +7,7 @@ use std::{
 
 /// All elements of the mesh implement this trait. They are identified by their
 /// index.
-pub trait Handle: From<u32> {
+pub trait Handle: From<u32> + Copy + Clone {
     /// The index of the element.
     fn index(&self) -> u32;
 }

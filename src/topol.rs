@@ -1,4 +1,3 @@
-use crate::edit::EditableTopology;
 use crate::iterator::HasIterators;
 use crate::property::EProperty;
 use crate::{
@@ -246,6 +245,26 @@ pub trait HasTopology: Sized {
     /// Iterator over the faces of the mesh.
     fn faces(&self) -> FRange {
         (0..(self.num_faces() as u32)).into()
+    }
+
+    /// Get the vertex status property.
+    fn vertex_status_prop(&self) -> VProperty<Status> {
+        self.topology().vstatus.clone()
+    }
+
+    /// Get the halfedge status property.
+    fn halfedge_status_prop(&self) -> HProperty<Status> {
+        self.topology().hstatus.clone()
+    }
+
+    /// Get the edge status property.
+    fn edge_status_prop(&self) -> EProperty<Status> {
+        self.topology().estatus.clone()
+    }
+
+    /// Get the face status property.
+    fn face_status_prop(&self) -> FProperty<Status> {
+        self.topology().fstatus.clone()
     }
 
     /// The status of a vertex.
@@ -992,10 +1011,6 @@ impl HasTopology for Topology {
         self
     }
 }
-
-impl HasIterators for Topology {}
-
-impl EditableTopology for Topology {}
 
 impl Default for Topology {
     fn default() -> Self {

@@ -3,8 +3,8 @@ use crate::{
     error::Error,
     iterator::HasIterators,
     status::Status,
-    topol::TopolCache,
-    HasTopology,
+    topol::Topology,
+    Adaptor, HasTopology, PolyMeshT,
 };
 
 /// This trait defines functions to edit the topology of a mesh, with typical
@@ -70,12 +70,14 @@ pub trait EditableTopology: HasIterators {
                 return false;
             }
         }
+        let v0_boundary = v0.is_boundary(self);
+        let v1_boundary = v1.is_boundary(self);
         // Check if we're collapsing across two different boundaries.
-        if v0.is_boundary(self)
-            && v1.is_boundary(self)
-            && !h.is_boundary(self)
-            && !oh.is_boundary(self)
-        {
+        if v0_boundary && v1_boundary && !h.is_boundary(self) && !oh.is_boundary(self) {
+            return false;
+        }
+        // A boundary vertex should not be collapsed inward.
+        if v0_boundary && !v1_boundary {
             return false;
         }
         // Check the 'Link condition' Edelsbrunner [2006]. The intersection of
@@ -194,10 +196,11 @@ pub trait EditableTopology: HasIterators {
     ///
     /// The vertex at the start of the halfedge will be deleted, and all the
     /// topology associated with that vertex will be rewired to the vertex that
-    /// the halfedge is pointing towards. This function requires borrowed
-    /// status properties of vertices, halfedges, edges and faces. This is
-    /// useful when collapsing edges in a hot loop, to avoid repeated borrows of
-    /// properties.
+    /// the halfedge is pointing towards. This function requires borrowed status
+    /// properties of vertices, halfedges, edges and faces. This is useful when
+    /// collapsing edges in a hot loop, to avoid repeated borrows of
+    /// properties. `hcache` is used for temporary storage. Reusing the same
+    /// `hcache` for many collapses avoids repeated allocations.
     fn collapse_edge(
         &mut self,
         h: HH,
@@ -205,7 +208,7 @@ pub trait EditableTopology: HasIterators {
         hstatus: &mut [Status],
         estatus: &mut [Status],
         fstatus: &mut [Status],
-        cache: &mut TopolCache,
+        hcache: &mut Vec<HH>,
     ) {
         let topol = self.topology_mut();
         // Collect neighboring topology.
@@ -218,8 +221,6 @@ pub trait EditableTopology: HasIterators {
         let fo = o.face(topol);
         let vh = h.head(topol);
         let vo = o.head(topol);
-        // Setup cache.
-        let hcache: &mut Vec<HH> = &mut cache.halfedges;
         // Rewire halfedge -> vertex
         hcache.clear();
         hcache.extend(topol.vih_ccw_iter(vo));
@@ -261,7 +262,7 @@ pub trait EditableTopology: HasIterators {
     /// This is the same as [`Self::collapse_edge`]. Except this function will
     /// try to borrow all the necessary properties, and return an error if the
     /// borrowing fails.
-    fn try_collapse_edge(&mut self, h: HH, cache: &mut TopolCache) -> Result<(), Error> {
+    fn try_collapse_edge(&mut self, h: HH, hcache: &mut Vec<HH>) -> Result<(), Error> {
         let topol = self.topology_mut();
         let mut vstatus = topol.vstatus.clone();
         let mut vstatus = vstatus.try_borrow_mut()?;
@@ -277,7 +278,7 @@ pub trait EditableTopology: HasIterators {
             &mut hstatus,
             &mut estatus,
             &mut fstatus,
-            cache,
+            hcache,
         );
         Ok(())
     }
@@ -750,6 +751,10 @@ pub trait EditableTopology: HasIterators {
     }
 }
 
+impl<const DIM: usize, A> EditableTopology for PolyMeshT<DIM, A> where A: Adaptor<DIM> {}
+
+impl EditableTopology for Topology {}
+
 #[cfg(test)]
 mod test {
     use crate::{
@@ -797,11 +802,11 @@ mod test {
     #[test]
     fn t_box_edge_collapse() {
         let mut qbox = quad_box();
-        let mut cache = TopolCache::default();
+        let mut hcache = Vec::new();
         let h = qbox
             .find_halfedge(5.into(), 6.into())
             .expect("Cannot find halfedge");
-        qbox.try_collapse_edge(h, &mut cache)
+        qbox.try_collapse_edge(h, &mut hcache)
             .expect("Cannot collapse edges");
         assert_eq!(qbox.num_faces(), 6);
         assert_eq!(
@@ -855,12 +860,12 @@ mod test {
         let h = qbox
             .find_halfedge(5.into(), 6.into())
             .expect("Cannot find halfedge");
-        qbox.try_collapse_edge(h, &mut cache)
+        qbox.try_collapse_edge(h, &mut cache.halfedges)
             .expect("Cannot collapse edges");
         let h = qbox
             .find_halfedge(4.into(), 7.into())
             .expect("Cannot find halfedge");
-        qbox.try_collapse_edge(h, &mut cache)
+        qbox.try_collapse_edge(h, &mut cache.halfedges)
             .expect("Cannot collapse edge");
         {
             let estatus = qbox
