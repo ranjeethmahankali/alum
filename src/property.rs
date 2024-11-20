@@ -230,7 +230,7 @@ where
     }
 
     fn generic_ref(&self) -> Box<dyn GenericProperty<H>> {
-        Box::new(PropertyRef {
+        Box::new(WeakProperty {
             data: Rc::downgrade(&self.data),
             default: self.default,
         })
@@ -368,7 +368,7 @@ pub type EProperty<T> = Property<EH, T>;
 /// ```
 pub type FProperty<T> = Property<FH, T>;
 
-struct PropertyRef<T>
+struct WeakProperty<T>
 where
     T: Clone + Copy,
 {
@@ -376,7 +376,7 @@ where
     default: T,
 }
 
-impl<H, T> GenericProperty<H> for PropertyRef<T>
+impl<H, T> GenericProperty<H> for WeakProperty<T>
 where
     T: Clone + Copy,
     H: Handle,
