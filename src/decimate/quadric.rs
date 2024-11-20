@@ -5,7 +5,7 @@ use crate::{
 };
 use std::{
     fmt::Display,
-    ops::{Add, Div, Mul, Neg, Sub},
+    ops::{Add, AddAssign, Div, Mul, Neg, Sub},
 };
 
 // Credit to:
@@ -135,6 +135,29 @@ where
         }
     }
 
+    fn probabilistic_triangle_quadric(
+        p: A::Vector,
+        q: A::Vector,
+        r: A::Vector,
+        stddev: A::Scalar,
+    ) -> Self
+    where
+        A: CrossProductAdaptor + DotProductAdaptor<3>,
+        A::Scalar: Mul<Output = A::Scalar>,
+        A::Vector: Add<Output = A::Vector> + Sub<Output = A::Vector>,
+    {
+        let sigma = stddev * stddev;
+        let pxq = A::cross_product(p, q);
+        let qxr = A::cross_product(q, r);
+        let rxp = A::cross_product(r, p);
+        let det_pqr = A::dot_product(pxq, r);
+        let cross_pqr = pxq + qxr + rxp;
+        let pmq = p - q;
+        let qmr = q - r;
+        let rmp = r - p;
+        todo!()
+    }
+
     fn minimizer(&self) -> A::Vector
     where
         A::Scalar: Div<Output = A::Scalar>
@@ -213,6 +236,25 @@ where
             b2: self.b2 + rhs.b2,
             c: self.c + rhs.c,
         }
+    }
+}
+
+impl<A> AddAssign for Quadric<A>
+where
+    A: Adaptor<3>,
+    A::Scalar: AddAssign,
+{
+    fn add_assign(&mut self, rhs: Self) {
+        self.a00 += rhs.a00;
+        self.a01 += rhs.a01;
+        self.a02 += rhs.a02;
+        self.a11 += rhs.a11;
+        self.a12 += rhs.a12;
+        self.a22 += rhs.a22;
+        self.b0 += rhs.b0;
+        self.b1 += rhs.b1;
+        self.b2 += rhs.b2;
+        self.c += rhs.c;
     }
 }
 
@@ -320,28 +362,19 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::{obj::test::bunny_mesh, HasDecimation, QuadricDecimater};
+    use crate::{obj::test::bunny_mesh, HasDecimation, HasTopology, QuadricDecimater};
 
     #[test]
     fn t_bunny_quadrics() {
         let mut mesh = bunny_mesh();
         let mut decimater = QuadricDecimater::new(&mesh).unwrap();
-        mesh.decimate(&mut decimater, 10).unwrap();
-        todo!()
-        // let reference = fs::read_to_string("/home/rnjth94/dev/alum/reference.txt").unwrap();
-        // let actual = fs::read_to_string("/home/rnjth94/dev/alum/actual.txt").unwrap();
-        // assert_eq!(reference.lines().count(), actual.lines().count());
-        // for (li, (lref, lact)) in reference.lines().zip(actual.lines()).enumerate() {
-        //     for (lword, rword) in lref.split(", ").zip(lact.split(", ")) {
-        //         let lval: f64 = lword.parse().unwrap();
-        //         let rval: f64 = rword.parse().unwrap();
-        //         let err = f64::abs(lval - rval);
-        //         println!(
-        //             "Line: {}, Error:{}; left: {}; right: {}",
-        //             li, err, lword, rword
-        //         );
-        //         assert!(err < 1e-7);
-        //     }
-        // }
+        let (nv, ne, nf) = (mesh.num_vertices(), mesh.num_edges(), mesh.num_faces());
+        mesh.decimate(&mut decimater, 500).unwrap();
+        mesh.garbage_collection()
+            .expect("Garbage collection failed");
+        mesh.check_topology().expect("Topological errors found");
+        assert_eq!(nv - 500, mesh.num_vertices());
+        assert!(mesh.num_edges() < ne);
+        assert!(mesh.num_faces() < nf);
     }
 }
