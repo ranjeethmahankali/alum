@@ -135,29 +135,6 @@ where
         }
     }
 
-    fn probabilistic_triangle_quadric(
-        p: A::Vector,
-        q: A::Vector,
-        r: A::Vector,
-        stddev: A::Scalar,
-    ) -> Self
-    where
-        A: CrossProductAdaptor + DotProductAdaptor<3>,
-        A::Scalar: Mul<Output = A::Scalar>,
-        A::Vector: Add<Output = A::Vector> + Sub<Output = A::Vector>,
-    {
-        let sigma = stddev * stddev;
-        let pxq = A::cross_product(p, q);
-        let qxr = A::cross_product(q, r);
-        let rxp = A::cross_product(r, p);
-        let det_pqr = A::dot_product(pxq, r);
-        let cross_pqr = pxq + qxr + rxp;
-        let pmq = p - q;
-        let qmr = q - r;
-        let rmp = r - p;
-        todo!()
-    }
-
     fn minimizer(&self) -> A::Vector
     where
         A::Scalar: Div<Output = A::Scalar>
