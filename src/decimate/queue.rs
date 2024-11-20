@@ -92,9 +92,8 @@ where
     }
 
     fn remove_last(&mut self) -> Option<(H, Cost)> {
-        self.items.pop().map(|last| {
+        self.items.pop().inspect(|last| {
             self.unset_position(last.0);
-            last
         })
     }
 

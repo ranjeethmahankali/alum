@@ -3,10 +3,7 @@ use crate::{
     Adaptor, CrossProductAdaptor, DotProductAdaptor, Error, FloatScalarAdaptor, Handle,
     HasIterators, HasTopology, PolyMeshT, VectorLengthAdaptor, VectorNormalizeAdaptor, HH, VH,
 };
-use std::{
-    fmt::Display,
-    ops::{Add, AddAssign, Div, Mul, Neg, Sub},
-};
+use std::ops::{Add, AddAssign, Div, Mul, Neg, Sub};
 
 // Credit to:
 // https://github.com/Philip-Trettner/probabilistic-quadrics/blob/master/probabilistic-quadrics.hh
@@ -52,18 +49,7 @@ where
     A::Scalar: Clone,
 {
     fn clone(&self) -> Self {
-        Self {
-            a00: self.a00.clone(),
-            a01: self.a01.clone(),
-            a02: self.a02.clone(),
-            a11: self.a11.clone(),
-            a12: self.a12.clone(),
-            a22: self.a22.clone(),
-            b0: self.b0.clone(),
-            b1: self.b1.clone(),
-            b2: self.b2.clone(),
-            c: self.c.clone(),
-        }
+        *self
     }
 }
 
@@ -261,10 +247,7 @@ where
         + Div<A::Scalar, Output = A::Vector>
         + Mul<A::Scalar, Output = A::Vector>,
 {
-    pub fn new(mesh: &PolyMeshT<3, A>) -> Result<Self, Error>
-    where
-        A::Scalar: Display,
-    {
+    pub fn new(mesh: &PolyMeshT<3, A>) -> Result<Self, Error> {
         let points = mesh.points();
         let points = points.try_borrow()?;
         let fqs: Vec<_> = mesh
