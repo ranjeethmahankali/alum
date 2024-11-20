@@ -792,9 +792,6 @@ mod test {
         assert!(qbox.has_face_normals());
         let fnormals = fnormals.try_borrow().expect("Cannot borrow face normals");
         let fnormals: &[glam::Vec3] = &fnormals;
-        for n in fnormals {
-            println!("glam::vec3({:.1}, {:.1}, {:.1}),", n[0], n[1], n[2]);
-        }
         assert_eq!(
             &fnormals,
             &[
