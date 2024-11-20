@@ -198,7 +198,7 @@ pub trait EditableTopology: HasIterators {
     /// the halfedge is pointing towards. This function requires borrowed status
     /// properties of vertices, halfedges, edges and faces. This is useful when
     /// collapsing edges in a hot loop, to avoid repeated borrows of
-    /// properties. `hache` is used for temporary storage. Reusing the same
+    /// properties. `hcache` is used for temporary storage. Reusing the same
     /// `hcache` for many collapses avoids repeated allocations.
     fn collapse_edge(
         &mut self,
