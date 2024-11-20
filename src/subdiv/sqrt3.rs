@@ -6,7 +6,7 @@ use std::{
 
 use crate::{
     subdiv::check_for_deleted, topol::Topology, EditableTopology, Error, FloatScalarAdaptor,
-    Handle, HasIterators, HasTopology, PolyMeshT, EH,
+    Handle, HasIterators, HasTopology, PolyMeshT, VPropRef, EH,
 };
 
 const WEIGHTS: [(f64, f64); 64] = [
@@ -99,7 +99,11 @@ where
         + Mul<A::Scalar, Output = A::Vector>
         + Div<A::Scalar, Output = A::Vector>,
 {
-    fn compute_edge_points(mesh: &Topology, e: EH, points: &[A::Vector]) -> (A::Vector, A::Vector) {
+    fn compute_edge_points(
+        mesh: &Topology,
+        e: EH,
+        points: &VPropRef<A::Vector>,
+    ) -> (A::Vector, A::Vector) {
         let h = {
             let mut h = e.halfedge(false);
             if !h.is_boundary(mesh) {
@@ -108,10 +112,10 @@ where
             h
         };
         let (p1, p2, p3, p4) = (
-            points[h.next(mesh).head(mesh).index() as usize],
-            points[h.head(mesh).index() as usize],
-            points[h.tail(mesh).index() as usize],
-            points[h.prev(mesh).tail(mesh).index() as usize],
+            points[h.next(mesh).head(mesh)],
+            points[h.head(mesh)],
+            points[h.tail(mesh)],
+            points[h.prev(mesh).tail(mesh)],
         );
         (
             (p1 + p2 * A::scalarf64(16.0) + p3 * A::scalarf64(10.0)) / A::scalarf64(27.0),

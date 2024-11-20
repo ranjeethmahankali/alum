@@ -1,10 +1,10 @@
 use crate::{
-    element::{Handle, EH, FH, HH, VH},
+    element::{EH, FH, HH, VH},
     error::Error,
     iterator::HasIterators,
     status::Status,
     topol::Topology,
-    Adaptor, HasTopology, PolyMeshT,
+    Adaptor, EPropRef, EPropRefMut, FPropRefMut, HPropRefMut, HasTopology, PolyMeshT, VPropRefMut,
 };
 
 /// This trait defines functions to edit the topology of a mesh, with typical
@@ -20,19 +20,17 @@ pub trait EditableTopology: HasIterators {
     fn check_edge_collapse(
         &self,
         h: HH,
-        edge_status: &[Status],
-        vertex_status: &mut [Status],
+        edge_status: &EPropRef<Status>,
+        vertex_status: &mut VPropRefMut<Status>,
     ) -> bool {
         // Check if already deleted.
-        if edge_status[h.edge().index() as usize].deleted() {
+        if edge_status[h.edge()].deleted() {
             return false;
         }
         let oh = h.opposite();
         let v0 = oh.head(self);
         let v1 = h.head(self);
-        if vertex_status[v0.index() as usize].deleted()
-            || vertex_status[v1.index() as usize].deleted()
-        {
+        if vertex_status[v0].deleted() || vertex_status[v1].deleted() {
             return false;
         }
         let htriangle = match h.face(self) {
@@ -86,16 +84,13 @@ pub trait EditableTopology: HasIterators {
         let vl = h.next(self).head(self);
         let vr = oh.next(self).head(self);
         for v in self.vv_ccw_iter(v0) {
-            vertex_status[v.index() as usize].set_tagged(false);
+            vertex_status[v].set_tagged(false);
         }
         for v in self.vv_ccw_iter(v1) {
-            vertex_status[v.index() as usize].set_tagged(true);
+            vertex_status[v].set_tagged(true);
         }
         for v in self.vv_ccw_iter(v0) {
-            if vertex_status[v.index() as usize].tagged()
-                && !(v == vl && htriangle)
-                && !(v == vr && ohtriangle)
-            {
+            if vertex_status[v].tagged() && !(v == vl && htriangle) && !(v == vr && ohtriangle) {
                 return false;
             }
         }
@@ -120,11 +115,7 @@ pub trait EditableTopology: HasIterators {
         }
         // Check again if left and right are the same vertex.
         if let Some(h) = v0.halfedge(self) {
-            if vertex_status[h.head(self).index() as usize].tagged()
-                && vl == vr
-                && htriangle
-                && ohtriangle
-            {
+            if vertex_status[h.head(self)].tagged() && vl == vr && htriangle && ohtriangle {
                 return false;
             }
         }
@@ -150,9 +141,9 @@ pub trait EditableTopology: HasIterators {
     fn collapse_degenerate_triangle(
         &mut self,
         h: HH,
-        hstatus: &mut [Status],
-        estatus: &mut [Status],
-        fstatus: &mut [Status],
+        hstatus: &mut HPropRefMut<Status>,
+        estatus: &mut EPropRefMut<Status>,
+        fstatus: &mut FPropRefMut<Status>,
     ) {
         let topol = self.topology_mut();
         let h1 = h.next(topol);
@@ -185,11 +176,11 @@ pub trait EditableTopology: HasIterators {
         }
         // Delete stuff.
         if let Some(fh) = fh {
-            fstatus[fh.index() as usize].set_deleted(true);
+            fstatus[fh].set_deleted(true);
         }
-        estatus[h.edge().index() as usize].set_deleted(true);
-        hstatus[h.index() as usize].set_deleted(true);
-        hstatus[o.index() as usize].set_deleted(true);
+        estatus[h.edge()].set_deleted(true);
+        hstatus[h].set_deleted(true);
+        hstatus[o].set_deleted(true);
     }
 
     /// Collapse the given edge.
@@ -204,10 +195,10 @@ pub trait EditableTopology: HasIterators {
     fn collapse_edge(
         &mut self,
         h: HH,
-        vstatus: &mut [Status],
-        hstatus: &mut [Status],
-        estatus: &mut [Status],
-        fstatus: &mut [Status],
+        vstatus: &mut VPropRefMut<Status>,
+        hstatus: &mut HPropRefMut<Status>,
+        estatus: &mut EPropRefMut<Status>,
+        fstatus: &mut FPropRefMut<Status>,
         hcache: &mut Vec<HH>,
     ) {
         let topol = self.topology_mut();
@@ -244,10 +235,10 @@ pub trait EditableTopology: HasIterators {
         topol.adjust_outgoing_halfedge(vh);
         topol.vertex_mut(vo).halfedge = None;
         // Delete stuff
-        estatus[h.edge().index() as usize].set_deleted(true);
-        vstatus[vo.index() as usize].set_deleted(true);
-        hstatus[h.index() as usize].set_deleted(true);
-        hstatus[o.index() as usize].set_deleted(true);
+        estatus[h.edge()].set_deleted(true);
+        vstatus[vo].set_deleted(true);
+        hstatus[h].set_deleted(true);
+        hstatus[o].set_deleted(true);
         // If the loops that used to contain the halfedges that were collapsed
         // and deleted had a valance of 3, they are now degenerate. So we need
         // to collapse those loops.
