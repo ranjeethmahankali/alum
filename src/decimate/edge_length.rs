@@ -55,20 +55,50 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::{obj::test::bunny_mesh, HasDecimation, HasTopology};
-
     use super::EdgeLengthDecimater;
+    use crate::{obj::test::bunny_mesh, Handle, HasDecimation, HasIterators, HasTopology};
 
     #[test]
     fn t_bunny_edge_length_decimate() {
         let mut mesh = bunny_mesh();
-        let nbefore = mesh.num_faces();
+        let (nv, ne, nf) = (mesh.num_vertices(), mesh.num_edges(), mesh.num_faces());
+        let nloops_before = {
+            let mut visited = mesh.create_halfedge_prop(false);
+            let mut visited = visited.try_borrow_mut().unwrap();
+            mesh.halfedges().fold(0usize, |count, h| {
+                if !h.is_boundary(&mesh) || visited[h.index() as usize] {
+                    count
+                } else {
+                    for h2 in mesh.loop_ccw_iter(h) {
+                        visited[h2.index() as usize] = true;
+                    }
+                    count + 1
+                }
+            })
+        };
         let mut decimater = EdgeLengthDecimater::new(0.1);
         mesh.decimate(&mut decimater, 2000)
             .expect("Cannot decimate");
         mesh.garbage_collection()
             .expect("Failed to garbage collect");
         mesh.check_topology().expect("Topological errors found");
-        assert!(mesh.num_faces() < nbefore);
+        assert_eq!(nv - 2000, mesh.num_vertices());
+        assert!(mesh.num_edges() < ne);
+        assert!(mesh.num_faces() < nf);
+        let nloops_after = {
+            let mut visited = mesh.create_halfedge_prop(false);
+            let mut visited = visited.try_borrow_mut().unwrap();
+            mesh.halfedges().fold(0usize, |count, h| {
+                if !h.is_boundary(&mesh) || visited[h.index() as usize] {
+                    count
+                } else {
+                    for h2 in mesh.loop_ccw_iter(h) {
+                        visited[h2.index() as usize] = true;
+                    }
+                    count + 1
+                }
+            })
+        };
+        assert_eq!(nloops_before, nloops_after);
     }
 }

@@ -427,8 +427,8 @@ where
 #[cfg(test)]
 mod test {
     use crate::{
-        decimate::quadric::QuadricType, obj::test::bunny_mesh, HasDecimation, HasTopology,
-        QuadricDecimater,
+        decimate::quadric::QuadricType, obj::test::bunny_mesh, Handle, HasDecimation, HasIterators,
+        HasTopology, QuadricDecimater,
     };
 
     #[test]
@@ -436,6 +436,20 @@ mod test {
         let mut mesh = bunny_mesh();
         let mut decimater = QuadricDecimater::new(&mesh, QuadricType::Triangle).unwrap();
         let (nv, ne, nf) = (mesh.num_vertices(), mesh.num_edges(), mesh.num_faces());
+        let nloops_before = {
+            let mut visited = mesh.create_halfedge_prop(false);
+            let mut visited = visited.try_borrow_mut().unwrap();
+            mesh.halfedges().fold(0usize, |count, h| {
+                if !h.is_boundary(&mesh) || visited[h.index() as usize] {
+                    count
+                } else {
+                    for h2 in mesh.loop_ccw_iter(h) {
+                        visited[h2.index() as usize] = true;
+                    }
+                    count + 1
+                }
+            })
+        };
         mesh.decimate(&mut decimater, 500).unwrap();
         mesh.garbage_collection()
             .expect("Garbage collection failed");
@@ -443,5 +457,64 @@ mod test {
         assert_eq!(nv - 500, mesh.num_vertices());
         assert!(mesh.num_edges() < ne);
         assert!(mesh.num_faces() < nf);
+        let nloops_after = {
+            let mut visited = mesh.create_halfedge_prop(false);
+            let mut visited = visited.try_borrow_mut().unwrap();
+            mesh.halfedges().fold(0usize, |count, h| {
+                if !h.is_boundary(&mesh) || visited[h.index() as usize] {
+                    count
+                } else {
+                    for h2 in mesh.loop_ccw_iter(h) {
+                        visited[h2.index() as usize] = true;
+                    }
+                    count + 1
+                }
+            })
+        };
+        assert_eq!(nloops_before, nloops_after);
+    }
+
+    #[test]
+    fn t_bunny_probabilistic_quadrics() {
+        let mut mesh = bunny_mesh();
+        let mut decimater =
+            QuadricDecimater::new(&mesh, QuadricType::ProbabilisticTriangle).unwrap();
+        let (nv, ne, nf) = (mesh.num_vertices(), mesh.num_edges(), mesh.num_faces());
+        let nloops_before = {
+            let mut visited = mesh.create_halfedge_prop(false);
+            let mut visited = visited.try_borrow_mut().unwrap();
+            mesh.halfedges().fold(0usize, |count, h| {
+                if !h.is_boundary(&mesh) || visited[h.index() as usize] {
+                    count
+                } else {
+                    for h2 in mesh.loop_ccw_iter(h) {
+                        visited[h2.index() as usize] = true;
+                    }
+                    count + 1
+                }
+            })
+        };
+        mesh.decimate(&mut decimater, 500).unwrap();
+        mesh.garbage_collection()
+            .expect("Garbage collection failed");
+        mesh.check_topology().expect("Topological errors found");
+        assert_eq!(nv - 500, mesh.num_vertices());
+        assert!(mesh.num_edges() < ne);
+        assert!(mesh.num_faces() < nf);
+        let nloops_after = {
+            let mut visited = mesh.create_halfedge_prop(false);
+            let mut visited = visited.try_borrow_mut().unwrap();
+            mesh.halfedges().fold(0usize, |count, h| {
+                if !h.is_boundary(&mesh) || visited[h.index() as usize] {
+                    count
+                } else {
+                    for h2 in mesh.loop_ccw_iter(h) {
+                        visited[h2.index() as usize] = true;
+                    }
+                    count + 1
+                }
+            })
+        };
+        assert_eq!(nloops_before, nloops_after);
     }
 }
