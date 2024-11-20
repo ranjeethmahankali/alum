@@ -3,6 +3,7 @@ use std::ops::{Mul, Sub};
 
 use super::Decimater;
 
+/// Decimater implementation that prioritizes the collapse of short edges.
 pub struct EdgeLengthDecimater<const DIM: usize, A>
 where
     A: DotProductAdaptor<DIM>,
@@ -18,6 +19,9 @@ where
     A::Vector: Sub<Output = A::Vector>,
     A::Scalar: PartialOrd + Mul<Output = A::Scalar>,
 {
+    /// Create a new EdgeLengthDecimater.
+    ///
+    /// Edges longer than `max_length` will not be collapsed.
     pub fn new(max_length: A::Scalar) -> Self {
         EdgeLengthDecimater {
             max_length: max_length * max_length,
@@ -33,6 +37,7 @@ where
 {
     type Cost = A::Scalar;
 
+    /// Cost of collapsing an edge, i.e. the squared length of the edge.
     fn collapse_cost(&self, mesh: &PolyMeshT<DIM, A>, h: HH) -> Option<Self::Cost> {
         let points = mesh.points();
         let points = points.try_borrow().ok()?;

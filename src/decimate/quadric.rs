@@ -302,6 +302,14 @@ where
     }
 }
 
+/// This [`Decimater`](Decimater<MeshT>) implementation prioritizes collapses
+/// that minimize the quadric error.
+///
+/// The type of quadric this decimater uses is determined by how it was
+/// initialized. See [this](QuadricDecimater::new) for more information. This
+/// uses [this
+/// implementation](https://github.com/Philip-Trettner/probabilistic-quadrics)
+/// by Philip Trettner.
 pub struct QuadricDecimater<A>
 where
     A: CrossProductAdaptor + VectorNormalizeAdaptor<3> + FloatScalarAdaptor<3>,
@@ -314,8 +322,11 @@ where
     next: Quadric<A>,
 }
 
+/// Type of quadric error to be used by the [`QuadricDecimater`].
 pub enum QuadricType {
+    /// Triangle quadric.
     Triangle,
+    /// Probabilistic triangle quadric.
     ProbabilisticTriangle,
 }
 
@@ -336,6 +347,10 @@ where
         + Div<A::Scalar, Output = A::Vector>
         + Mul<A::Scalar, Output = A::Vector>,
 {
+    /// Create a new QuadricDecimater.
+    ///
+    /// `qtype` determines the type of quadric error used to prioritize edge
+    /// collapses.
     pub fn new(mesh: &PolyMeshT<3, A>, qtype: QuadricType) -> Result<Self, Error> {
         let points = mesh.points();
         let points = points.try_borrow()?;
@@ -403,18 +418,23 @@ where
 {
     type Cost = A::Scalar;
 
+    /// The cost of the collapse, i.e. the quadric error.
     fn collapse_cost(&self, mesh: &PolyMeshT<3, A>, h: HH) -> Option<A::Scalar> {
         let q = self.quadrics[h.tail(mesh).index() as usize]
             + self.quadrics[h.head(mesh).index() as usize];
         Some(q.residual(q.minimizer()))
     }
 
+    /// Compute the sum of the quadrics from vertices about to be
+    /// collapsed. This is used in [`after_collapse`].
     fn before_collapse(&mut self, mesh: &PolyMeshT<3, A>, h: HH) -> Result<(), Error> {
         self.next = self.quadrics[h.tail(mesh).index() as usize]
             + self.quadrics[h.head(mesh).index() as usize];
         Ok(())
     }
 
+    /// The vertex quadric is updated to be the sum of the two vertices before
+    /// collapse, and it is moved to a position that minimizes this quadric.
     fn after_collapse(&mut self, mesh: &PolyMeshT<3, A>, v: VH) -> Result<(), Error> {
         let mut points = mesh.points();
         let mut points = points.try_borrow_mut()?;
