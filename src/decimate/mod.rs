@@ -41,17 +41,41 @@ use crate::{topol::Topology, EditableTopology, Error, Handle, HasIterators, Stat
 use queue::Queue;
 use std::cmp::Ordering;
 
+/// An implementation of this trait is required to control the mesh decimation.
+///
+/// You can either write your own implementation of this trait, or use one of
+/// the implementations that come with this crate out of the box:
+///
+/// - [`Decimater<MeshT>::collapse_cost`] must return the cost of a collapse. The
+///   collapses with low cost will be prioritized.
+///
+/// - [`Decimater<MeshT>::before_collapse`], [`Decimater<MeshT>::after_collapse`]
+///   functions can be used to keep track of the mesh, update the locations of
+///   vertices, normals etc.
 pub trait Decimater<MeshT>
 where
     MeshT: HasIterators,
     Self::Cost: PartialOrd,
 {
+    /// This is the type of cost returned by this decimater implementation. This
+    /// must implement [`PartialOrd`] to allow for comparison, to prioritze edge
+    /// collapses with the lowest cost.
     type Cost;
 
+    /// The cost of a halfedge collapse.
+    ///
+    /// The cost of collapsing the tail of `h` toward the head of `h` must be
+    /// returned. If `None` is returned, it means this collapse is not allowed.
     fn collapse_cost(&self, mesh: &MeshT, h: HH) -> Option<Self::Cost>;
 
+    /// This can be used to keep track of the changes being done to the mesh.
+    ///
+    /// `h` is the edge that is about to be collapsed.
     fn before_collapse(&mut self, mesh: &MeshT, h: HH) -> Result<(), Error>;
 
+    /// This can be used to keep track of the changes being done to the mesh.
+    ///
+    /// `v` is the vertex resulting from the edge that was just collapsed.
     fn after_collapse(&mut self, mesh: &MeshT, v: VH) -> Result<(), Error>;
 }
 
