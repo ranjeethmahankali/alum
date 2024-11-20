@@ -44,6 +44,10 @@ where
             if mesh.positions.len() % 3 != 0 {
                 return Err(Error::IncorrectNumberOfCoordinates(mesh.positions.len()));
             }
+            for triplet in mesh.positions.chunks(3) {
+                // DEBUG
+                println!("({}, {}, {})", triplet[0], triplet[1], triplet[2]);
+            }
             positions.clear();
             positions.extend(mesh.positions.chunks(3).map(|triplet| {
                 A::vector([

@@ -5,7 +5,7 @@ use crate::{
 };
 use std::{
     fmt::Display,
-    ops::{Add, AddAssign, Div, Mul, Neg, Sub, SubAssign},
+    ops::{Add, Div, Mul, Neg, Sub},
 };
 
 // Credit to:
@@ -146,8 +146,8 @@ where
         let a00 = self.a00;
         let a10 = self.a01;
         let a20 = self.a02;
-        let mut a11 = self.a12;
-        let mut a21 = self.a22;
+        let mut a11 = self.a11;
+        let mut a21 = self.a12;
         let mut a22 = self.a22;
         let mut x0 = self.b0;
         let mut x1 = self.b1;
@@ -194,32 +194,12 @@ where
     }
 }
 
-impl<A> AddAssign for Quadric<A>
-where
-    A: Adaptor<3>,
-    A::Scalar: AddAssign,
-{
-    fn add_assign(&mut self, rhs: Self) {
-        self.a00 += rhs.a00;
-        self.a01 += rhs.a01;
-        self.a02 += rhs.a02;
-        self.a11 += rhs.a11;
-        self.a12 += rhs.a12;
-        self.a22 += rhs.a22;
-        self.b0 += rhs.b0;
-        self.b1 += rhs.b1;
-        self.b2 += rhs.b2;
-        self.c += rhs.c;
-    }
-}
-
 impl<A> Add for Quadric<A>
 where
     A: Adaptor<3>,
     A::Scalar: Add<Output = A::Scalar>,
 {
     type Output = Self;
-
     fn add(self, rhs: Self) -> Self::Output {
         Self {
             a00: self.a00 + rhs.a00,
@@ -232,48 +212,6 @@ where
             b1: self.b1 + rhs.b1,
             b2: self.b2 + rhs.b2,
             c: self.c + rhs.c,
-        }
-    }
-}
-
-impl<A> SubAssign for Quadric<A>
-where
-    A: Adaptor<3>,
-    A::Scalar: SubAssign,
-{
-    fn sub_assign(&mut self, rhs: Self) {
-        self.a00 -= rhs.a00;
-        self.a01 -= rhs.a01;
-        self.a02 -= rhs.a02;
-        self.a11 -= rhs.a11;
-        self.a12 -= rhs.a12;
-        self.a22 -= rhs.a22;
-        self.b0 -= rhs.b0;
-        self.b1 -= rhs.b1;
-        self.b2 -= rhs.b2;
-        self.c -= rhs.c;
-    }
-}
-
-impl<A> Neg for Quadric<A>
-where
-    A: Adaptor<3>,
-    A::Scalar: Neg<Output = A::Scalar>,
-{
-    type Output = Self;
-
-    fn neg(self) -> Self::Output {
-        Self {
-            a00: -self.a00,
-            a01: -self.a01,
-            a02: -self.a02,
-            a11: -self.a11,
-            a12: -self.a12,
-            a22: -self.a22,
-            b0: -self.b0,
-            b1: -self.b1,
-            b2: -self.b2,
-            c: -self.c,
         }
     }
 }
@@ -323,16 +261,6 @@ where
                     })
             })
             .collect();
-
-        // DEBUG
-        eprintln!("============================");
-        for fq in fqs.iter() {
-            eprintln!(
-                "{}, {}, {}, {}, {}, {}, {}, {}, {}, {}",
-                fq.a00, fq.a01, fq.a02, fq.a11, fq.a12, fq.a22, fq.b0, fq.b1, fq.b2, fq.c
-            );
-        }
-
         Ok(Self {
             quadrics: mesh
                 .vertices()
@@ -392,24 +320,28 @@ where
 
 #[cfg(test)]
 mod test {
-    use std::fs;
+    use crate::{obj::test::bunny_mesh, HasDecimation, QuadricDecimater};
 
     #[test]
     fn t_bunny_quadrics() {
-        let reference = fs::read_to_string("/home/rnjth94/dev/alum/reference.txt").unwrap();
-        let actual = fs::read_to_string("/home/rnjth94/dev/alum/actual.txt").unwrap();
-        assert_eq!(reference.lines().count(), actual.lines().count());
-        for (li, (lref, lact)) in reference.lines().zip(actual.lines()).enumerate() {
-            for (lword, rword) in lref.split(", ").zip(lact.split(", ")) {
-                let lval: f64 = lword.parse().unwrap();
-                let rval: f64 = rword.parse().unwrap();
-                let err = f64::abs(lval - rval);
-                println!(
-                    "Line: {}, Error:{}; left: {}; right: {}",
-                    li, err, lword, rword
-                );
-                assert!(err < 1e-7);
-            }
-        }
+        let mut mesh = bunny_mesh();
+        let mut decimater = QuadricDecimater::new(&mesh).unwrap();
+        mesh.decimate(&mut decimater, 10).unwrap();
+        todo!()
+        // let reference = fs::read_to_string("/home/rnjth94/dev/alum/reference.txt").unwrap();
+        // let actual = fs::read_to_string("/home/rnjth94/dev/alum/actual.txt").unwrap();
+        // assert_eq!(reference.lines().count(), actual.lines().count());
+        // for (li, (lref, lact)) in reference.lines().zip(actual.lines()).enumerate() {
+        //     for (lword, rword) in lref.split(", ").zip(lact.split(", ")) {
+        //         let lval: f64 = lword.parse().unwrap();
+        //         let rval: f64 = rword.parse().unwrap();
+        //         let err = f64::abs(lval - rval);
+        //         println!(
+        //             "Line: {}, Error:{}; left: {}; right: {}",
+        //             li, err, lword, rword
+        //         );
+        //         assert!(err < 1e-7);
+        //     }
+        // }
     }
 }
