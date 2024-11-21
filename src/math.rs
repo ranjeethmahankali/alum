@@ -7,7 +7,7 @@ use crate::{
         VectorAngleAdaptor, VectorLengthAdaptor, VectorNormalizeAdaptor,
     },
     property::{FProperty, VProperty},
-    HasTopology,
+    HasTopology, VPropRef,
 };
 use std::ops::{Add, AddAssign, Div, Mul, Neg, Sub};
 
@@ -34,7 +34,7 @@ where
     /// Calling this function in a hot loop with borrowed points property, can
     /// be faster than [`Self::try_calc_face_normal`] because it avoids repeated
     /// borrows.
-    pub fn calc_face_normal(&self, f: FH, points: &[A::Vector]) -> A::Vector {
+    pub fn calc_face_normal(&self, f: FH, points: &VPropRef<A::Vector>) -> A::Vector {
         // Use newell's method to compute the normal.
         let (nverts, x, y, z) = {
             self.fh_ccw_iter(f).fold(
@@ -46,8 +46,8 @@ where
                 ),
                 |(nverts, x, y, z): (usize, A::Scalar, A::Scalar, A::Scalar), h| {
                     let (a, b) = {
-                        let pc = points[h.tail(self).index() as usize];
-                        let pn = points[h.head(self).index() as usize];
+                        let pc = points[h.tail(self)];
+                        let pn = points[h.head(self)];
                         (pc - pn, pc + pn)
                     };
                     (
@@ -97,7 +97,7 @@ where
     /// of the vertices. Calling this function with borrowed `points` in a hot
     /// loop can be faster than [`Self::try_calc_vertex_normal_accurate`] by
     /// avoiding repeated borrows.
-    pub fn calc_vertex_normal_accurate(&self, v: VH, points: &[A::Vector]) -> A::Vector {
+    pub fn calc_vertex_normal_accurate(&self, v: VH, points: &VPropRef<A::Vector>) -> A::Vector {
         A::normalized_vec(
             match v.halfedge(self) {
                 Some(h) => {
@@ -167,14 +167,11 @@ where
     /// Compute the centroid of a face as the average position of the incident vertices.
     ///
     /// `points` must be the positions of the vertices.
-    pub fn calc_face_centroid(&self, f: FH, points: &[A::Vector]) -> A::Vector {
+    pub fn calc_face_centroid(&self, f: FH, points: &VPropRef<A::Vector>) -> A::Vector {
         let (denom, total) = self.fv_ccw_iter(f).fold(
             (A::scalarf64(0.0), A::zero_vector()),
             |(denom, total): (A::Scalar, A::Vector), v: VH| {
-                (
-                    denom + A::scalarf64(1.0),
-                    total + points[v.index() as usize],
-                )
+                (denom + A::scalarf64(1.0), total + points[v])
             },
         );
         total / denom
@@ -243,8 +240,8 @@ where
 
     /// Compute the vector spanning from the start of the halfedge to the head
     /// of the halfedge.
-    pub fn calc_halfedge_vector(&self, h: HH, points: &[A::Vector]) -> A::Vector {
-        points[h.head(self).index() as usize] - points[h.tail(self).index() as usize]
+    pub fn calc_halfedge_vector(&self, h: HH, points: &VPropRef<A::Vector>) -> A::Vector {
+        points[h.head(self)] - points[h.tail(self)]
     }
 }
 
@@ -261,7 +258,7 @@ where
     /// previous halfedge. Calling this function in a hot loop with borrowed
     /// `points` can be faster than [`Self::try_calc_sector_normal`] by avoiding
     /// repeated borrows.
-    pub fn calc_sector_normal(&self, h: HH, points: &[A::Vector]) -> A::Vector {
+    pub fn calc_sector_normal(&self, h: HH, points: &VPropRef<A::Vector>) -> A::Vector {
         A::cross_product(
             self.calc_halfedge_vector(h.prev(&self.topol), points),
             self.calc_halfedge_vector(h, points),
@@ -290,7 +287,7 @@ where
     /// previous halfedge. Calling this function in a hotloop with borrowed
     /// points can be faster than [`Self::try_calc_sector_area`] by avoiding
     /// repeated borrows.
-    pub fn calc_sector_area(&self, h: HH, points: &[A::Vector]) -> A::Scalar {
+    pub fn calc_sector_area(&self, h: HH, points: &VPropRef<A::Vector>) -> A::Scalar {
         A::vector_length(self.calc_sector_normal(h, points)) * A::scalarf64(0.5)
     }
 
@@ -308,16 +305,14 @@ where
     /// For non-planar polygonal faces, the computed area will be
     /// approximate. This is because the area is computed as the sum of
     /// triangles, present in the default triangulation of the face.
-    pub fn calc_face_area(&self, f: FH, points: &[A::Vector]) -> A::Scalar {
+    pub fn calc_face_area(&self, f: FH, points: &VPropRef<A::Vector>) -> A::Scalar {
         self.topol
             .triangulated_face_vertices(f)
             .fold(A::scalarf64(0.0), |total, vs| {
-                let p0 = points[vs[0].index() as usize];
+                let p0 = points[vs[0]];
                 total
-                    + A::vector_length(A::cross_product(
-                        points[vs[1].index() as usize] - p0,
-                        points[vs[2].index() as usize] - p0,
-                    )) * A::scalarf64(0.5)
+                    + A::vector_length(A::cross_product(points[vs[1]] - p0, points[vs[2]] - p0))
+                        * A::scalarf64(0.5)
             })
     }
 
@@ -333,7 +328,7 @@ where
     /// Compute the total area of this mesh. `points` must be the positions of vertices.
     ///
     /// Calling this function with borrowed `points` property avoids an internal borrow.
-    pub fn calc_area(&self, points: &[A::Vector]) -> A::Scalar {
+    pub fn calc_area(&self, points: &VPropRef<A::Vector>) -> A::Scalar {
         self.faces().fold(A::scalarf64(0.0), |total, f| {
             total + self.calc_face_area(f, points)
         })
@@ -361,7 +356,7 @@ where
     A::Vector: Sub<Output = A::Vector>,
 {
     /// Compute the length of a mesh edge. `points` must be the positions of the vertices.
-    pub fn calc_edge_length(&self, e: EH, points: &[A::Vector]) -> A::Scalar {
+    pub fn calc_edge_length(&self, e: EH, points: &VPropRef<A::Vector>) -> A::Scalar {
         A::vector_length(self.calc_halfedge_vector(e.halfedge(false), points))
     }
 
@@ -397,7 +392,7 @@ where
 {
     /// Compute the squared length of a mesh edge. `points` must be the
     /// positions of the vertices.
-    pub fn calc_edge_length_sqr(&self, e: EH, points: &[A::Vector]) -> A::Scalar {
+    pub fn calc_edge_length_sqr(&self, e: EH, points: &VPropRef<A::Vector>) -> A::Scalar {
         let ev = self.calc_halfedge_vector(e.halfedge(false), points);
         A::dot_product(ev, ev)
     }
@@ -439,18 +434,14 @@ where
     ///
     /// Calling this function with borrowed `points` property avoids an internal
     /// borrow of properties.
-    pub fn calc_volume(&self, points: &[A::Vector]) -> A::Scalar {
+    pub fn calc_volume(&self, points: &VPropRef<A::Vector>) -> A::Scalar {
         if self.halfedges().any(|h| h.is_boundary(&self.topol)) {
             // Not closed.
             return A::scalarf64(0.0);
         }
         self.triangulated_vertices()
             .fold(A::scalarf64(0.0), |total, vs| {
-                let (p0, p1, p2) = (
-                    points[vs[0].index() as usize],
-                    points[vs[1].index() as usize],
-                    points[vs[2].index() as usize],
-                );
+                let (p0, p1, p2) = (points[vs[0]], points[vs[1]], points[vs[2]]);
                 total + (A::dot_product(p0, A::cross_product(p1 - p0, p2 - p0)) / A::scalarf64(6.0))
             })
     }
@@ -501,7 +492,7 @@ where
     /// The the sector normals of the halfedges are used to compute the dihedral
     /// angle. This can be more accurate than
     /// [`Self::calc_dihedral_angle_fast`].
-    pub fn calc_dihedral_angle(&self, e: EH, points: &[A::Vector]) -> A::Scalar {
+    pub fn calc_dihedral_angle(&self, e: EH, points: &VPropRef<A::Vector>) -> A::Scalar {
         if e.is_boundary(self) {
             return A::scalarf64(0.0);
         }
@@ -533,7 +524,7 @@ where
     pub fn calc_dihedral_angle_fast(
         &self,
         e: EH,
-        points: &[A::Vector],
+        points: &VPropRef<A::Vector>,
         face_normals: &[A::Vector],
     ) -> A::Scalar {
         let h0 = e.halfedge(false);
@@ -579,7 +570,7 @@ where
     pub fn calc_sector_angle(
         &self,
         h: HH,
-        points: &[A::Vector],
+        points: &VPropRef<A::Vector>,
         face_normals: &[A::Vector],
     ) -> A::Scalar {
         let n0 = self.calc_halfedge_vector(h, points);
@@ -617,7 +608,7 @@ where
     /// Compute the vertex centroid, i.e. the average position of all the vertices.
     ///
     /// `points` must be the positions of vertices.
-    pub fn calc_vertex_centroid(&self, points: &[A::Vector]) -> A::Vector {
+    pub fn calc_vertex_centroid(&self, points: &VPropRef<A::Vector>) -> A::Vector {
         points.iter().fold(A::zero_vector(), |total, p| total + *p)
             / A::scalarf64(points.len() as f64)
     }
@@ -643,7 +634,7 @@ where
     /// Compute the area weighted centroid of the mesh.
     ///
     /// `points` must be the positions of vertices.
-    pub fn calc_area_centroid(&self, points: &[A::Vector]) -> A::Vector {
+    pub fn calc_area_centroid(&self, points: &VPropRef<A::Vector>) -> A::Vector {
         let (total, denom) = self.faces().fold(
             (A::zero_vector(), A::scalarf64(0.0)),
             |(total, denom), f| {
@@ -920,11 +911,10 @@ mod test {
             .expect("Cannot create a box primitive");
         let points = qbox.points();
         let points = points.try_borrow().expect("Cannot borrow points");
-        let points: &[glam::Vec3] = &points;
         for f in qbox.faces() {
-            let fnorm = qbox.calc_face_normal(f, points);
+            let fnorm = qbox.calc_face_normal(f, &points);
             for h in qbox.fh_ccw_iter(f) {
-                assert_eq!(qbox.calc_sector_normal(h, points), fnorm);
+                assert_eq!(qbox.calc_sector_normal(h, &points), fnorm);
             }
         }
     }
