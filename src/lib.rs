@@ -161,6 +161,9 @@ pub use mesh::{
     Adaptor, CrossProductAdaptor, DotProductAdaptor, FloatScalarAdaptor, PolyMeshT,
     VectorAngleAdaptor, VectorLengthAdaptor, VectorNormalizeAdaptor,
 };
-pub use property::{EProperty, FProperty, HProperty, Property, VProperty};
+pub use property::{
+    EPropRef, EPropRefMut, EProperty, FPropRef, FPropRefMut, FProperty, HPropRef, HPropRefMut,
+    HProperty, PropRef, PropRefMut, Property, VPropRef, VPropRefMut, VProperty,
+};
 pub use status::Status;
 pub use topol::HasTopology;

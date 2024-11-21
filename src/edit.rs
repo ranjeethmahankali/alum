@@ -1,10 +1,10 @@
 use crate::{
-    element::{Handle, EH, FH, HH, VH},
+    element::{EH, FH, HH, VH},
     error::Error,
     iterator::HasIterators,
     status::Status,
     topol::Topology,
-    Adaptor, HasTopology, PolyMeshT,
+    Adaptor, EPropRef, EPropRefMut, FPropRefMut, HPropRefMut, HasTopology, PolyMeshT, VPropRefMut,
 };
 
 /// This trait defines functions to edit the topology of a mesh, with typical
@@ -20,19 +20,17 @@ pub trait EditableTopology: HasIterators {
     fn check_edge_collapse(
         &self,
         h: HH,
-        edge_status: &[Status],
-        vertex_status: &mut [Status],
+        edge_status: &EPropRef<Status>,
+        vertex_status: &mut VPropRefMut<Status>,
     ) -> bool {
         // Check if already deleted.
-        if edge_status[h.edge().index() as usize].deleted() {
+        if edge_status[h.edge()].deleted() {
             return false;
         }
         let oh = h.opposite();
         let v0 = oh.head(self);
         let v1 = h.head(self);
-        if vertex_status[v0.index() as usize].deleted()
-            || vertex_status[v1.index() as usize].deleted()
-        {
+        if vertex_status[v0].deleted() || vertex_status[v1].deleted() {
             return false;
         }
         let htriangle = match h.face(self) {
@@ -86,16 +84,13 @@ pub trait EditableTopology: HasIterators {
         let vl = h.next(self).head(self);
         let vr = oh.next(self).head(self);
         for v in self.vv_ccw_iter(v0) {
-            vertex_status[v.index() as usize].set_tagged(false);
+            vertex_status[v].set_tagged(false);
         }
         for v in self.vv_ccw_iter(v1) {
-            vertex_status[v.index() as usize].set_tagged(true);
+            vertex_status[v].set_tagged(true);
         }
         for v in self.vv_ccw_iter(v0) {
-            if vertex_status[v.index() as usize].tagged()
-                && !(v == vl && htriangle)
-                && !(v == vr && ohtriangle)
-            {
+            if vertex_status[v].tagged() && !(v == vl && htriangle) && !(v == vr && ohtriangle) {
                 return false;
             }
         }
@@ -120,11 +115,7 @@ pub trait EditableTopology: HasIterators {
         }
         // Check again if left and right are the same vertex.
         if let Some(h) = v0.halfedge(self) {
-            if vertex_status[h.head(self).index() as usize].tagged()
-                && vl == vr
-                && htriangle
-                && ohtriangle
-            {
+            if vertex_status[h.head(self)].tagged() && vl == vr && htriangle && ohtriangle {
                 return false;
             }
         }
@@ -150,9 +141,9 @@ pub trait EditableTopology: HasIterators {
     fn collapse_degenerate_triangle(
         &mut self,
         h: HH,
-        hstatus: &mut [Status],
-        estatus: &mut [Status],
-        fstatus: &mut [Status],
+        hstatus: &mut HPropRefMut<Status>,
+        estatus: &mut EPropRefMut<Status>,
+        fstatus: &mut FPropRefMut<Status>,
     ) {
         let topol = self.topology_mut();
         let h1 = h.next(topol);
@@ -185,11 +176,11 @@ pub trait EditableTopology: HasIterators {
         }
         // Delete stuff.
         if let Some(fh) = fh {
-            fstatus[fh.index() as usize].set_deleted(true);
+            fstatus[fh].set_deleted(true);
         }
-        estatus[h.edge().index() as usize].set_deleted(true);
-        hstatus[h.index() as usize].set_deleted(true);
-        hstatus[o.index() as usize].set_deleted(true);
+        estatus[h.edge()].set_deleted(true);
+        hstatus[h].set_deleted(true);
+        hstatus[o].set_deleted(true);
     }
 
     /// Collapse the given edge.
@@ -204,10 +195,10 @@ pub trait EditableTopology: HasIterators {
     fn collapse_edge(
         &mut self,
         h: HH,
-        vstatus: &mut [Status],
-        hstatus: &mut [Status],
-        estatus: &mut [Status],
-        fstatus: &mut [Status],
+        vstatus: &mut VPropRefMut<Status>,
+        hstatus: &mut HPropRefMut<Status>,
+        estatus: &mut EPropRefMut<Status>,
+        fstatus: &mut FPropRefMut<Status>,
         hcache: &mut Vec<HH>,
     ) {
         let topol = self.topology_mut();
@@ -244,10 +235,10 @@ pub trait EditableTopology: HasIterators {
         topol.adjust_outgoing_halfedge(vh);
         topol.vertex_mut(vo).halfedge = None;
         // Delete stuff
-        estatus[h.edge().index() as usize].set_deleted(true);
-        vstatus[vo.index() as usize].set_deleted(true);
-        hstatus[h.index() as usize].set_deleted(true);
-        hstatus[o.index() as usize].set_deleted(true);
+        estatus[h.edge()].set_deleted(true);
+        vstatus[vo].set_deleted(true);
+        hstatus[h].set_deleted(true);
+        hstatus[o].set_deleted(true);
         // If the loops that used to contain the halfedges that were collapsed
         // and deleted had a valance of 3, they are now degenerate. So we need
         // to collapse those loops.
@@ -627,7 +618,7 @@ pub trait EditableTopology: HasIterators {
         let mut fstatus = fstatus.try_borrow_mut()?;
         let mut hstatus = topol.hstatus.clone();
         let mut hstatus = hstatus.try_borrow_mut()?;
-        if estatus[e.index() as usize].deleted() {
+        if estatus[e].deleted() {
             return Err(Error::DeletedEdge(e));
         }
         if !topol.edge_is_unique_link(e) {
@@ -659,10 +650,10 @@ pub trait EditableTopology: HasIterators {
         for (mesh, h) in topol.loop_ccw_iter_mut(n1).take_while(|(_, h)| *h != n0) {
             mesh.halfedge_mut(h).face = Some(f0);
         }
-        estatus[e.index() as usize].set_deleted(true);
-        hstatus[h0.index() as usize].set_deleted(true);
-        hstatus[h1.index() as usize].set_deleted(true);
-        fstatus[f1.index() as usize].set_deleted(true);
+        estatus[e].set_deleted(true);
+        hstatus[h0].set_deleted(true);
+        hstatus[h1].set_deleted(true);
+        fstatus[f1].set_deleted(true);
         Ok(f0)
     }
 
@@ -826,7 +817,7 @@ mod test {
             assert_eq!(
                 (1, 11),
                 qbox.edges().fold((0usize, 0usize), |(del, ndel), e| {
-                    if estatus[e.index() as usize].deleted() {
+                    if estatus[e].deleted() {
                         (del + 1, ndel)
                     } else {
                         (del, 1 + ndel)
@@ -842,7 +833,7 @@ mod test {
             assert_eq!(
                 (2, 22),
                 qbox.halfedges().fold((0usize, 0usize), |(del, ndel), h| {
-                    if hstatus[h.index() as usize].deleted() {
+                    if hstatus[h].deleted() {
                         (del + 1, ndel)
                     } else {
                         (del, 1 + ndel)
@@ -875,7 +866,7 @@ mod test {
             assert_eq!(
                 (3, 9),
                 qbox.edges().fold((0usize, 0usize), |(del, ndel), e| {
-                    if estatus[e.index() as usize].deleted() {
+                    if estatus[e].deleted() {
                         (del + 1, ndel)
                     } else {
                         (del, 1 + ndel)
@@ -891,7 +882,7 @@ mod test {
             assert_eq!(
                 (6, 18),
                 qbox.halfedges().fold((0usize, 0usize), |(del, ndel), h| {
-                    if hstatus[h.index() as usize].deleted() {
+                    if hstatus[h].deleted() {
                         (del + 1, ndel)
                     } else {
                         (del, 1 + ndel)
@@ -907,7 +898,7 @@ mod test {
             assert_eq!(
                 (1, 5),
                 qbox.faces().fold((0usize, 0usize), |(del, ndel), h| {
-                    if fstatus[h.index() as usize].deleted() {
+                    if fstatus[h].deleted() {
                         (del + 1, ndel)
                     } else {
                         (del, 1 + ndel)
@@ -917,7 +908,7 @@ mod test {
             assert_eq!(
                 (2, 3),
                 qbox.faces().fold((0usize, 0usize), |(t, q), f| {
-                    if fstatus[f.index() as usize].deleted() {
+                    if fstatus[f].deleted() {
                         (t, q)
                     } else {
                         match f.valence(&qbox) {
@@ -1064,13 +1055,13 @@ mod test {
         assert_eq!(
             1,
             qbox.edges()
-                .filter(|e| eprop.get(*e).expect("Cannot read property") != usize::default())
+                .filter(|e| eprop.get_cloned(*e).expect("Cannot read property") != usize::default())
                 .count()
         );
         assert_eq!(
             2,
             qbox.halfedges()
-                .filter(|h| hprop.get(*h).expect("Cannot read property") != usize::default())
+                .filter(|h| hprop.get_cloned(*h).expect("Cannot read property") != usize::default())
                 .count()
         );
         // Do the split and check topology.
@@ -1091,23 +1082,20 @@ mod test {
         assert_eq!(
             2,
             qbox.edges()
-                .filter(|e| eprop.get(*e).expect("Cannot read property") != usize::default())
+                .filter(|e| eprop.get_cloned(*e).expect("Cannot read property") != usize::default())
                 .count()
         );
         assert_eq!(
             4,
             qbox.halfedges()
-                .filter(|h| hprop.get(*h).expect("Cannot read property") != usize::default())
+                .filter(|h| hprop.get_cloned(*h).expect("Cannot read property") != usize::default())
                 .count()
         );
         let eprop = eprop.try_borrow().expect("Cannot borrow edge");
-        assert_eq!(
-            eprop[e.index() as usize],
-            eprop[hnew.edge().index() as usize]
-        );
+        assert_eq!(eprop[e], eprop[hnew.edge()]);
         let hprop = hprop.try_borrow().expect("Cannot borrow halfedge");
-        assert_eq!(hprop[h.index() as usize], hprop[hnew.index() as usize]);
-        assert_eq!(hprop[oh.index() as usize], hprop[ohnew.index() as usize]);
+        assert_eq!(hprop[h], hprop[hnew]);
+        assert_eq!(hprop[oh], hprop[ohnew]);
         qbox.check().expect("Topological errors found");
     }
 
@@ -1263,7 +1251,7 @@ mod test {
             // Set face indices as property values.
             let mut fprop = fprop.try_borrow_mut().expect("Cannot borrow property");
             for f in mesh.faces() {
-                fprop[f.index() as usize] = f.index() as u8;
+                fprop[f] = f.index() as u8;
             }
         }
         let vnew = mesh.add_vertex().expect("Cannot add vertex");
@@ -1285,7 +1273,7 @@ mod test {
         assert_eq!(
             (6, 3),
             mesh.faces().fold((0usize, 0usize), |(old, new), f| {
-                if fprop[f.index() as usize] == DEFAULT_PROP {
+                if fprop[f] == DEFAULT_PROP {
                     (old, 1 + new)
                 } else {
                     (1 + old, new)
@@ -1303,7 +1291,7 @@ mod test {
             // Set face indices as property values.
             let mut fprop = fprop.try_borrow_mut().expect("Cannot borrow property");
             for f in mesh.faces() {
-                fprop[f.index() as usize] = f.index() as u8;
+                fprop[f] = f.index() as u8;
             }
         }
         let vnew = mesh.add_vertex().expect("Cannot add vertex");
@@ -1325,7 +1313,7 @@ mod test {
         assert_eq!(
             (9, 0),
             mesh.faces().fold((0usize, 0usize), |(old, new), f| {
-                if fprop[f.index() as usize] == DEFAULT_PROP {
+                if fprop[f] == DEFAULT_PROP {
                     (old, 1 + new)
                 } else {
                     (1 + old, new)

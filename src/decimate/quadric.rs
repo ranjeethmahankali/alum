@@ -362,15 +362,15 @@ where
                     .fold(Quadric::<A>::default(), |q, vs| {
                         q + match qtype {
                             QuadricType::Triangle => Quadric::<A>::triangle_quadric(
-                                points[vs[0].index() as usize],
-                                points[vs[1].index() as usize],
-                                points[vs[2].index() as usize],
+                                points[vs[0]],
+                                points[vs[1]],
+                                points[vs[2]],
                             ),
                             QuadricType::ProbabilisticTriangle => {
                                 Quadric::<A>::probabilistic_triangle_quadric(
-                                    points[vs[0].index() as usize],
-                                    points[vs[1].index() as usize],
-                                    points[vs[2].index() as usize],
+                                    points[vs[0]],
+                                    points[vs[1]],
+                                    points[vs[2]],
                                     A::scalarf64(EDGE_RATIO)
                                         * mesh.fe_ccw_iter(f).fold(A::scalarf64(0.), |total, e| {
                                             total + mesh.calc_edge_length(e, &points)
@@ -438,7 +438,7 @@ where
     fn after_collapse(&mut self, mesh: &PolyMeshT<3, A>, v: VH) -> Result<(), Error> {
         let mut points = mesh.points();
         let mut points = points.try_borrow_mut()?;
-        points[v.index() as usize] = self.next.minimizer();
+        points[v] = self.next.minimizer();
         self.quadrics[v.index() as usize] = self.next;
         Ok(())
     }
@@ -447,7 +447,7 @@ where
 #[cfg(test)]
 mod test {
     use crate::{
-        decimate::quadric::QuadricType, obj::test::bunny_mesh, Handle, HasDecimation, HasIterators,
+        decimate::quadric::QuadricType, obj::test::bunny_mesh, HasDecimation, HasIterators,
         HasTopology, QuadricDecimater,
     };
 
@@ -460,11 +460,11 @@ mod test {
             let mut visited = mesh.create_halfedge_prop(false);
             let mut visited = visited.try_borrow_mut().unwrap();
             mesh.halfedges().fold(0usize, |count, h| {
-                if !h.is_boundary(&mesh) || visited[h.index() as usize] {
+                if !h.is_boundary(&mesh) || visited[h] {
                     count
                 } else {
                     for h2 in mesh.loop_ccw_iter(h) {
-                        visited[h2.index() as usize] = true;
+                        visited[h2] = true;
                     }
                     count + 1
                 }
@@ -481,11 +481,11 @@ mod test {
             let mut visited = mesh.create_halfedge_prop(false);
             let mut visited = visited.try_borrow_mut().unwrap();
             mesh.halfedges().fold(0usize, |count, h| {
-                if !h.is_boundary(&mesh) || visited[h.index() as usize] {
+                if !h.is_boundary(&mesh) || visited[h] {
                     count
                 } else {
                     for h2 in mesh.loop_ccw_iter(h) {
-                        visited[h2.index() as usize] = true;
+                        visited[h2] = true;
                     }
                     count + 1
                 }
@@ -504,11 +504,11 @@ mod test {
             let mut visited = mesh.create_halfedge_prop(false);
             let mut visited = visited.try_borrow_mut().unwrap();
             mesh.halfedges().fold(0usize, |count, h| {
-                if !h.is_boundary(&mesh) || visited[h.index() as usize] {
+                if !h.is_boundary(&mesh) || visited[h] {
                     count
                 } else {
                     for h2 in mesh.loop_ccw_iter(h) {
-                        visited[h2.index() as usize] = true;
+                        visited[h2] = true;
                     }
                     count + 1
                 }
@@ -525,11 +525,11 @@ mod test {
             let mut visited = mesh.create_halfedge_prop(false);
             let mut visited = visited.try_borrow_mut().unwrap();
             mesh.halfedges().fold(0usize, |count, h| {
-                if !h.is_boundary(&mesh) || visited[h.index() as usize] {
+                if !h.is_boundary(&mesh) || visited[h] {
                     count
                 } else {
                     for h2 in mesh.loop_ccw_iter(h) {
-                        visited[h2.index() as usize] = true;
+                        visited[h2] = true;
                     }
                     count + 1
                 }

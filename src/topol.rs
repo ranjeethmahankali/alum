@@ -269,22 +269,22 @@ pub trait HasTopology: Sized {
 
     /// The status of a vertex.
     fn vertex_status(&self, v: VH) -> Result<Status, Error> {
-        self.topology().vstatus.get(v)
+        self.topology().vstatus.get_cloned(v)
     }
 
     /// The status of a halfedge.
     fn halfedge_status(&self, h: HH) -> Result<Status, Error> {
-        self.topology().hstatus.get(h)
+        self.topology().hstatus.get_cloned(h)
     }
 
     /// The status of an edge.
     fn edge_status(&self, e: EH) -> Result<Status, Error> {
-        self.topology().estatus.get(e)
+        self.topology().estatus.get_cloned(e)
     }
 
     /// The status of a face.
     fn face_status(&self, f: FH) -> Result<Status, Error> {
-        self.topology().fstatus.get(f)
+        self.topology().fstatus.get_cloned(f)
     }
 
     /// The status of a vertex as mutable.
@@ -734,8 +734,8 @@ impl Topology {
             self.edge_status_mut(e)?.set_deleted(true);
             {
                 let mut hstatus = self.hstatus.try_borrow_mut()?;
-                hstatus[h0.index() as usize].set_deleted(true);
-                hstatus[h1.index() as usize].set_deleted(true);
+                hstatus[h0].set_deleted(true);
+                hstatus[h1].set_deleted(true);
             }
         }
         Ok(())
@@ -782,8 +782,8 @@ impl Topology {
             self.edge_status_mut(e)?.set_deleted(true);
             {
                 let mut hstatus = self.hstatus.try_borrow_mut()?;
-                hstatus[h0.index() as usize].set_deleted(true);
-                hstatus[h1.index() as usize].set_deleted(true);
+                hstatus[h0].set_deleted(true);
+                hstatus[h1].set_deleted(true);
             }
             // Update vertices.
             if v0.halfedge(self) == Some(h1) {
@@ -839,6 +839,7 @@ impl Topology {
                 // Use scope to borrow the status vector.
                 {
                     let status = self.vstatus.try_borrow()?;
+                    let status: &[Status] = &status;
                     while !status[left].deleted() && left < right {
                         left += 1;
                     }
@@ -866,6 +867,7 @@ impl Topology {
                 // Use scope to borrow the status vector.
                 {
                     let status = self.estatus.try_borrow()?;
+                    let status: &[Status] = &status;
                     while !status[left].deleted() && left < right {
                         left += 1;
                     }
@@ -897,6 +899,7 @@ impl Topology {
                 // Use scope to borrow the status vector.
                 {
                     let status = self.fstatus.try_borrow()?;
+                    let status: &[Status] = &status;
                     while !status[left].deleted() && left < right {
                         left += 1;
                     }

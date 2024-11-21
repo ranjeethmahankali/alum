@@ -1,6 +1,8 @@
 use std::{
     cell::{Ref, RefCell, RefMut},
+    fmt::Debug,
     marker::PhantomData,
+    ops::{Deref, DerefMut, Index, IndexMut},
     rc::{Rc, Weak},
 };
 
@@ -230,7 +232,7 @@ where
     }
 
     fn generic_ref(&self) -> Box<dyn GenericProperty<H>> {
-        Box::new(PropertyRef {
+        Box::new(WeakProperty {
             data: Rc::downgrade(&self.data),
             default: self.default,
         })
@@ -242,13 +244,16 @@ where
     /// enforce runtime borrow checking rules. If borrowing fails,
     /// [`Error::BorrowedPropertyAccess`] is returned, otherwise a reference to
     /// the property is returned.
-    pub fn try_borrow(&self) -> Result<Ref<[T]>, Error> {
-        Ok(Ref::map(
-            self.data
-                .try_borrow()
-                .map_err(|_| Error::BorrowedPropertyAccess)?,
-            |p| -> &[T] { p },
-        ))
+    pub fn try_borrow(&self) -> Result<PropRef<'_, H, T>, Error> {
+        Ok(PropRef {
+            buf: Ref::map(
+                self.data
+                    .try_borrow()
+                    .map_err(|_| Error::BorrowedPropertyAccess)?,
+                |p| -> &[T] { p },
+            ),
+            _phantom: PhantomData,
+        })
     }
 
     /// Try to borrow the property with mutable access.
@@ -257,24 +262,38 @@ where
     /// enforce runtime borrow checking rules. If borrowing fails,
     /// [`Error::BorrowedPropertyAccess`] is returned, otherwise a mutable
     /// reference to the property is returned.
-    pub fn try_borrow_mut(&mut self) -> Result<RefMut<[T]>, Error> {
-        Ok(RefMut::map(
-            self.data
-                .try_borrow_mut()
-                .map_err(|_| Error::BorrowedPropertyAccess)?,
-            |p| -> &mut [T] { p },
-        ))
+    pub fn try_borrow_mut(&mut self) -> Result<PropRefMut<'_, H, T>, Error> {
+        Ok(PropRefMut {
+            buf: RefMut::map(
+                self.data
+                    .try_borrow_mut()
+                    .map_err(|_| Error::BorrowedPropertyAccess)?,
+                |p| -> &mut [T] { p },
+            ),
+            _phantom: PhantomData,
+        })
     }
 
-    /// Read the property value of a mesh element.
+    /// Get a reference to the property value of the mesh element `h`.
     ///
     /// This function internally tries to borrow the property and returns an
     /// error if borrowing fails.
-    pub fn get(&self, h: H) -> Result<T, Error> {
-        Ok(*self
-            .try_borrow()?
-            .get(h.index() as usize)
-            .ok_or(Error::OutOfBoundsAccess)?)
+    pub fn get(&self, h: H) -> Result<Ref<T>, Error> {
+        Ok(Ref::map(
+            self.data
+                .try_borrow()
+                .map_err(|_| Error::BorrowedPropertyAccess)?,
+            |v| &v[h.index() as usize],
+        ))
+    }
+
+    /// Get the cloned property value of the mesh element `h`.
+    ///
+    /// The function internally tries to borrow the property and returns an
+    /// error if borrowing fails.
+    pub fn get_cloned(&self, h: H) -> Result<T, Error> {
+        let buf = self.try_borrow()?;
+        Ok(buf[h])
     }
 
     /// Get a mutable reference to the property value of a mesh element.
@@ -300,6 +319,135 @@ where
     }
 }
 
+/// Borrowed reference to a property.
+///
+/// While this reference is alive, the property cannot be borrowed mutably by
+/// anyone else. This property ref can be indexed into with the handle of type
+/// `H` corresponding to the mesh element.
+pub struct PropRef<'a, H, T>
+where
+    H: Handle,
+    T: Copy + Clone + 'static,
+{
+    buf: Ref<'a, [T]>,
+    _phantom: PhantomData<H>,
+}
+
+impl<'a, H, T> Index<H> for PropRef<'a, H, T>
+where
+    H: Handle,
+    T: Copy + Clone + 'static,
+{
+    type Output = T;
+
+    /// Get the refernce to the property of element corresponding to handle `h`.
+    fn index(&self, h: H) -> &Self::Output {
+        &self.buf[h.index() as usize]
+    }
+}
+
+impl<'a, H, T> Deref for PropRef<'a, H, T>
+where
+    H: Handle,
+    T: Copy + Clone + 'static,
+{
+    type Target = [T];
+
+    /// Borrow the underlying property buffer as a slice.
+    fn deref(&self) -> &Self::Target {
+        &self.buf
+    }
+}
+
+impl<'a, H, T> Debug for PropRef<'a, H, T>
+where
+    H: Handle,
+    T: Copy + Clone + Debug + 'static,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "[")?;
+        for val in self.buf.iter() {
+            writeln!(f, "{:?}, ", val)?;
+        }
+        writeln!(f, "[")
+    }
+}
+
+impl<'a, H, T> PartialEq<&[T]> for PropRef<'a, H, T>
+where
+    H: Handle,
+    T: Copy + Clone + PartialEq + 'static,
+{
+    fn eq(&self, other: &&[T]) -> bool {
+        let buf: &[T] = &self.buf;
+        buf == *other
+    }
+}
+
+/// Borrowed mutable reference to a property.
+///
+/// While this is alive, no one else can borrow the property either mutably or
+/// otherwise. This property ref can be indexed into with the handle of type `H`
+/// corresponding to the mesh element.
+pub struct PropRefMut<'a, H, T>
+where
+    H: Handle,
+    T: Copy + Clone + 'static,
+{
+    buf: RefMut<'a, [T]>,
+    _phantom: PhantomData<H>,
+}
+
+impl<'a, H, T> Index<H> for PropRefMut<'a, H, T>
+where
+    H: Handle,
+    T: Copy + Clone + 'static,
+{
+    type Output = T;
+
+    /// Get the reference to the property of the element corresponding to handle
+    /// `h`.
+    fn index(&self, h: H) -> &Self::Output {
+        &self.buf[h.index() as usize]
+    }
+}
+
+impl<'a, H, T> IndexMut<H> for PropRefMut<'a, H, T>
+where
+    H: Handle,
+    T: Copy + Clone + 'static,
+{
+    /// Get the mutable reference to the property of the element corresponding
+    /// to handle `h`.
+    fn index_mut(&mut self, h: H) -> &mut Self::Output {
+        &mut self.buf[h.index() as usize]
+    }
+}
+
+impl<'a, H, T> Deref for PropRefMut<'a, H, T>
+where
+    H: Handle,
+    T: Copy + Clone + 'static,
+{
+    type Target = [T];
+
+    /// Borrow the underlying property buffer as a slice.
+    fn deref(&self) -> &Self::Target {
+        &self.buf
+    }
+}
+
+impl<'a, H, T> DerefMut for PropRefMut<'a, H, T>
+where
+    H: Handle,
+    T: Copy + Clone + 'static,
+{
+    /// Mutably borrow the underlying property buffer as a slice.
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.buf
+    }
+}
+
 /// Vertex property. A value of type `T` is defined on each vertex of the
 /// mesh.
 ///
@@ -313,7 +461,7 @@ where
 /// // Crate a vertex property of type u32, with a default value of 42.
 /// let vprop = mesh.create_vertex_prop(42u32);
 /// let v = 2.into(); // Vertex indexed 2.
-/// assert_eq!(42, vprop.get(v).expect("Cannot read vertex property"));
+/// assert_eq!(42, vprop.get_cloned(v).expect("Cannot read vertex property"));
 /// ```
 pub type VProperty<T> = Property<VH, T>;
 
@@ -330,7 +478,7 @@ pub type VProperty<T> = Property<VH, T>;
 /// // Crate a halfedge property of type u32, with a default value of 42.
 /// let hprop = mesh.create_halfedge_prop(42u32);
 /// let h = 2.into(); // Halfedge indexed 2.
-/// assert_eq!(42, hprop.get(h).expect("Cannot read halfedge property"));
+/// assert_eq!(42, hprop.get_cloned(h).expect("Cannot read halfedge property"));
 /// ```
 pub type HProperty<T> = Property<HH, T>;
 
@@ -347,7 +495,7 @@ pub type HProperty<T> = Property<HH, T>;
 /// // Crate a edge property of type u32, with a default value of 42.
 /// let eprop = mesh.create_edge_prop(42u32);
 /// let e = 2.into(); // Edge indexed 2.
-/// assert_eq!(42, eprop.get(e).expect("Cannot read edge property"));
+/// assert_eq!(42, eprop.get_cloned(e).expect("Cannot read edge property"));
 /// ```
 pub type EProperty<T> = Property<EH, T>;
 
@@ -364,11 +512,59 @@ pub type EProperty<T> = Property<EH, T>;
 /// // Crate a face property of type u32, with a default value of 42.
 /// let fprop = mesh.create_face_prop(42u32);
 /// let f = 2.into(); // Face indexed 2.
-/// assert_eq!(42, fprop.get(f).expect("Cannot read face property"));
+/// assert_eq!(42, fprop.get_cloned(f).expect("Cannot read face property"));
 /// ```
 pub type FProperty<T> = Property<FH, T>;
 
-struct PropertyRef<T>
+/// Borrowed reference to a vertex property of type `T`.
+///
+/// While this is alive, any attempt to borrow the property mutably will result
+/// in an error.
+pub type VPropRef<'a, T> = PropRef<'a, VH, T>;
+
+/// Borrowed reference to a halfedge property of type `T`.
+///
+/// While this is alive, any attempt to borrow the property mutably will result
+/// in an error.
+pub type HPropRef<'a, T> = PropRef<'a, HH, T>;
+
+/// Borrowed reference to a edge property of type `T`.
+///
+/// While this is alive, any attempt to borrow the property mutably will result
+/// in an error.
+pub type EPropRef<'a, T> = PropRef<'a, EH, T>;
+
+/// Borrowed reference to a face property of type `T`.
+///
+/// While this is alive, any attempt to borrow the property mutably will result
+/// in an error.
+pub type FPropRef<'a, T> = PropRef<'a, FH, T>;
+
+/// Borrowed mutable reference to a vertex property of type `T`.
+///
+/// While this is alive, any attempt to borrow the property mutably or
+/// otherwise, will result in an error.
+pub type VPropRefMut<'a, T> = PropRefMut<'a, VH, T>;
+
+/// Borrowed mutable reference to a halfedge property of type `T`.
+///
+/// While this is alive, any attempt to borrow the property mutably or
+/// otherwise, will result in an error.
+pub type HPropRefMut<'a, T> = PropRefMut<'a, HH, T>;
+
+/// Borrowed mutable reference to a edge property of type `T`.
+///
+/// While this is alive, any attempt to borrow the property mutably or
+/// otherwise, will result in an error.
+pub type EPropRefMut<'a, T> = PropRefMut<'a, EH, T>;
+
+/// Borrowed mutable reference to a face property of type `T`.
+///
+/// While this is alive, any attempt to borrow the property mutably or
+/// otherwise, will result in an error.
+pub type FPropRefMut<'a, T> = PropRefMut<'a, FH, T>;
+
+struct WeakProperty<T>
 where
     T: Clone + Copy,
 {
@@ -376,7 +572,7 @@ where
     default: T,
 }
 
-impl<H, T> GenericProperty<H> for PropertyRef<T>
+impl<H, T> GenericProperty<H> for WeakProperty<T>
 where
     T: Clone + Copy,
     H: Handle,

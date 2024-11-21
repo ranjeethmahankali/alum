@@ -38,8 +38,8 @@ pub mod quadric;
 mod queue;
 
 use crate::{
-    topol::Topology, Adaptor, EditableTopology, Error, Handle, HasIterators, PolyMeshT, Status, HH,
-    VH,
+    topol::Topology, Adaptor, EPropRef, EditableTopology, Error, HasIterators, PolyMeshT, Status,
+    VPropRefMut, HH, VH,
 };
 use queue::Queue;
 use std::cmp::Ordering;
@@ -117,10 +117,15 @@ where
     }
 }
 
-fn is_collapse_legal(mesh: &Topology, h: HH, estatus: &[Status], vstatus: &mut [Status]) -> bool {
+fn is_collapse_legal(
+    mesh: &Topology,
+    h: HH,
+    estatus: &EPropRef<Status>,
+    vstatus: &mut VPropRefMut<Status>,
+) -> bool {
     let v = h.tail(mesh);
-    !vstatus[v.index() as usize].feature() // Vertex not a feature.
-        && !estatus[h.edge().index() as usize].feature() // Edge not a feature.
+    !vstatus[v].feature() // Vertex not a feature.
+        && !estatus[h.edge()].feature() // Edge not a feature.
         && mesh.vf_ccw_iter(v).take(2).count() == 2 // Has at leaset two incident faces.
         && mesh.check_edge_collapse(h, estatus, vstatus) // No topological errors.
 }
@@ -154,7 +159,7 @@ pub trait HasDecimation: EditableTopology {
             for (v, target) in self
                 .vertices()
                 .zip(collapse_targets.iter_mut())
-                .filter(|(v, _target)| !vstatus[v.index() as usize].deleted())
+                .filter(|(v, _target)| !vstatus[*v].deleted())
             {
                 *target = queue_vertex_collapse(self, v, decimater, &mut heap);
             }
@@ -166,8 +171,7 @@ pub trait HasDecimation: EditableTopology {
                 break;
             }
             // Get the collapse target and check if it is legal.
-            let h =
-                collapse_targets[v0.index() as usize].ok_or(Error::UndefinedCollapseTarget(v0))?;
+            let h = collapse_targets[v0].ok_or(Error::UndefinedCollapseTarget(v0))?;
             {
                 let estatus = estatus.try_borrow()?;
                 let mut vstatus = vstatus.try_borrow_mut()?;
@@ -202,8 +206,7 @@ pub trait HasDecimation: EditableTopology {
             decimater.after_collapse(self, v1)?;
             // Update heap.
             for &v in one_ring.iter() {
-                collapse_targets[v.index() as usize] =
-                    queue_vertex_collapse(self, v, decimater, &mut heap);
+                collapse_targets[v] = queue_vertex_collapse(self, v, decimater, &mut heap);
             }
         }
         heap.clear();

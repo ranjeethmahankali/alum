@@ -61,7 +61,7 @@ where
 #[cfg(test)]
 mod test {
     use super::EdgeLengthDecimater;
-    use crate::{obj::test::bunny_mesh, Handle, HasDecimation, HasIterators, HasTopology};
+    use crate::{obj::test::bunny_mesh, HasDecimation, HasIterators, HasTopology};
 
     #[test]
     fn t_bunny_edge_length_decimate() {
@@ -71,11 +71,11 @@ mod test {
             let mut visited = mesh.create_halfedge_prop(false);
             let mut visited = visited.try_borrow_mut().unwrap();
             mesh.halfedges().fold(0usize, |count, h| {
-                if !h.is_boundary(&mesh) || visited[h.index() as usize] {
+                if !h.is_boundary(&mesh) || visited[h] {
                     count
                 } else {
                     for h2 in mesh.loop_ccw_iter(h) {
-                        visited[h2.index() as usize] = true;
+                        visited[h2] = true;
                     }
                     count + 1
                 }
@@ -94,11 +94,11 @@ mod test {
             let mut visited = mesh.create_halfedge_prop(false);
             let mut visited = visited.try_borrow_mut().unwrap();
             mesh.halfedges().fold(0usize, |count, h| {
-                if !h.is_boundary(&mesh) || visited[h.index() as usize] {
+                if !h.is_boundary(&mesh) || visited[h] {
                     count
                 } else {
                     for h2 in mesh.loop_ccw_iter(h) {
-                        visited[h2.index() as usize] = true;
+                        visited[h2] = true;
                     }
                     count + 1
                 }

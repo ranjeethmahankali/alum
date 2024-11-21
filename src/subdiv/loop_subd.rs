@@ -6,7 +6,7 @@ use std::{
 
 use crate::{
     topol::Topology, EditableTopology, Error, FloatScalarAdaptor, Handle, HasIterators,
-    HasTopology, PolyMeshT,
+    HasTopology, PolyMeshT, VPropRef,
 };
 
 use super::check_for_deleted;
@@ -120,31 +120,35 @@ where
         mesh.reserve(nv, ne, nf)
     }
 
-    fn compute_vertex_points(mesh: &Topology, points: &[A::Vector], dst: &mut Vec<A::Vector>) {
+    fn compute_vertex_points(
+        mesh: &Topology,
+        points: &VPropRef<A::Vector>,
+        dst: &mut Vec<A::Vector>,
+    ) {
         dst.clear();
         dst.extend(mesh.vertices().map(|v| {
             if v.is_boundary(mesh) {
                 if let Some(h) = v.halfedge(mesh) {
                     debug_assert!(h.is_boundary(mesh));
-                    (points[v.index() as usize] * A::scalarf64(6.0)
-                        + points[h.head(mesh).index() as usize]
-                        + points[h.prev(mesh).tail(mesh).index() as usize])
+                    (points[v] * A::scalarf64(6.0)
+                        + points[h.head(mesh)]
+                        + points[h.prev(mesh).tail(mesh)])
                         / A::scalarf64(8.0)
                 } else {
                     // Isolated vertex doesn't move.
-                    points[v.index() as usize]
+                    points[v]
                 }
             } else {
                 let (valence, sum) = mesh
                     .vv_ccw_iter(v)
                     .fold((0usize, A::zero_vector()), |(valence, sum), nv| {
-                        (valence + 1, sum + points[nv.index() as usize])
+                        (valence + 1, sum + points[nv])
                     });
                 let (a, b) = match WEIGHTS.get(valence) {
                     Some((a, b)) => (*a, *b),
                     None => compute_weights(valence),
                 };
-                sum * A::scalarf64(b) + points[v.index() as usize] * A::scalarf64(a)
+                sum * A::scalarf64(b) + points[v] * A::scalarf64(a)
             }
         }));
     }
@@ -152,21 +156,19 @@ where
     fn compute_edge_points(
         mesh: &Topology,
         update_points: bool,
-        points: &[A::Vector],
+        points: &VPropRef<A::Vector>,
         dst: &mut Vec<A::Vector>,
     ) {
         dst.clear();
         dst.extend(mesh.edges().map(|e| {
             let (v0, v1) = e.vertices(mesh);
-            let vsum = points[v0.index() as usize] + points[v1.index() as usize];
+            let vsum = points[v0] + points[v1];
             if e.is_boundary(mesh) || !update_points {
                 vsum * A::scalarf64(0.5)
             } else {
                 let (h, oh) = e.halfedges();
                 let (v2, v3) = (h.next(mesh).head(mesh), oh.next(mesh).head(mesh));
-                (vsum * A::scalarf64(3.0)
-                    + (points[v2.index() as usize] + points[v3.index() as usize]))
-                    / A::scalarf64(8.0)
+                (vsum * A::scalarf64(3.0) + (points[v2] + points[v3])) / A::scalarf64(8.0)
             }
         }));
     }

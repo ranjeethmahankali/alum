@@ -6,7 +6,7 @@ use std::{
 
 use crate::{
     subdiv::check_for_deleted, topol::Topology, EditableTopology, Error, FloatScalarAdaptor,
-    Handle, HasIterators, HasTopology, PolyMeshT, EH,
+    Handle, HasIterators, HasTopology, PolyMeshT, VPropRef, EH,
 };
 
 const WEIGHTS: [(f64, f64); 64] = [
@@ -99,7 +99,11 @@ where
         + Mul<A::Scalar, Output = A::Vector>
         + Div<A::Scalar, Output = A::Vector>,
 {
-    fn compute_edge_points(mesh: &Topology, e: EH, points: &[A::Vector]) -> (A::Vector, A::Vector) {
+    fn compute_edge_points(
+        mesh: &Topology,
+        e: EH,
+        points: &VPropRef<A::Vector>,
+    ) -> (A::Vector, A::Vector) {
         let h = {
             let mut h = e.halfedge(false);
             if !h.is_boundary(mesh) {
@@ -108,10 +112,10 @@ where
             h
         };
         let (p1, p2, p3, p4) = (
-            points[h.next(mesh).head(mesh).index() as usize],
-            points[h.head(mesh).index() as usize],
-            points[h.tail(mesh).index() as usize],
-            points[h.prev(mesh).tail(mesh).index() as usize],
+            points[h.next(mesh).head(mesh)],
+            points[h.head(mesh)],
+            points[h.tail(mesh)],
+            points[h.prev(mesh).tail(mesh)],
         );
         (
             (p1 + p2 * A::scalarf64(16.0) + p3 * A::scalarf64(10.0)) / A::scalarf64(27.0),
@@ -180,33 +184,29 @@ where
                 // Compute relaxed vertex positions.
                 vpoints.clear();
                 vpoints.extend(self.vertices().map(|v| {
-                    let vi = v.index() as usize;
                     if let Some(h) = v.halfedge(self) {
                         if h.is_boundary(self) {
                             if phase {
                                 let ph = h.prev(self);
                                 debug_assert!(ph.is_boundary(self));
-                                ((points[h.head(self).index() as usize]
-                                    + points[ph.tail(self).index() as usize])
-                                    * A::scalarf64(4.0)
-                                    + points[vi] * A::scalarf64(19.0))
+                                ((points[h.head(self)] + points[ph.tail(self)]) * A::scalarf64(4.0)
+                                    + points[v] * A::scalarf64(19.0))
                                     / A::scalarf64(27.0)
                             } else {
-                                points[vi]
+                                points[v]
                             }
                         } else {
-                            let (valence, sum) = self.vv_ccw_iter(v).fold(
-                                (0usize, A::zero_vector()),
-                                |(valence, sum), nv| {
-                                    (valence + 1, sum + points[nv.index() as usize])
-                                },
-                            );
+                            let (valence, sum) = self
+                                .vv_ccw_iter(v)
+                                .fold((0usize, A::zero_vector()), |(valence, sum), nv| {
+                                    (valence + 1, sum + points[nv])
+                                });
                             let (a, b) = get_weight(valence);
-                            sum * A::scalarf64(b) + points[vi] * A::scalarf64(a)
+                            sum * A::scalarf64(b) + points[v] * A::scalarf64(a)
                         }
                     } else {
                         // Isolated vertices don't move.
-                        points[vi]
+                        points[v]
                     }
                 }));
                 // Compute centroids of faces not on the boundary.

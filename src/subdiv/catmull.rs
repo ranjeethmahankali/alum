@@ -80,16 +80,13 @@ where
             let (h, oh) = e.halfedges();
             match (h.face(mesh), oh.face(mesh)) {
                 (Some(fa), Some(fb)) if update_points => {
-                    (points[h.head(mesh).index() as usize]
-                        + points[oh.head(mesh).index() as usize]
+                    (points[h.head(mesh)]
+                        + points[oh.head(mesh)]
                         + face_points[fa.index() as usize]
                         + face_points[fb.index() as usize])
                         * A::scalarf64(0.25)
                 }
-                _ => {
-                    (points[h.head(mesh).index() as usize] + points[oh.head(mesh).index() as usize])
-                        * A::scalarf64(0.5)
-                }
+                _ => (points[h.head(mesh)] + points[oh.head(mesh)]) * A::scalarf64(0.5),
             }
         }));
         Ok(())
@@ -109,13 +106,12 @@ where
         let mut points = points.try_borrow_mut()?;
         vertex_points.clear();
         {
-            let points: &[A::Vector] = &points;
             vertex_points.extend(mesh.vertices().map(|v| {
                 if v.is_boundary(mesh) {
                     let (count, sum) = mesh
                         .ve_ccw_iter(v)
                         .filter(|e| e.is_boundary(mesh))
-                        .fold((1usize, points[v.index() as usize]), |(count, total), e| {
+                        .fold((1usize, points[v]), |(count, total), e| {
                             (count + 1, total + edge_points[e.index() as usize])
                         });
                     sum / A::scalarf64(count as f64)
@@ -123,10 +119,11 @@ where
                     let valence = v.valence(mesh) as f64;
                     (((mesh.vf_ccw_iter(v).fold(A::zero_vector(), |total, f| {
                         total + face_points[f.index() as usize]
-                    }) + mesh.vv_ccw_iter(v).fold(A::zero_vector(), |total, v| {
-                        total + points[v.index() as usize]
-                    })) / A::scalarf64(valence))
-                        + (points[v.index() as usize] * A::scalarf64(valence - 2.0)))
+                    }) + mesh
+                        .vv_ccw_iter(v)
+                        .fold(A::zero_vector(), |total, v| total + points[v]))
+                        / A::scalarf64(valence))
+                        + (points[v] * A::scalarf64(valence - 2.0)))
                         / A::scalarf64(valence)
                 }
             }));
