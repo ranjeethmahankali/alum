@@ -1,5 +1,7 @@
 # Alum: A Halfedge based Polygon Mesh Library
 
+![CI](https://github.com/ranjeethmahankali/alum/actions/workflows/ci.yml/badge.svg)
+
 ![Standford Bunny](assets/bunny.png)
 
 This library is inspired by
