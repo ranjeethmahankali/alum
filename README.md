@@ -1,7 +1,7 @@
 # Alum: A Halfedge based Polygon Mesh Library
 
-![CI](https://github.com/ranjeethmahankali/alum/actions/workflows/ci.yml/badge.svg)
-![Crate](https://img.shields.io/crates/v/alum)
+[![CI](https://github.com/ranjeethmahankali/alum/actions/workflows/ci.yml/badge.svg)](https://github.com/ranjeethmahankali/alum/actions/workflows/ci.yml)
+[![Crate](https://img.shields.io/crates/v/alum)](https://crates.io/crates/alum)
 
 ![Standford Bunny](assets/bunny.png)
 
