@@ -461,7 +461,7 @@ where
 /// // Crate a vertex property of type u32, with a default value of 42.
 /// let vprop = mesh.create_vertex_prop(42u32);
 /// let v = 2.into(); // Vertex indexed 2.
-/// assert_eq!(42, vprop.get(v).expect("Cannot read vertex property"));
+/// assert_eq!(42, vprop.get_cloned(v).expect("Cannot read vertex property"));
 /// ```
 pub type VProperty<T> = Property<VH, T>;
 
@@ -478,7 +478,7 @@ pub type VProperty<T> = Property<VH, T>;
 /// // Crate a halfedge property of type u32, with a default value of 42.
 /// let hprop = mesh.create_halfedge_prop(42u32);
 /// let h = 2.into(); // Halfedge indexed 2.
-/// assert_eq!(42, hprop.get(h).expect("Cannot read halfedge property"));
+/// assert_eq!(42, hprop.get_cloned(h).expect("Cannot read halfedge property"));
 /// ```
 pub type HProperty<T> = Property<HH, T>;
 
@@ -495,7 +495,7 @@ pub type HProperty<T> = Property<HH, T>;
 /// // Crate a edge property of type u32, with a default value of 42.
 /// let eprop = mesh.create_edge_prop(42u32);
 /// let e = 2.into(); // Edge indexed 2.
-/// assert_eq!(42, eprop.get(e).expect("Cannot read edge property"));
+/// assert_eq!(42, eprop.get_cloned(e).expect("Cannot read edge property"));
 /// ```
 pub type EProperty<T> = Property<EH, T>;
 
@@ -512,7 +512,7 @@ pub type EProperty<T> = Property<EH, T>;
 /// // Crate a face property of type u32, with a default value of 42.
 /// let fprop = mesh.create_face_prop(42u32);
 /// let f = 2.into(); // Face indexed 2.
-/// assert_eq!(42, fprop.get(f).expect("Cannot read face property"));
+/// assert_eq!(42, fprop.get_cloned(f).expect("Cannot read face property"));
 /// ```
 pub type FProperty<T> = Property<FH, T>;
 
