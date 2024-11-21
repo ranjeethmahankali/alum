@@ -1055,13 +1055,13 @@ mod test {
         assert_eq!(
             1,
             qbox.edges()
-                .filter(|e| eprop.get(*e).expect("Cannot read property") != usize::default())
+                .filter(|e| eprop.get_cloned(*e).expect("Cannot read property") != usize::default())
                 .count()
         );
         assert_eq!(
             2,
             qbox.halfedges()
-                .filter(|h| hprop.get(*h).expect("Cannot read property") != usize::default())
+                .filter(|h| hprop.get_cloned(*h).expect("Cannot read property") != usize::default())
                 .count()
         );
         // Do the split and check topology.
@@ -1082,13 +1082,13 @@ mod test {
         assert_eq!(
             2,
             qbox.edges()
-                .filter(|e| eprop.get(*e).expect("Cannot read property") != usize::default())
+                .filter(|e| eprop.get_cloned(*e).expect("Cannot read property") != usize::default())
                 .count()
         );
         assert_eq!(
             4,
             qbox.halfedges()
-                .filter(|h| hprop.get(*h).expect("Cannot read property") != usize::default())
+                .filter(|h| hprop.get_cloned(*h).expect("Cannot read property") != usize::default())
                 .count()
         );
         let eprop = eprop.try_borrow().expect("Cannot borrow edge");

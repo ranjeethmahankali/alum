@@ -269,22 +269,22 @@ pub trait HasTopology: Sized {
 
     /// The status of a vertex.
     fn vertex_status(&self, v: VH) -> Result<Status, Error> {
-        self.topology().vstatus.get(v)
+        self.topology().vstatus.get_cloned(v)
     }
 
     /// The status of a halfedge.
     fn halfedge_status(&self, h: HH) -> Result<Status, Error> {
-        self.topology().hstatus.get(h)
+        self.topology().hstatus.get_cloned(h)
     }
 
     /// The status of an edge.
     fn edge_status(&self, e: EH) -> Result<Status, Error> {
-        self.topology().estatus.get(e)
+        self.topology().estatus.get_cloned(e)
     }
 
     /// The status of a face.
     fn face_status(&self, f: FH) -> Result<Status, Error> {
-        self.topology().fstatus.get(f)
+        self.topology().fstatus.get_cloned(f)
     }
 
     /// The status of a vertex as mutable.

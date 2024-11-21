@@ -274,12 +274,26 @@ where
         })
     }
 
-    /// Read the property value of a mesh element.
+    /// Get a reference to the property value of the mesh element `h`.
     ///
     /// This function internally tries to borrow the property and returns an
     /// error if borrowing fails.
-    pub fn get(&self, h: H) -> Result<T, Error> {
-        Ok(*self.try_borrow()?.get(h).ok_or(Error::OutOfBoundsAccess)?)
+    pub fn get(&self, h: H) -> Result<Ref<T>, Error> {
+        Ok(Ref::map(
+            self.data
+                .try_borrow()
+                .map_err(|_| Error::BorrowedPropertyAccess)?,
+            |v| &v[h.index() as usize],
+        ))
+    }
+
+    /// Get the cloned property value of the mesh element `h`.
+    ///
+    /// The function internally tries to borrow the property and returns an
+    /// error if borrowing fails.
+    pub fn get_cloned(&self, h: H) -> Result<T, Error> {
+        let buf = self.try_borrow()?;
+        Ok(buf[h])
     }
 
     /// Get a mutable reference to the property value of a mesh element.
@@ -329,18 +343,6 @@ where
     /// Get the refernce to the property of element corresponding to handle `h`.
     fn index(&self, h: H) -> &Self::Output {
         &self.buf[h.index() as usize]
-    }
-}
-
-impl<'a, H, T> PropRef<'a, H, T>
-where
-    H: Handle,
-    T: Copy + Clone + 'static,
-{
-    /// Get the reference to the property of element corresponding to handle
-    /// `h`.
-    pub fn get(&self, h: H) -> Option<&T> {
-        self.buf.get(h.index() as usize)
     }
 }
 
@@ -419,24 +421,6 @@ where
     /// to handle `h`.
     fn index_mut(&mut self, h: H) -> &mut Self::Output {
         &mut self.buf[h.index() as usize]
-    }
-}
-
-impl<'a, H, T> PropRefMut<'a, H, T>
-where
-    H: Handle,
-    T: Copy + Clone + 'static,
-{
-    /// Get the reference to the property of the element corresponding to handle
-    /// `h`.
-    pub fn get(&self, h: H) -> Option<&T> {
-        self.buf.get(h.index() as usize)
-    }
-
-    /// Get the mutable reference to the property of the element corresponding
-    /// to handle `h`.
-    pub fn get_mut(&mut self, h: H) -> Option<&mut T> {
-        self.buf.get_mut(h.index() as usize)
     }
 }
 

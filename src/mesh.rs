@@ -171,7 +171,7 @@ where
 
     /// The position of a vertex.
     pub fn point(&self, vi: VH) -> Result<A::Vector, Error> {
-        self.points.get(vi)
+        self.points.get_cloned(vi)
     }
 
     /// Set the position of a vertex.
