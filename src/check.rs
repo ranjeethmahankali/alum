@@ -2,26 +2,23 @@ use crate::{
     element::Handle,
     iterator::HasIterators,
     topol::{HasTopology, Topology},
-    Error, Status,
+    EPropRef, Error, FPropRef, HPropRef, Status, VPropRef,
 };
 
 fn check_vertices(
     mesh: &Topology,
-    vstatus: &[Status],
-    hstatus: &[Status],
+    vstatus: &VPropRef<Status>,
+    hstatus: &HPropRef<Status>,
     hvisited: &mut [bool],
 ) -> Result<(), Error> {
     hvisited.fill(false);
-    for v in mesh
-        .vertices()
-        .filter(|v| !vstatus[v.index() as usize].deleted())
-    {
+    for v in mesh.vertices().filter(|v| !vstatus[*v].deleted()) {
         if let Some(h) = v.halfedge(mesh) {
             // Invalid index, or deleted halfedge.
             if !h.is_valid(mesh) {
                 return Err(Error::InvalidHalfedge(h));
             }
-            if hstatus[h.index() as usize].deleted() {
+            if hstatus[h].deleted() {
                 return Err(Error::DeletedHalfedge(h));
             }
             // The outgoing halfedge must be a boundary halfedge, or none of the
@@ -52,38 +49,35 @@ fn check_vertices(
 
 fn check_edges(
     mesh: &Topology,
-    vstatus: &[Status],
-    hstatus: &[Status],
-    estatus: &[Status],
-    fstatus: &[Status],
+    vstatus: &VPropRef<Status>,
+    hstatus: &HPropRef<Status>,
+    estatus: &EPropRef<Status>,
+    fstatus: &FPropRef<Status>,
     hflags: &mut [bool],
 ) -> Result<(), Error> {
-    for h in mesh
-        .halfedges()
-        .filter(|h| !hstatus[h.index() as usize].deleted())
-    {
+    for h in mesh.halfedges().filter(|h| !hstatus[*h].deleted()) {
         // Check if degenerate.
         if h.tail(mesh) == h.head(mesh) {
             return Err(Error::DegenerateHalfedge(h));
         }
         let hedge = mesh.halfedge(h);
         // Check for deleted.
-        if hstatus[hedge.prev.index() as usize].deleted() {
+        if hstatus[hedge.prev].deleted() {
             return Err(Error::DeletedHalfedge(hedge.prev));
         }
-        if hstatus[hedge.next.index() as usize].deleted() {
+        if hstatus[hedge.next].deleted() {
             return Err(Error::DeletedHalfedge(hedge.next));
         }
-        if vstatus[hedge.vertex.index() as usize].deleted() {
+        if vstatus[hedge.vertex].deleted() {
             return Err(Error::DeletedVertex(hedge.vertex));
         }
         if let Some(f) = hedge.face {
-            if fstatus[f.index() as usize].deleted() {
+            if fstatus[f].deleted() {
                 return Err(Error::DeletedFace(f));
             }
         }
         let e = h.edge();
-        if estatus[e.index() as usize].deleted() {
+        if estatus[e].deleted() {
             return Err(Error::DeletedEdge(e));
         }
         // Check connctivity.
@@ -103,10 +97,7 @@ fn check_edges(
         }
     }
     // Check all loops.
-    for h in mesh
-        .halfedges()
-        .filter(|h| !hstatus[h.index() as usize].deleted())
-    {
+    for h in mesh.halfedges().filter(|h| !hstatus[*h].deleted()) {
         if hflags[h.index() as usize] {
             continue;
         }
@@ -120,10 +111,7 @@ fn check_edges(
             }
         }
     }
-    for h in mesh
-        .halfedges()
-        .filter(|h| !hstatus[h.index() as usize].deleted())
-    {
+    for h in mesh.halfedges().filter(|h| !hstatus[*h].deleted()) {
         if !hflags[h.index() as usize] {
             continue;
         }
@@ -160,18 +148,14 @@ fn check_faces(mesh: &Topology, hstatus: &[Status], fstatus: &[Status]) -> Resul
 impl Topology {
     pub fn check(&self) -> Result<(), Error> {
         let vstatus = self.vstatus.try_borrow()?;
-        let vstatus: &[Status] = &vstatus;
         let hstatus = self.hstatus.try_borrow()?;
-        let hstatus: &[Status] = &hstatus;
         let fstatus = self.fstatus.try_borrow()?;
-        let fstatus: &[Status] = &fstatus;
         let estatus = self.estatus.try_borrow()?;
-        let estatus: &[Status] = &estatus;
         // To keep track of visited halfedges.
         let mut hvisited = vec![false; self.num_halfedges()].into_boxed_slice();
-        check_vertices(self, vstatus, hstatus, &mut hvisited)?;
-        check_edges(self, vstatus, hstatus, estatus, fstatus, &mut hvisited)?;
-        check_faces(self, hstatus, fstatus)?;
+        check_vertices(self, &vstatus, &hstatus, &mut hvisited)?;
+        check_edges(self, &vstatus, &hstatus, &estatus, &fstatus, &mut hvisited)?;
+        check_faces(self, &hstatus, &fstatus)?;
         Ok(())
     }
 }
