@@ -1,5 +1,5 @@
 use crate::{
-    element::{Handle, EH, FH, HH, VH},
+    element::{EH, FH, HH, VH},
     error::Error,
     iterator::HasIterators,
     mesh::{
@@ -72,11 +72,10 @@ where
         let mut fprop = self.request_face_normals();
         {
             let mut fnormals = fprop.try_borrow_mut()?;
-            let fnormals: &mut [A::Vector] = &mut fnormals;
             let points = self.points();
             let points = points.try_borrow()?;
             for f in self.faces() {
-                fnormals[f.index() as usize] = self.calc_face_normal(f, &points);
+                fnormals[f] = self.calc_face_normal(f, &points);
             }
         }
         Ok(fprop)
@@ -138,11 +137,10 @@ where
         let mut vprop = self.request_vertex_normals();
         {
             let mut vnormals = vprop.try_borrow_mut()?;
-            let vnormals: &mut [A::Vector] = &mut vnormals;
             let points = self.points();
             let points = points.try_borrow()?;
             for v in self.vertices() {
-                vnormals[v.index() as usize] = self.calc_vertex_normal_accurate(v, &points);
+                vnormals[v] = self.calc_vertex_normal_accurate(v, &points);
             }
         }
         Ok(vprop)
@@ -525,7 +523,7 @@ where
         &self,
         e: EH,
         points: &VPropRef<A::Vector>,
-        face_normals: &[A::Vector],
+        face_normals: &FPropRef<A::Vector>,
     ) -> A::Scalar {
         let h0 = e.halfedge(false);
         let h1 = e.halfedge(true);
@@ -534,8 +532,8 @@ where
         match (f0, f1) {
             (None, None) | (None, Some(_)) | (Some(_), None) => A::scalarf64(0.0),
             (Some(f0), Some(f1)) => Self::aligned_angle(
-                face_normals[f0.index() as usize],
-                face_normals[f1.index() as usize],
+                face_normals[f0],
+                face_normals[f1],
                 self.calc_halfedge_vector(h0, points),
             ),
         }
@@ -571,7 +569,7 @@ where
         &self,
         h: HH,
         points: &VPropRef<A::Vector>,
-        face_normals: &[A::Vector],
+        face_normals: &FPropRef<A::Vector>,
     ) -> A::Scalar {
         let n0 = self.calc_halfedge_vector(h, points);
         let h2 = h.prev(self).opposite();
@@ -579,8 +577,7 @@ where
         let angle = A::vector_angle(n0, n1);
         if let Some(f) = h.opposite().face(self) {
             if h.is_boundary(self)
-                && A::dot_product(A::cross_product(n0, n1), face_normals[f.index() as usize])
-                    < A::scalarf64(0.0)
+                && A::dot_product(A::cross_product(n0, n1), face_normals[f]) < A::scalarf64(0.0)
             {
                 return -angle;
             }
