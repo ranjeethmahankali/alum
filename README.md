@@ -29,7 +29,7 @@ Or by adding the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-alum = "0.1.1"
+alum = "0.4.1"
 ```
 
 ## Usage and Features
