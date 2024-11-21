@@ -7,7 +7,7 @@ use crate::{
         VectorAngleAdaptor, VectorLengthAdaptor, VectorNormalizeAdaptor,
     },
     property::{FProperty, VProperty},
-    HasTopology, VPropRef,
+    FPropRef, HasTopology, VPropRef,
 };
 use std::ops::{Add, AddAssign, Div, Mul, Neg, Sub};
 
@@ -187,10 +187,11 @@ where
     /// Compute the vertex normal as the average of normals of incident
     /// faces. The normals of the incident faces are read from provided
     /// `fnormals`.
-    pub fn calc_vertex_normal_fast(&self, v: VH, fnormals: &[A::Vector]) -> A::Vector {
-        A::normalized_vec(self.vf_ccw_iter(v).fold(A::zero_vector(), |total, f| {
-            total + fnormals[f.index() as usize]
-        }))
+    pub fn calc_vertex_normal_fast(&self, v: VH, fnormals: &FPropRef<A::Vector>) -> A::Vector {
+        A::normalized_vec(
+            self.vf_ccw_iter(v)
+                .fold(A::zero_vector(), |total, f| total + fnormals[f]),
+        )
     }
 
     /// Similar to [`Self::calc_vertex_normal_fast`] except this function will
@@ -215,9 +216,8 @@ where
             let fnormals = self.face_normals().ok_or(Error::FaceNormalsNotAvailable)?;
             let fnormals = fnormals.try_borrow()?;
             let mut vnormals = vprop.try_borrow_mut()?;
-            let vnormals: &mut [A::Vector] = &mut vnormals;
             for v in self.vertices() {
-                vnormals[v.index() as usize] = self.calc_vertex_normal_fast(v, &fnormals);
+                vnormals[v] = self.calc_vertex_normal_fast(v, &fnormals);
             }
         }
         Ok(vprop)
@@ -782,9 +782,8 @@ mod test {
             .expect("Unable to update face normals");
         assert!(qbox.has_face_normals());
         let fnormals = fnormals.try_borrow().expect("Cannot borrow face normals");
-        let fnormals: &[glam::Vec3] = &fnormals;
         assert_eq!(
-            &fnormals,
+            fnormals,
             &[
                 glam::vec3(0.0, 0.0, -1.0),
                 glam::vec3(0.0, -1.0, 0.0),
@@ -798,7 +797,7 @@ mod test {
                          // Compute and verify vertex normals.
         assert_eq!(
             qbox.vertices()
-                .map(|v| qbox.calc_vertex_normal_fast(v, fnormals))
+                .map(|v| qbox.calc_vertex_normal_fast(v, &fnormals))
                 .collect::<Vec<_>>(),
             &[
                 glam::vec3(-0.57735026, -0.57735026, -0.57735026),

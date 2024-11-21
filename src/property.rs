@@ -1,5 +1,6 @@
 use std::{
     cell::{Ref, RefCell, RefMut},
+    fmt::Debug,
     marker::PhantomData,
     ops::{Deref, DerefMut, Index, IndexMut},
     rc::{Rc, Weak},
@@ -353,6 +354,31 @@ where
     /// Borrow the underlying property buffer as a slice.
     fn deref(&self) -> &Self::Target {
         &self.buf
+    }
+}
+
+impl<'a, H, T> Debug for PropRef<'a, H, T>
+where
+    H: Handle,
+    T: Copy + Clone + Debug + 'static,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "[")?;
+        for val in self.buf.iter() {
+            writeln!(f, "{:?}, ", val)?;
+        }
+        writeln!(f, "[")
+    }
+}
+
+impl<'a, H, T> PartialEq<&[T]> for PropRef<'a, H, T>
+where
+    H: Handle,
+    T: Copy + Clone + PartialEq + 'static,
+{
+    fn eq(&self, other: &&[T]) -> bool {
+        let buf: &[T] = &self.buf;
+        buf == *other
     }
 }
 
