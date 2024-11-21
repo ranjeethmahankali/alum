@@ -10,7 +10,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build_linux:
+  linux:
       runs-on: ubuntu-latest
       steps:
         - name: Update Rust
@@ -24,7 +24,7 @@ jobs:
           run: cargo clippy --all-targets --all-features -- -D warnings
         - name: Run tests
           run: cargo test --all-features --verbose
-  build_windows:
+  windows:
       runs-on: ubuntu-latest
       steps:
         - name: Update Rust
