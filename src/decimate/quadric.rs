@@ -426,7 +426,7 @@ where
     }
 
     /// Compute the sum of the quadrics from vertices about to be
-    /// collapsed. This is used in [`after_collapse`].
+    /// collapsed. This is used in [`after_collapse`](Self::after_collapse).
     fn before_collapse(&mut self, mesh: &PolyMeshT<3, A>, h: HH) -> Result<(), Error> {
         self.next = self.quadrics[h.tail(mesh).index() as usize]
             + self.quadrics[h.head(mesh).index() as usize];

@@ -1,3 +1,9 @@
+/*!
+This example demonstrates how to write your own implementation of
+[`Adaptor`](alum::Adaptor<DIM, A>) and use it with
+[`PolyMeshT`](alum::PolyMeshT<DIM, A>).
+*/
+
 use alum::{Adaptor, HasIterators, HasTopology, PolyMeshT};
 use three_d::{vec3, Vec3};
 
