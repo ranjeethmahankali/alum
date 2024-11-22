@@ -1,13 +1,7 @@
-/*!
-This example demonstrates how to write your own implementation of
-[`Adaptor`](alum::Adaptor<DIM, A>) and use it with
-[`PolyMeshT`](alum::PolyMeshT<DIM, A>).
-*/
-
 use alum::{Adaptor, HasTopology, PolyMeshT};
 use three_d::{vec3, Vec3};
 
-pub struct MeshAdaptor;
+struct MeshAdaptor;
 
 impl Adaptor<3> for MeshAdaptor {
     type Vector = Vec3;
@@ -27,9 +21,9 @@ impl Adaptor<3> for MeshAdaptor {
     }
 }
 
-pub type PolygonMesh = PolyMeshT<3, MeshAdaptor>;
+type PolygonMesh = PolyMeshT<3, MeshAdaptor>;
 
-pub fn make_box() -> PolygonMesh {
+fn make_box() -> PolygonMesh {
     // Make a box.
     let mut mesh = PolygonMesh::with_capacity(8, 12, 6);
     // Add several vertices at once.
@@ -60,7 +54,6 @@ pub fn make_box() -> PolygonMesh {
     mesh
 }
 
-#[allow(dead_code)]
 fn main() {
     let mesh = make_box();
     // Print stats.

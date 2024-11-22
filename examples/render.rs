@@ -1,16 +1,62 @@
-mod adaptor;
-
-use adaptor::{make_box, PolygonMesh};
-use alum::{Handle, HasIterators};
+use alum::{
+    Adaptor, CrossProductAdaptor, FloatScalarAdaptor, Handle, HasIterators, PolyMeshT,
+    VectorNormalizeAdaptor,
+};
 use three_d::{
-    degrees, vec3, AmbientLight, Camera, ClearState, ColorMaterial, Context, CpuMaterial, CpuMesh,
-    DirectionalLight, FrameOutput, Gm, Indices, InnerSpace, Mesh, OrbitControl, Positions, Srgba,
-    Window, WindowSettings,
+    degrees, vec3, AmbientLight, Camera, ClearState, Context, CpuMaterial, CpuMesh,
+    DirectionalLight, FrameOutput, Gm, Indices, InnerSpace, Mesh, OrbitControl, PhysicalMaterial,
+    Positions, Srgba, Vec3, Window, WindowSettings,
 };
 
-fn mesh_view(mesh: &PolygonMesh, context: &Context) -> Gm<Mesh, ColorMaterial> {
+struct MeshAdaptor;
+
+impl Adaptor<3> for MeshAdaptor {
+    type Vector = Vec3;
+
+    type Scalar = f32;
+
+    fn vector(coords: [Self::Scalar; 3]) -> Self::Vector {
+        three_d::vec3(coords[0], coords[1], coords[2])
+    }
+
+    fn zero_vector() -> Self::Vector {
+        three_d::vec3(0.0, 0.0, 0.0)
+    }
+
+    fn vector_coord(v: &Self::Vector, i: usize) -> Self::Scalar {
+        v[i]
+    }
+}
+
+impl FloatScalarAdaptor<3> for MeshAdaptor {
+    fn scalarf32(val: f32) -> Self::Scalar {
+        val
+    }
+
+    fn scalarf64(val: f64) -> Self::Scalar {
+        val as f32
+    }
+}
+
+impl CrossProductAdaptor for MeshAdaptor {
+    fn cross_product(a: Self::Vector, b: Self::Vector) -> Self::Vector {
+        a.cross(b)
+    }
+}
+
+impl VectorNormalizeAdaptor<3> for MeshAdaptor {
+    fn normalized_vec(v: Self::Vector) -> Self::Vector {
+        v.normalize()
+    }
+}
+
+type PolygonMesh = PolyMeshT<3, MeshAdaptor>;
+
+fn mesh_view(mut mesh: PolygonMesh, context: &Context) -> Gm<Mesh, PhysicalMaterial> {
     let points = mesh.points();
     let points = points.try_borrow().expect("Cannot borrow points");
+    let vnormals = mesh.update_vertex_normals_accurate().unwrap();
+    let vnormals = vnormals.try_borrow().unwrap();
     let cpumesh = CpuMesh {
         positions: Positions::F32(points.iter().map(|p| vec3(p.x, p.y, p.z)).collect()),
         indices: Indices::U32(
@@ -19,19 +65,21 @@ fn mesh_view(mesh: &PolygonMesh, context: &Context) -> Gm<Mesh, ColorMaterial> {
                 .map(|v| v.index())
                 .collect(),
         ),
+        normals: Some(vnormals.to_vec()),
         ..Default::default()
     };
-    let model_material = ColorMaterial::new_opaque(
+    let model_material = PhysicalMaterial::new_opaque(
         &context,
         &CpuMaterial {
             albedo: Srgba::new_opaque(200, 200, 200),
+            roughness: 0.7,
+            metallic: 0.8,
             ..Default::default()
         },
     );
     Gm::new(Mesh::new(&context, &cpumesh), model_material)
 }
 
-#[allow(dead_code)]
 fn main() {
     // Window and context.
     let window = Window::new(WindowSettings {
@@ -58,8 +106,8 @@ fn main() {
     let directional0 = DirectionalLight::new(&context, 2.0, Srgba::WHITE, &vec3(-1.0, -1.0, -1.0));
     let directional1 = DirectionalLight::new(&context, 2.0, Srgba::WHITE, &vec3(1.0, 1.0, 1.0));
     // Create the mesh.
-    let mesh = make_box();
-    let view = mesh_view(&mesh, &context);
+    let mesh = PolygonMesh::unit_box().unwrap();
+    let view = mesh_view(mesh, &context);
     // Render loop.
     window.render_loop(move |mut frame_input| {
         let mut redraw = frame_input.first_frame;
