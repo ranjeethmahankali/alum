@@ -60,6 +60,7 @@ pub fn make_box() -> PolygonMesh {
     mesh
 }
 
+#[allow(dead_code)]
 fn main() {
     let mesh = make_box();
     // Print stats.

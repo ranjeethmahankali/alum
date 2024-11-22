@@ -4,8 +4,8 @@ use adaptor::{make_box, PolygonMesh};
 use alum::{Handle, HasIterators};
 use three_d::{
     degrees, vec3, AmbientLight, Camera, ClearState, ColorMaterial, Context, CpuMaterial, CpuMesh,
-    DirectionalLight, FrameOutput, Gm, Indices, InnerSpace, Mesh, OrbitControl, PhysicalMaterial,
-    Positions, Srgba, Window, WindowSettings,
+    DirectionalLight, FrameOutput, Gm, Indices, InnerSpace, Mesh, OrbitControl, Positions, Srgba,
+    Window, WindowSettings,
 };
 
 fn mesh_view(mesh: &PolygonMesh, context: &Context) -> Gm<Mesh, ColorMaterial> {
@@ -31,6 +31,7 @@ fn mesh_view(mesh: &PolygonMesh, context: &Context) -> Gm<Mesh, ColorMaterial> {
     Gm::new(Mesh::new(&context, &cpumesh), model_material)
 }
 
+#[allow(dead_code)]
 fn main() {
     // Window and context.
     let window = Window::new(WindowSettings {
@@ -41,7 +42,7 @@ fn main() {
     .unwrap();
     let context = window.gl();
     // Setup the camera and the controls and lights.
-    let target = vec3(0.0, 0.0, 0.0);
+    let target = vec3(0.5, 0.5, 0.5);
     let scene_radius: f32 = 6.0;
     let mut camera = Camera::new_perspective(
         window.viewport(),
