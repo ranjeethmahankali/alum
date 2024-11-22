@@ -7,9 +7,9 @@ This example demonstrates how to write your own implementation of
 use alum::{Adaptor, HasIterators, HasTopology, PolyMeshT};
 use three_d::{vec3, Vec3};
 
-pub struct MyAdaptor;
+pub struct MeshAdaptor;
 
-impl Adaptor<3> for MyAdaptor {
+impl Adaptor<3> for MeshAdaptor {
     type Vector = Vec3;
 
     type Scalar = f32;
@@ -27,12 +27,13 @@ impl Adaptor<3> for MyAdaptor {
     }
 }
 
-pub type MyMesh = PolyMeshT<3, MyAdaptor>;
+pub type Mesh = PolyMeshT<3, MeshAdaptor>;
 
 fn main() {
-    // Make a Box.
-    let mut mesh = MyMesh::with_capacity(8, 12, 6);
-    let vs: Vec<_> = mesh
+    // Make a box manually.
+    let mut mesh = Mesh::with_capacity(8, 12, 6);
+    // Add several vertices at once.
+    let mut vs: Vec<_> = mesh
         .add_vertices(&[
             vec3(0.0, 0.0, 0.0),
             vec3(1.0, 0.0, 0.0),
@@ -40,17 +41,22 @@ fn main() {
             vec3(0.0, 1.0, 0.0),
             vec3(0.0, 0.0, 1.0),
             vec3(1.0, 0.0, 1.0),
-            vec3(1.0, 1.0, 1.0),
-            vec3(0.0, 1.0, 1.0),
         ])
         .unwrap()
         .collect();
+    // Add vertices one at a time.
+    let v6 = mesh.add_vertex(vec3(1.0, 1.0, 1.0)).unwrap();
+    let v7 = mesh.add_vertex(vec3(0.0, 1.0, 1.0)).unwrap();
+    vs.push(v6);
+    vs.push(v7);
+    // Add quad faces from 4 vertices.
     mesh.add_quad_face(vs[0], vs[3], vs[2], vs[1]).unwrap();
     mesh.add_quad_face(vs[0], vs[1], vs[5], vs[4]).unwrap();
     mesh.add_quad_face(vs[1], vs[2], vs[6], vs[5]).unwrap();
-    mesh.add_quad_face(vs[2], vs[3], vs[7], vs[6]).unwrap();
-    mesh.add_quad_face(vs[3], vs[0], vs[4], vs[7]).unwrap();
-    mesh.add_quad_face(vs[4], vs[5], vs[6], vs[7]).unwrap();
+    // Add polygon faces from a slice of vertices.
+    mesh.add_face(&[vs[2], vs[3], vs[7], vs[6]]).unwrap();
+    mesh.add_face(&[vs[3], vs[0], vs[4], vs[7]]).unwrap();
+    mesh.add_face(&[vs[4], vs[5], vs[6], vs[7]]).unwrap();
     // Print stats.
     println!(
         "Mesh has {} vertices, {} edges, and {} faces.",
@@ -58,17 +64,4 @@ fn main() {
         mesh.num_edges(),
         mesh.num_faces()
     );
-    // Print vertex-vertex connectivity.
-    let points = mesh.points();
-    let points = points.try_borrow().unwrap();
-    for (v, pos) in mesh.vertices().zip(points.iter()) {
-        println!(
-            "Vertex at ({}, {}, {}) is connected to vertices at:",
-            pos.x, pos.y, pos.z
-        );
-        for nv in mesh.vv_ccw_iter(v) {
-            let pos = points[nv];
-            println!("\t- ({}, {}, {})", pos.x, pos.y, pos.z);
-        }
-    }
 }
