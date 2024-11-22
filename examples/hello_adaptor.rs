@@ -52,7 +52,7 @@ fn main() {
         mesh.num_edges(),
         mesh.num_faces()
     );
-    // Print vertex connectivity.
+    // Print vertex-vertex connectivity.
     let points = mesh.points();
     let points = points.try_borrow().unwrap();
     for (v, pos) in mesh.vertices().zip(points.iter()) {
