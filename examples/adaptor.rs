@@ -4,7 +4,7 @@ This example demonstrates how to write your own implementation of
 [`PolyMeshT`](alum::PolyMeshT<DIM, A>).
 */
 
-use alum::{Adaptor, HasIterators, HasTopology, PolyMeshT};
+use alum::{Adaptor, HasTopology, PolyMeshT};
 use three_d::{vec3, Vec3};
 
 pub struct MeshAdaptor;
@@ -27,11 +27,11 @@ impl Adaptor<3> for MeshAdaptor {
     }
 }
 
-pub type Mesh = PolyMeshT<3, MeshAdaptor>;
+pub type PolygonMesh = PolyMeshT<3, MeshAdaptor>;
 
-fn main() {
-    // Make a box manually.
-    let mut mesh = Mesh::with_capacity(8, 12, 6);
+pub fn make_box() -> PolygonMesh {
+    // Make a box.
+    let mut mesh = PolygonMesh::with_capacity(8, 12, 6);
     // Add several vertices at once.
     let mut vs: Vec<_> = mesh
         .add_vertices(&[
@@ -57,6 +57,11 @@ fn main() {
     mesh.add_face(&[vs[2], vs[3], vs[7], vs[6]]).unwrap();
     mesh.add_face(&[vs[3], vs[0], vs[4], vs[7]]).unwrap();
     mesh.add_face(&[vs[4], vs[5], vs[6], vs[7]]).unwrap();
+    mesh
+}
+
+fn main() {
+    let mesh = make_box();
     // Print stats.
     println!(
         "Mesh has {} vertices, {} edges, and {} faces.",
