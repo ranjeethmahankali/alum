@@ -8,7 +8,7 @@ use crate::{
     property::{FProperty, HProperty, PropertyContainer, VProperty},
     status::Status,
 };
-use std::{cell::RefMut, ops::Range};
+use std::cell::RefMut;
 
 enum TentativeEdge {
     Old(HH),
@@ -417,12 +417,12 @@ impl Topology {
         Ok(vi.into())
     }
 
-    pub fn add_vertices(&mut self, n: usize) -> Result<Range<u32>, Error> {
+    pub fn add_vertices(&mut self, n: usize) -> Result<VRange, Error> {
         let nverts = self.vertices.len() as u32;
         self.vprops.push_values(n)?;
         self.vertices
             .resize(self.vertices.len() + n, Vertex { halfedge: None });
-        Ok(nverts..(nverts + n as u32))
+        Ok((nverts..(nverts + n as u32)).into())
     }
 
     pub(crate) fn new_edge(

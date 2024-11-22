@@ -1,10 +1,9 @@
 use crate::{
-    element::{EH, FH, VH},
+    element::{VRange, EH, FH, VH},
     error::Error,
     property::{FProperty, VProperty},
     topol::{HasTopology, TopolCache, Topology},
 };
-use std::ops::Range;
 
 /// Trait for an adaptor that tells this crate how to work with user specified
 /// geometric types.
@@ -270,12 +269,11 @@ where
     /// let verts = mesh.add_vertices(&verts).expect("Cannot add vertices");
     /// assert_eq!(verts, 4..8);
     /// ```
-    pub fn add_vertices(&mut self, pos: &[A::Vector]) -> Result<Range<u32>, Error> {
+    pub fn add_vertices(&mut self, pos: &[A::Vector]) -> Result<VRange, Error> {
         let vis = self.topol.add_vertices(pos.len())?;
         let mut points = self.points.try_borrow_mut()?;
-        let points: &mut [A::Vector] = &mut points;
         for (i, v) in vis.clone().enumerate() {
-            points[v as usize] = pos[i];
+            points[v] = pos[i];
         }
         Ok(vis)
     }

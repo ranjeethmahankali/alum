@@ -56,7 +56,7 @@ where
         let verts = qbox.add_vertices(&pos)?;
         assert_eq!(
             verts,
-            0..8,
+            (0..8).into(),
             "Vertices are expected to be in one contiguous range"
         );
         for (a, b, c, d) in BOX_IDX {
@@ -138,7 +138,7 @@ where
         ])?;
         assert_eq!(
             verts,
-            0..4,
+            (0..4).into(),
             "Vertices are expected to be in one contiguous range"
         );
         mesh.add_tri_face(0.into(), 1.into(), 2.into())?;
@@ -165,7 +165,7 @@ where
         ])?;
         assert_eq!(
             verts,
-            0..8,
+            (0..8).into(),
             "Vertices are expected to be in one contiguous range"
         );
         mesh.add_quad_face(3.into(), 2.into(), 1.into(), 0.into())?;
@@ -192,7 +192,7 @@ where
         ])?;
         assert_eq!(
             verts,
-            0..6,
+            (0..6).into(),
             "Vertices are expected to be in one contiguous range"
         );
         mesh.add_tri_face(0.into(), 4.into(), 3.into())?;
@@ -274,7 +274,7 @@ where
         ])?;
         assert_eq!(
             verts,
-            0..12,
+            (0..12).into(),
             "Vertices are expected to be in one contiguous range"
         );
         mesh.add_tri_face(2.into(), 1.into(), 0.into())?;
@@ -408,7 +408,7 @@ where
         ])?;
         assert_eq!(
             verts,
-            0..20,
+            (0..20).into(),
             "Vertices are expected to be in one contiguous range"
         );
         mesh.add_face(&[15.into(), 4.into(), 5.into(), 14.into(), 0.into()])?;

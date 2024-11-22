@@ -56,7 +56,7 @@ where
             let vertices = outmesh.add_vertices(&positions)?;
             assert_eq!(
                 vertices,
-                nbefore..(nbefore + positions.len() as u32),
+                (nbefore..(nbefore + positions.len() as u32)).into(),
                 "Vertex indices are expected to be in a contiguous range."
             );
             // Faces.
