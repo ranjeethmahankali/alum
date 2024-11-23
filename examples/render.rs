@@ -1,6 +1,6 @@
 mod common;
 
-use common::{mesh_view, PolygonMesh};
+use common::{mesh_view, wireframe_view, PolygonMesh};
 use three_d::{
     degrees, vec3, AmbientLight, Camera, ClearState, DirectionalLight, FrameOutput, InnerSpace,
     OrbitControl, Srgba, Window, WindowSettings,
@@ -35,6 +35,7 @@ fn main() {
     let mut mesh = PolygonMesh::unit_box().unwrap();
     mesh.update_vertex_normals_accurate().unwrap();
     let view = mesh_view(&mesh, &context);
+    let (vertices, edges) = wireframe_view(&mesh, &context, 0.01, 0.005);
     // Render loop.
     window.render_loop(move |mut frame_input| {
         let mut redraw = frame_input.first_frame;
@@ -46,7 +47,7 @@ fn main() {
                 .clear(ClearState::color_and_depth(0.1, 0.1, 0.1, 1.0, 1.0))
                 .render(
                     &camera,
-                    view.into_iter(),
+                    view.into_iter().chain(&vertices).chain(&edges),
                     &[&ambient, &directional0, &directional1],
                 );
         }

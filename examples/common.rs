@@ -1,10 +1,10 @@
 use alum::{
-    Adaptor, CrossProductAdaptor, FloatScalarAdaptor, Handle, HasIterators, PolyMeshT,
+    Adaptor, CrossProductAdaptor, FloatScalarAdaptor, Handle, HasIterators, HasTopology, PolyMeshT,
     VectorNormalizeAdaptor,
 };
 use three_d::{
-    vec3, Context, CpuMaterial, CpuMesh, Gm, Indices, InnerSpace, Mesh, PhysicalMaterial,
-    Positions, Srgba, Vec3,
+    vec3, Context, CpuMaterial, CpuMesh, Cull, Gm, Indices, InnerSpace, InstancedMesh, Instances,
+    Mat4, Mesh, PhysicalMaterial, Positions, Quat, Srgba, Vec3,
 };
 
 pub struct MeshAdaptor;
@@ -79,33 +79,72 @@ pub fn mesh_view(mesh: &PolygonMesh, context: &Context) -> Gm<Mesh, PhysicalMate
     Gm::new(Mesh::new(&context, &cpumesh), model_material)
 }
 
-// fn make_box() -> PolygonMesh {
-//     // Make a box.
-//     let mut mesh = PolygonMesh::with_capacity(8, 12, 6);
-//     // Add several vertices at once.
-//     let mut vs: Vec<_> = mesh
-//         .add_vertices(&[
-//             vec3(0.0, 0.0, 0.0),
-//             vec3(1.0, 0.0, 0.0),
-//             vec3(1.0, 1.0, 0.0),
-//             vec3(0.0, 1.0, 0.0),
-//             vec3(0.0, 0.0, 1.0),
-//             vec3(1.0, 0.0, 1.0),
-//         ])
-//         .unwrap()
-//         .collect();
-//     // Add vertices one at a time.
-//     let v6 = mesh.add_vertex(vec3(1.0, 1.0, 1.0)).unwrap();
-//     let v7 = mesh.add_vertex(vec3(0.0, 1.0, 1.0)).unwrap();
-//     vs.push(v6);
-//     vs.push(v7);
-//     // Add quad faces from 4 vertices.
-//     mesh.add_quad_face(vs[0], vs[3], vs[2], vs[1]).unwrap();
-//     mesh.add_quad_face(vs[0], vs[1], vs[5], vs[4]).unwrap();
-//     mesh.add_quad_face(vs[1], vs[2], vs[6], vs[5]).unwrap();
-//     // Add polygon faces from a slice of vertices.
-//     mesh.add_face(&[vs[2], vs[3], vs[7], vs[6]]).unwrap();
-//     mesh.add_face(&[vs[3], vs[0], vs[4], vs[7]]).unwrap();
-//     mesh.add_face(&[vs[4], vs[5], vs[6], vs[7]]).unwrap();
-//     mesh
-// }
+pub fn wireframe_view(
+    mesh: &PolygonMesh,
+    context: &Context,
+    vertex_radius: f32,
+    edge_radius: f32,
+) -> (
+    Gm<InstancedMesh, PhysicalMaterial>,
+    Gm<InstancedMesh, PhysicalMaterial>,
+) {
+    let points = mesh.points();
+    let points = points.try_borrow().expect("Cannot borrow points");
+    let mut wireframe_material = PhysicalMaterial::new_opaque(
+        &context,
+        &CpuMaterial {
+            albedo: Srgba::new_opaque(220, 50, 50),
+            roughness: 0.7,
+            metallic: 0.8,
+            ..Default::default()
+        },
+    );
+    wireframe_material.render_states.cull = Cull::Back;
+    let mut sphere = CpuMesh::sphere(8);
+    sphere.transform(&Mat4::from_scale(vertex_radius)).unwrap();
+    let mut cylinder = CpuMesh::cylinder(10);
+    cylinder
+        .transform(&Mat4::from_nonuniform_scale(1.0, edge_radius, edge_radius))
+        .unwrap();
+    (
+        Gm::new(
+            InstancedMesh::new(
+                &context,
+                &Instances {
+                    transformations: points
+                        .iter()
+                        .map(|pos| Mat4::from_translation(vec3(pos.x, pos.y, pos.z)))
+                        .collect(),
+                    ..Default::default()
+                },
+                &sphere,
+            ),
+            wireframe_material.clone(),
+        ),
+        Gm::new(
+            InstancedMesh::new(
+                &context,
+                &Instances {
+                    transformations: mesh
+                        .edges()
+                        .map(|e| {
+                            let h = e.halfedge(false);
+                            let mut ev = mesh.calc_halfedge_vector(h, &points);
+                            let length = ev.magnitude();
+                            ev /= length;
+                            let ev = vec3(ev.x, ev.y, ev.z);
+                            let start = points[h.tail(mesh)];
+                            let start = vec3(start.x, start.y, start.z);
+                            Mat4::from_translation(start)
+                                * Into::<Mat4>::into(Quat::from_arc(vec3(1.0, 0., 0.0), ev, None))
+                                * Mat4::from_nonuniform_scale(length, 1., 1.)
+                        })
+                        .collect(),
+                    ..Default::default()
+                },
+                &cylinder,
+            ),
+            wireframe_material,
+        ),
+    )
+}
