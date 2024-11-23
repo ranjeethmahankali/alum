@@ -652,6 +652,26 @@ where
     }
 }
 
+impl<const DIM: usize, A> PolyMeshT<DIM, A>
+where
+    A: Adaptor<DIM>,
+    A::Vector: Add<Output = A::Vector>,
+{
+    /// Translate this mesh along the given vector, by translating all the vertices.
+    ///
+    /// This will function will try to mutably borrow the points property, and
+    /// return an error if that fails.
+    pub fn translate(&mut self, v: A::Vector) -> Result<(), Error> {
+        let mut points = self.points();
+        let mut points = points.try_borrow_mut()?;
+        let points: &mut [A::Vector] = &mut points;
+        for pos in points {
+            *pos = *pos + v;
+        }
+        Ok(())
+    }
+}
+
 #[cfg(all(test, feature = "use_glam"))]
 mod test {
     use core::f32;
