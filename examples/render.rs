@@ -1,7 +1,7 @@
-mod basic_adaptor;
+mod common;
 
 use alum::{Handle, HasIterators};
-use basic_adaptor::PolygonMesh;
+use common::PolygonMesh;
 use three_d::{
     degrees, vec3, AmbientLight, Camera, ClearState, Context, CpuMaterial, CpuMesh,
     DirectionalLight, FrameOutput, Gm, Indices, InnerSpace, Mesh, OrbitControl, PhysicalMaterial,

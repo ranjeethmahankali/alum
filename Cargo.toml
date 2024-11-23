@@ -25,5 +25,5 @@ arrayvec = "0.7.6"
 three-d = "0.17.0"
 
 [[example]]
-name = "basic_adaptor"
+name = "common"
 crate-type = ["staticlib"]
