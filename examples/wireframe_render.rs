@@ -53,7 +53,7 @@ impl VectorNormalizeAdaptor<3> for MeshAdaptor {
 type PolygonMesh = PolyMeshT<3, MeshAdaptor>;
 
 fn mesh_view(
-    mut mesh: PolygonMesh,
+    mesh: &PolygonMesh,
     context: &Context,
     vertex_radius: f32,
     edge_radius: f32,
@@ -64,7 +64,7 @@ fn mesh_view(
 ) {
     let points = mesh.points();
     let points = points.try_borrow().expect("Cannot borrow points");
-    let vnormals = mesh.update_vertex_normals_accurate().unwrap();
+    let vnormals = mesh.vertex_normals().unwrap();
     let vnormals = vnormals.try_borrow().unwrap();
     let cpumesh = CpuMesh {
         positions: Positions::F32(points.iter().map(|p| vec3(p.x, p.y, p.z)).collect()),
@@ -130,7 +130,7 @@ fn mesh_view(
                             let length = ev.magnitude();
                             ev /= length;
                             let ev = vec3(ev.x, ev.y, ev.z);
-                            let start = points[h.tail(&mesh)];
+                            let start = points[h.tail(mesh)];
                             let start = vec3(start.x, start.y, start.z);
                             Mat4::from_translation(start)
                                 * Into::<Mat4>::into(Quat::from_arc(vec3(1.0, 0., 0.0), ev, None))
@@ -172,8 +172,9 @@ fn main() {
     let directional0 = DirectionalLight::new(&context, 2.0, Srgba::WHITE, &vec3(-1.0, -1.0, -1.0));
     let directional1 = DirectionalLight::new(&context, 2.0, Srgba::WHITE, &vec3(1.0, 1.0, 1.0));
     // Create the mesh.
-    let mesh = PolygonMesh::unit_box().unwrap();
-    let (mesh, vertices, edges) = mesh_view(mesh, &context, 0.01, 0.005);
+    let mut mesh = PolygonMesh::unit_box().unwrap();
+    mesh.update_vertex_normals_accurate().unwrap();
+    let (mesh, vertices, edges) = mesh_view(&mesh, &context, 0.01, 0.005);
     // Render loop.
     window.render_loop(move |mut frame_input| {
         let mut redraw = frame_input.first_frame;
