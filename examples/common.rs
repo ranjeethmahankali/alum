@@ -1,5 +1,11 @@
-use alum::{Adaptor, CrossProductAdaptor, FloatScalarAdaptor, PolyMeshT, VectorNormalizeAdaptor};
-use three_d::{InnerSpace, Vec3};
+use alum::{
+    Adaptor, CrossProductAdaptor, FloatScalarAdaptor, Handle, HasIterators, PolyMeshT,
+    VectorNormalizeAdaptor,
+};
+use three_d::{
+    vec3, Context, CpuMaterial, CpuMesh, Gm, Indices, InnerSpace, Mesh, PhysicalMaterial,
+    Positions, Srgba, Vec3,
+};
 
 pub struct MeshAdaptor;
 
@@ -44,6 +50,34 @@ impl VectorNormalizeAdaptor<3> for MeshAdaptor {
 }
 
 pub type PolygonMesh = PolyMeshT<3, MeshAdaptor>;
+
+pub fn mesh_view(mesh: &PolygonMesh, context: &Context) -> Gm<Mesh, PhysicalMaterial> {
+    let points = mesh.points();
+    let points = points.try_borrow().expect("Cannot borrow points");
+    let vnormals = mesh.vertex_normals().unwrap();
+    let vnormals = vnormals.try_borrow().unwrap();
+    let cpumesh = CpuMesh {
+        positions: Positions::F32(points.iter().map(|p| vec3(p.x, p.y, p.z)).collect()),
+        indices: Indices::U32(
+            mesh.triangulated_vertices()
+                .flatten()
+                .map(|v| v.index())
+                .collect(),
+        ),
+        normals: Some(vnormals.to_vec()),
+        ..Default::default()
+    };
+    let model_material = PhysicalMaterial::new_opaque(
+        &context,
+        &CpuMaterial {
+            albedo: Srgba::new_opaque(200, 200, 200),
+            roughness: 0.7,
+            metallic: 0.8,
+            ..Default::default()
+        },
+    );
+    Gm::new(Mesh::new(&context, &cpumesh), model_material)
+}
 
 // fn make_box() -> PolygonMesh {
 //     // Make a box.

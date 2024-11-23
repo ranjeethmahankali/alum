@@ -1,47 +1,24 @@
 mod common;
 
-use alum::{Handle, HasIterators, HasTopology};
-use common::PolygonMesh;
+use alum::HasTopology;
+use common::{mesh_view, PolygonMesh};
 use three_d::{
     degrees, vec3, AmbientLight, Camera, ClearState, Context, CpuMaterial, CpuMesh, Cull,
-    DirectionalLight, FrameOutput, Gm, Indices, InnerSpace, InstancedMesh, Instances, Mat4, Mesh,
-    OrbitControl, PhysicalMaterial, Positions, Quat, Srgba, Window, WindowSettings,
+    DirectionalLight, FrameOutput, Gm, InnerSpace, InstancedMesh, Instances, Mat4, OrbitControl,
+    PhysicalMaterial, Quat, Srgba, Window, WindowSettings,
 };
 
-fn mesh_view(
+fn wireframe_view(
     mesh: &PolygonMesh,
     context: &Context,
     vertex_radius: f32,
     edge_radius: f32,
 ) -> (
-    Gm<Mesh, PhysicalMaterial>,
     Gm<InstancedMesh, PhysicalMaterial>,
     Gm<InstancedMesh, PhysicalMaterial>,
 ) {
     let points = mesh.points();
     let points = points.try_borrow().expect("Cannot borrow points");
-    let vnormals = mesh.vertex_normals().unwrap();
-    let vnormals = vnormals.try_borrow().unwrap();
-    let cpumesh = CpuMesh {
-        positions: Positions::F32(points.iter().map(|p| vec3(p.x, p.y, p.z)).collect()),
-        indices: Indices::U32(
-            mesh.triangulated_vertices()
-                .flatten()
-                .map(|v| v.index())
-                .collect(),
-        ),
-        normals: Some(vnormals.to_vec()),
-        ..Default::default()
-    };
-    let model_material = PhysicalMaterial::new_opaque(
-        &context,
-        &CpuMaterial {
-            albedo: Srgba::new_opaque(200, 200, 200),
-            roughness: 0.7,
-            metallic: 0.8,
-            ..Default::default()
-        },
-    );
     let mut wireframe_material = PhysicalMaterial::new_opaque(
         &context,
         &CpuMaterial {
@@ -59,7 +36,6 @@ fn mesh_view(
         .transform(&Mat4::from_nonuniform_scale(1.0, edge_radius, edge_radius))
         .unwrap();
     (
-        Gm::new(Mesh::new(&context, &cpumesh), model_material),
         Gm::new(
             InstancedMesh::new(
                 &context,
@@ -143,11 +119,26 @@ fn main() {
     let mut ico = PolygonMesh::icosahedron(1.0).unwrap();
     ico.translate(vec3(4.0, 0.0, 0.0)).unwrap();
     ico.update_vertex_normals_accurate().unwrap();
-    let (tm, tv, te) = mesh_view(&tet, &context, 0.01, 0.005);
-    let (hm, hv, he) = mesh_view(&hex, &context, 0.01, 0.005);
-    let (om, ov, oe) = mesh_view(&oct, &context, 0.01, 0.005);
-    let (dm, dv, de) = mesh_view(&dod, &context, 0.01, 0.005);
-    let (im, iv, ie) = mesh_view(&ico, &context, 0.01, 0.005);
+    let (tm, (tv, te)) = (
+        mesh_view(&tet, &context),
+        wireframe_view(&tet, &context, 0.01, 0.005),
+    );
+    let (hm, (hv, he)) = (
+        mesh_view(&hex, &context),
+        wireframe_view(&hex, &context, 0.01, 0.005),
+    );
+    let (om, (ov, oe)) = (
+        mesh_view(&oct, &context),
+        wireframe_view(&oct, &context, 0.01, 0.005),
+    );
+    let (dm, (dv, de)) = (
+        mesh_view(&dod, &context),
+        wireframe_view(&dod, &context, 0.01, 0.005),
+    );
+    let (im, (iv, ie)) = (
+        mesh_view(&ico, &context),
+        wireframe_view(&ico, &context, 0.01, 0.005),
+    );
     {
         // Render loop.
         window.render_loop(move |mut frame_input| {
