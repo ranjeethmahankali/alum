@@ -1,56 +1,12 @@
-use alum::{
-    Adaptor, CrossProductAdaptor, FloatScalarAdaptor, Handle, HasIterators, PolyMeshT,
-    VectorNormalizeAdaptor,
-};
+mod basic_adaptor;
+
+use alum::{Handle, HasIterators};
+use basic_adaptor::PolygonMesh;
 use three_d::{
     degrees, vec3, AmbientLight, Camera, ClearState, Context, CpuMaterial, CpuMesh,
     DirectionalLight, FrameOutput, Gm, Indices, InnerSpace, Mesh, OrbitControl, PhysicalMaterial,
-    Positions, Srgba, Vec3, Window, WindowSettings,
+    Positions, Srgba, Window, WindowSettings,
 };
-
-struct MeshAdaptor;
-
-impl Adaptor<3> for MeshAdaptor {
-    type Vector = Vec3;
-
-    type Scalar = f32;
-
-    fn vector(coords: [Self::Scalar; 3]) -> Self::Vector {
-        three_d::vec3(coords[0], coords[1], coords[2])
-    }
-
-    fn zero_vector() -> Self::Vector {
-        three_d::vec3(0.0, 0.0, 0.0)
-    }
-
-    fn vector_coord(v: &Self::Vector, i: usize) -> Self::Scalar {
-        v[i]
-    }
-}
-
-impl FloatScalarAdaptor<3> for MeshAdaptor {
-    fn scalarf32(val: f32) -> Self::Scalar {
-        val
-    }
-
-    fn scalarf64(val: f64) -> Self::Scalar {
-        val as f32
-    }
-}
-
-impl CrossProductAdaptor for MeshAdaptor {
-    fn cross_product(a: Self::Vector, b: Self::Vector) -> Self::Vector {
-        a.cross(b)
-    }
-}
-
-impl VectorNormalizeAdaptor<3> for MeshAdaptor {
-    fn normalized_vec(v: Self::Vector) -> Self::Vector {
-        v.normalize()
-    }
-}
-
-type PolygonMesh = PolyMeshT<3, MeshAdaptor>;
 
 fn mesh_view(mut mesh: PolygonMesh, context: &Context) -> Gm<Mesh, PhysicalMaterial> {
     let points = mesh.points();
