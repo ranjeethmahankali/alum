@@ -13,7 +13,8 @@ where
     /**
      * Load a polygon mesh from an obj file.
      */
-    pub fn load_obj(path: &Path) -> Result<Self, Error> {
+    pub fn load_obj<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
+        let path: &Path = path.as_ref();
         if path
             .extension()
             .ok_or(Error::InvalidObjFile(path.to_path_buf()))?
