@@ -44,7 +44,7 @@ fn main() {
     let mut mesh = PolygonMesh::load_obj(path).unwrap();
     mesh.update_vertex_normals_accurate().unwrap();
     let mview = mesh_view(&mesh, &context);
-    let (vertices, edges) = wireframe_view(&mesh, &context, 0.01, 0.005);
+    let (vertices, edges) = wireframe_view(&mesh, &context, 0.001, 0.0005);
     window.render_loop(move |mut frame_input| {
         let mut redraw = frame_input.first_frame;
         redraw |= camera.set_viewport(frame_input.viewport);
