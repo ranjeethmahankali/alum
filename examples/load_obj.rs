@@ -1,12 +1,38 @@
 mod common;
 
+use core::f32;
 use std::path::PathBuf;
 
 use common::{mesh_view, wireframe_view, PolygonMesh};
 use three_d::{
     degrees, vec3, AmbientLight, Camera, ClearState, DirectionalLight, FrameOutput, InnerSpace,
-    OrbitControl, Srgba, Window, WindowSettings,
+    OrbitControl, Srgba, Vec3, Window, WindowSettings,
 };
+
+fn bounds(mesh: &PolygonMesh) -> (Vec3, Vec3) {
+    let points = mesh.points();
+    let points = points.try_borrow().unwrap();
+    points.iter().fold(
+        (
+            vec3(f32::MAX, f32::MAX, f32::MAX),
+            vec3(f32::MIN, f32::MIN, f32::MIN),
+        ),
+        |(min, max), p| {
+            (
+                vec3(
+                    f32::min(min.x, p.x),
+                    f32::min(min.y, p.y),
+                    f32::min(min.z, p.z),
+                ),
+                vec3(
+                    f32::max(max.x, p.x),
+                    f32::max(max.y, p.y),
+                    f32::max(max.z, p.z),
+                ),
+            )
+        },
+    )
+}
 
 fn main() {
     // Create the scene.
@@ -17,8 +43,20 @@ fn main() {
     })
     .unwrap();
     let context = window.gl();
+    // Import the mesh.
+    let path = {
+        let mut path = PathBuf::new();
+        path.push(env!("CARGO_MANIFEST_DIR"));
+        path.push("assets");
+        path.push("bunny_large.obj");
+        path
+    };
+    let mut mesh = PolygonMesh::load_obj(path).unwrap();
+    mesh.update_vertex_normals_accurate().unwrap();
+    let mesh = mesh; // Immutable.
+    let (min, max) = bounds(&mesh);
     // Setup the camera and the controls and lights.
-    let target = vec3(0.5, 0.5, 0.5);
+    let target = 0.5 * (min + max);
     let scene_radius: f32 = 6.0;
     let mut camera = Camera::new_perspective(
         window.viewport(),
@@ -34,15 +72,6 @@ fn main() {
     let directional0 = DirectionalLight::new(&context, 2.0, Srgba::WHITE, &vec3(-1.0, -1.0, -1.0));
     let directional1 = DirectionalLight::new(&context, 2.0, Srgba::WHITE, &vec3(1.0, 1.0, 1.0));
     // Import and render the mesh.
-    let path = {
-        let mut path = PathBuf::new();
-        path.push(env!("CARGO_MANIFEST_DIR"));
-        path.push("assets");
-        path.push("bunny_large.obj");
-        path
-    };
-    let mut mesh = PolygonMesh::load_obj(path).unwrap();
-    mesh.update_vertex_normals_accurate().unwrap();
     let mview = mesh_view(&mesh, &context);
     let (vertices, edges) = wireframe_view(&mesh, &context, 0.001, 0.0005);
     window.render_loop(move |mut frame_input| {
