@@ -52,6 +52,7 @@ impl VectorNormalizeAdaptor<3> for MeshAdaptor {
 
 pub type PolygonMesh = PolyMeshT<3, MeshAdaptor>;
 
+#[allow(dead_code)]
 pub fn mesh_view(mesh: &PolygonMesh, context: &Context) -> Gm<Mesh, PhysicalMaterial> {
     let points = mesh.points();
     let points = points.try_borrow().expect("Cannot borrow points");
@@ -80,6 +81,7 @@ pub fn mesh_view(mesh: &PolygonMesh, context: &Context) -> Gm<Mesh, PhysicalMate
     Gm::new(Mesh::new(&context, &cpumesh), model_material)
 }
 
+#[allow(dead_code)]
 pub fn wireframe_view(
     mesh: &PolygonMesh,
     context: &Context,
