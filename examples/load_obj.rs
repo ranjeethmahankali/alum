@@ -1,12 +1,11 @@
 mod common;
 
+use common::{mesh_view, wireframe_view, CameraMouseControl, PolygonMesh};
 use core::f32;
 use std::path::PathBuf;
-
-use common::{mesh_view, wireframe_view, PolygonMesh};
 use three_d::{
     degrees, vec3, AmbientLight, Camera, ClearState, DirectionalLight, FrameOutput, InnerSpace,
-    OrbitControl, Srgba, Vec3, Window, WindowSettings,
+    Srgba, Vec3, Window, WindowSettings,
 };
 
 fn bounds(mesh: &PolygonMesh) -> (Vec3, Vec3) {
@@ -67,7 +66,8 @@ fn main() {
         0.1,
         1000.0,
     );
-    let mut control = OrbitControl::new(*camera.target(), 0.1 * scene_radius, 100.0 * scene_radius);
+    let mut control =
+        CameraMouseControl::new(*camera.target(), 0.1 * scene_radius, 100.0 * scene_radius);
     let ambient = AmbientLight::new(&context, 0.7, Srgba::WHITE);
     let directional0 = DirectionalLight::new(&context, 2.0, Srgba::WHITE, &vec3(-1.0, -1.0, -1.0));
     let directional1 = DirectionalLight::new(&context, 2.0, Srgba::WHITE, &vec3(1.0, 1.0, 1.0));
