@@ -54,12 +54,8 @@ fn bunny() -> PolygonMesh {
     mesh
 }
 
-fn translate(mesh: PolygonMesh, v: Vec3) -> PolygonMesh {
-    let mut points = mesh.points();
-    let mut points = points.try_borrow_mut().unwrap();
-    for pos in points.iter_mut() {
-        *pos += v;
-    }
+fn translate(mut mesh: PolygonMesh, v: Vec3) -> PolygonMesh {
+    mesh.translate(v).unwrap();
     mesh
 }
 
