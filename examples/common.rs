@@ -82,7 +82,7 @@ pub fn mesh_view(mesh: &PolygonMesh, context: &Context) -> Gm<Mesh, PhysicalMate
         ..Default::default()
     };
     let model_material = PhysicalMaterial::new_opaque(
-        &context,
+        context,
         &CpuMaterial {
             albedo: Srgba::new_opaque(200, 200, 200),
             roughness: 0.7,
@@ -90,7 +90,7 @@ pub fn mesh_view(mesh: &PolygonMesh, context: &Context) -> Gm<Mesh, PhysicalMate
             ..Default::default()
         },
     );
-    Gm::new(Mesh::new(&context, &cpumesh), model_material)
+    Gm::new(Mesh::new(context, &cpumesh), model_material)
 }
 
 #[allow(dead_code)]
