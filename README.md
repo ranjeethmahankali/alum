@@ -30,7 +30,7 @@ Or by adding the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-alum = "0.4.1"
+alum = "0.5.2"
 ```
 
 ## Usage and Features
@@ -42,7 +42,10 @@ for geometric types such as points, normals etc. These are enabled by the
 You can use this library with your own geometric types for points and normals
 etc. by implementing an adaptor that tells this library how to work with your
 geometric types. Read the [documentation](https://docs.rs/alum/latest/alum/) to
-learn more about this.
+learn more about this. These
+[examples](https://github.com/ranjeethmahankali/alum/tree/main/examples)
+demonstrate writing custom adaptors and rendering and using various features of
+this crate together with [`three_d`](https://github.com/asny/three-d)
 
 This library also comes with a property system just like the one in `OpenMesh`,
 with some small improvements and differences. The properties are always

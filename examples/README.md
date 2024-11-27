@@ -7,10 +7,9 @@ mesh with `three_d`.
 cargo run --example render
 ```
 
-![Screen capture of a cube](https://github.com/ranjeethmahankali/alum/tree/main/examples/images/render.png)
+![Screen capture of a cube](images/render.png)
 
-# Primitives |
-[code](https://github.com/ranjeethmahankali/alum/tree/main/examples/primitives.rs)
+# Primitives | [code](https://github.com/ranjeethmahankali/alum/tree/main/examples/primitives.rs)
 
 This example shows how to create primitive polyhedral meshes, and render them
 with `three_d`.
@@ -19,7 +18,7 @@ with `three_d`.
 cargo run --example primitives
 ```
 
-![Screen capture of polyhedra](https://github.com/ranjeethmahankali/alum/tree/main/examples/images/primitives.png)
+![Screen capture of polyhedra](images/primitives.png)
 
 # Loading an OBJ File | [code](https://github.com/ranjeethmahankali/alum/tree/main/examples/load_obj.rs)
 
@@ -30,7 +29,7 @@ This example shows how to load a mesh from an OBJ file and render it using
 cargo run --example load_obj
 ```
 
-![Screen capture of the imported OBJ mesh](https://github.com/ranjeethmahankali/alum/tree/main/examples/images/load_obj.png)
+![Screen capture of the imported OBJ mesh](images/load_obj.png)
 
 # Property System | [code](https://github.com/ranjeethmahankali/alum/tree/main/examples/property.rs)
 
@@ -48,7 +47,7 @@ the colors.
 cargo run --example property
 ```
 
-![Screen capture of classified mesh vertices](https://github.com/ranjeethmahankali/alum/tree/main/examples/images/property.png)
+![Screen capture of classified mesh vertices](images/property.png)
 
 # Mesh Subdivision | [code](https://github.com/ranjeethmahankali/alum/tree/main/examples/subdiv.rs)
 
@@ -62,7 +61,7 @@ release mode:
 cargo run --release --example subdiv
 ```
 
-![Screen capture of mesh subdivision](https://github.com/ranjeethmahankali/alum/tree/main/examples/images/subdiv.png)
+![Screen capture of mesh subdivision](images/subdiv.png)
 
 # Mesh Decimation | [code](https://github.com/ranjeethmahankali/alum/tree/main/examples/decimate.rs)
 
@@ -75,4 +74,4 @@ performance reasons, it is recommended running this example in release mode:
 cargo run --release --example decimate
 ```
 
-![Screen capture of mesh decimation](https://github.com/ranjeethmahankali/alum/tree/main/examples/images/decimate.png)
+![Screen capture of mesh decimation](images/decimate.png)
