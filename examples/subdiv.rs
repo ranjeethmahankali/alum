@@ -110,6 +110,7 @@ impl MeshData {
             }
             SubdivType::Sqrt3(phase) => SubdivType::Sqrt3(!mesh.subdivide_sqrt3(1, phase).unwrap()),
         };
+        mesh.update_vertex_normals_accurate().unwrap();
         Self::new(mesh, stype, context)
     }
 }
@@ -142,27 +143,29 @@ fn main() {
     })
     .unwrap();
     let context = window.gl();
-    let (mut views, target) = {
+    const NUM_MAX_SUBDIV: usize = 3;
+    let (views, target) = {
         let mesh = bunny();
         let (min, max) = bounds(&mesh);
         let target = 0.5 * (min + max);
         const SHIFT: f32 = 2.0;
-        (
-            vec![MeshTriplet(
-                MeshData::new(
-                    translate(mesh.clone(), vec3(-SHIFT, 0.0, 0.0)),
-                    SubdivType::CatmullClark,
-                    &context,
-                ),
-                MeshData::new(mesh.clone(), SubdivType::Loop, &context),
-                MeshData::new(
-                    translate(mesh, vec3(SHIFT, 0.0, 0.0)),
-                    SubdivType::Sqrt3(false),
-                    &context,
-                ),
-            )],
-            target,
-        )
+        let mut views = vec![MeshTriplet(
+            MeshData::new(
+                translate(mesh.clone(), vec3(-SHIFT, 0.0, 0.0)),
+                SubdivType::CatmullClark,
+                &context,
+            ),
+            MeshData::new(mesh.clone(), SubdivType::Loop, &context),
+            MeshData::new(
+                translate(mesh, vec3(SHIFT, 0.0, 0.0)),
+                SubdivType::Sqrt3(false),
+                &context,
+            ),
+        )];
+        for _ in 0..NUM_MAX_SUBDIV {
+            views.push(views.last().unwrap().subdivide(&context));
+        }
+        (views, target)
     };
     // Setup the camera and the controls and lights.
     let scene_radius: f32 = 6.0;
@@ -182,6 +185,10 @@ fn main() {
     let directional1 = DirectionalLight::new(&context, 2.0, Srgba::WHITE, &vec3(1.0, 1.0, 1.0));
     let mut gui = three_d::GUI::new(&context);
     let mut num_iter = 0usize;
+    let note = format!(
+        "Use the Up/Down arrows to control the number of iterations, up to a maximum of {}",
+        NUM_MAX_SUBDIV
+    );
     window.render_loop(move |mut frame_input| {
         let mut panel_height = 0.0;
         gui.update(
@@ -193,7 +200,7 @@ fn main() {
                 use three_d::egui::*;
                 TopBottomPanel::top("top_panel").show(gui_context, |ui| {
                     ui.vertical_centered(|ui| {
-                        ui.label("Use the Up/Down arrows to control the number of iterations");
+                        ui.label(&note);
                     });
                 });
                 panel_height = gui_context.used_rect().height();
@@ -212,20 +219,21 @@ fn main() {
         redraw |= camera.set_viewport(frame_input.viewport);
         redraw |= control.handle_events(&mut camera, &mut frame_input.events);
         for event in &frame_input.events {
-            let next = match event {
-                Event::KeyPress { kind, .. } => match kind {
-                    Key::ArrowUp => num_iter + 1,
-                    Key::ArrowDown => num_iter.saturating_sub(1),
+            let next = usize::clamp(
+                match event {
+                    Event::KeyPress { kind, .. } => match kind {
+                        Key::ArrowUp => num_iter + 1,
+                        Key::ArrowDown => num_iter.saturating_sub(1),
+                        _ => num_iter,
+                    },
                     _ => num_iter,
                 },
-                _ => num_iter,
-            };
+                0,
+                views.len() - 1,
+            );
             if next != num_iter {
                 redraw = true;
                 num_iter = next;
-            }
-            while num_iter >= views.len() {
-                views.push(views.last().unwrap().subdivide(&context));
             }
         }
         let view = &views[num_iter];
