@@ -35,12 +35,12 @@ where
     }
 }
 
-impl<H> Into<Range<u32>> for HandleRange<H>
+impl<H> From<HandleRange<H>> for Range<u32>
 where
     H: Handle,
 {
-    fn into(self) -> Range<u32> {
-        self.current..self.stop
+    fn from(value: HandleRange<H>) -> Self {
+        value.current..value.stop
     }
 }
 
