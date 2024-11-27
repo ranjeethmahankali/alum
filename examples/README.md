@@ -9,8 +9,7 @@ cargo run --example render
 
 ![Screen capture of a cube](https://github.com/ranjeethmahankali/alum/tree/main/examples/images/render.png)
 
-# Primitives |
-[code](https://github.com/ranjeethmahankali/alum/tree/main/examples/primitives.rs)
+# Primitives | [code](https://github.com/ranjeethmahankali/alum/tree/main/examples/primitives.rs)
 
 This example shows how to create primitive polyhedral meshes, and render them
 with `three_d`.
