@@ -36,7 +36,7 @@ fn bounds(mesh: &PolygonMesh) -> (Vec3, Vec3) {
 fn main() {
     // Create the scene.
     let window = Window::new(WindowSettings {
-        title: "Viewer".to_string(),
+        title: "Example: Loading a Mesh from an OBJ File".to_string(),
         min_size: (512, 256),
         ..Default::default()
     })

@@ -148,7 +148,7 @@ fn mesh_view_with_colors(
 fn main() {
     // Create the scene.
     let window = Window::new(WindowSettings {
-        title: "Viewer".to_string(),
+        title: "Example: Using the Property System for Colors".to_string(),
         min_size: (512, 256),
         ..Default::default()
     })

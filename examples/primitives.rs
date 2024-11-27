@@ -9,7 +9,7 @@ use three_d::{
 fn main() {
     // Window and context.
     let window = Window::new(WindowSettings {
-        title: "Viewer".to_string(),
+        title: "Example: Primitive Solids".to_string(),
         min_size: (512, 256),
         ..Default::default()
     })

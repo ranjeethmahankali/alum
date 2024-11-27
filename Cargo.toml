@@ -22,7 +22,7 @@ decimate = []
 
 [dev-dependencies]
 arrayvec = "0.7.6"
-three-d = "0.17.0"
+three-d = {version = "0.17.0", features = ["egui-gui"]}
 
 [[example]]
 name = "common"
