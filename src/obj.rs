@@ -13,7 +13,8 @@ where
     /**
      * Load a polygon mesh from an obj file.
      */
-    pub fn load_obj(path: &Path) -> Result<Self, Error> {
+    pub fn load_obj<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
+        let path: &Path = path.as_ref();
         if path
             .extension()
             .ok_or(Error::InvalidObjFile(path.to_path_buf()))?
@@ -56,7 +57,7 @@ where
             let vertices = outmesh.add_vertices(&positions)?;
             assert_eq!(
                 vertices,
-                nbefore..(nbefore + positions.len() as u32),
+                (nbefore..(nbefore + positions.len() as u32)).into(),
                 "Vertex indices are expected to be in a contiguous range."
             );
             // Faces.

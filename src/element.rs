@@ -12,6 +12,7 @@ pub trait Handle: From<u32> + Copy + Clone {
     fn index(&self) -> u32;
 }
 
+#[derive(Clone, Debug)]
 pub struct HandleRange<H>
 where
     H: Handle,
@@ -31,6 +32,24 @@ where
             stop: value.end,
             _phantom: PhantomData,
         }
+    }
+}
+
+impl<H> From<HandleRange<H>> for Range<u32>
+where
+    H: Handle,
+{
+    fn from(value: HandleRange<H>) -> Self {
+        value.current..value.stop
+    }
+}
+
+impl<H> PartialEq for HandleRange<H>
+where
+    H: Handle,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.current == other.current && self.stop == other.stop
     }
 }
 

@@ -3,6 +3,7 @@
 [![CI](https://github.com/ranjeethmahankali/alum/actions/workflows/ci.yml/badge.svg)](https://github.com/ranjeethmahankali/alum/actions/workflows/ci.yml)
 [![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://docs.rs/alum/latest/alum/)
 [![Crate](https://img.shields.io/crates/v/alum)](https://crates.io/crates/alum)
+[![Examples with three_d](https://img.shields.io/badge/three__d-examples-purple)](https://github.com/ranjeethmahankali/alum/tree/main/examples)
 
 ![Standford Bunny](assets/bunny.png)
 
@@ -29,7 +30,7 @@ Or by adding the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-alum = "0.1.1"
+alum = "0.4.1"
 ```
 
 ## Usage and Features
