@@ -106,7 +106,7 @@ pub fn wireframe_view(
     let points = mesh.points();
     let points = points.try_borrow().expect("Cannot borrow points");
     let mut wireframe_material = PhysicalMaterial::new_opaque(
-        &context,
+        context,
         &CpuMaterial {
             albedo: Srgba::new_opaque(220, 50, 50),
             roughness: 0.7,
@@ -124,7 +124,7 @@ pub fn wireframe_view(
     (
         Gm::new(
             InstancedMesh::new(
-                &context,
+                context,
                 &Instances {
                     transformations: points
                         .iter()
@@ -138,7 +138,7 @@ pub fn wireframe_view(
         ),
         Gm::new(
             InstancedMesh::new(
-                &context,
+                context,
                 &Instances {
                     transformations: mesh
                         .edges()

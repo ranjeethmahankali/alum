@@ -53,13 +53,13 @@ impl Decimater<PolygonMesh> for RecordingDecimater {
 }
 
 fn bunny_mesh() -> PolygonMesh {
-    let mesh = PolygonMesh::load_obj(&PathBuf::from("/home/rnjth94/dev/alum/assets/bunny.obj"))
+    let mesh = PolygonMesh::load_obj(PathBuf::from("/home/rnjth94/dev/alum/assets/bunny.obj"))
         .expect("Cannot load obj");
     {
         let mut points = mesh.points();
         let mut points = points.try_borrow_mut().expect("Cannot borrow points");
         for p in points.iter_mut() {
-            *p = *p * 10.; // Scale the mesh.
+            *p *= 10.; // Scale the mesh.
         }
     }
     mesh
@@ -93,7 +93,7 @@ fn visualize_mesh(
             ..Default::default()
         };
         let model_material = PhysicalMaterial::new_opaque(
-            &context,
+            context,
             &CpuMaterial {
                 albedo: Srgba::new_opaque(200, 200, 200),
                 roughness: 0.7,
@@ -102,7 +102,7 @@ fn visualize_mesh(
             },
         );
         (
-            Gm::new(Mesh::new(&context, &cpumesh), model_material),
+            Gm::new(Mesh::new(context, &cpumesh), model_material),
             Instances {
                 transformations: mesh
                     .edges()
@@ -131,7 +131,7 @@ fn visualize_mesh(
         )
     };
     let mut wireframe_material = PhysicalMaterial::new_opaque(
-        &context,
+        context,
         &CpuMaterial {
             albedo: Srgba::new_opaque(220, 50, 50),
             roughness: 0.7,
@@ -143,7 +143,7 @@ fn visualize_mesh(
     let mut sphere = CpuMesh::sphere(8);
     sphere.transform(&Mat4::from_scale(SPH_RADIUS)).unwrap();
     let vertices = Gm::new(
-        InstancedMesh::new(&context, &vtransforms, &sphere),
+        InstancedMesh::new(context, &vtransforms, &sphere),
         wireframe_material.clone(),
     );
     let mut cylinder = CpuMesh::cylinder(10);
@@ -151,7 +151,7 @@ fn visualize_mesh(
         .transform(&Mat4::from_nonuniform_scale(1.0, CYL_RADIUS, CYL_RADIUS))
         .unwrap();
     let edges = Gm::new(
-        InstancedMesh::new(&context, &etransforms, &cylinder),
+        InstancedMesh::new(context, &etransforms, &cylinder),
         wireframe_material,
     );
     (model, vertices, edges)
@@ -203,7 +203,7 @@ pub fn main() {
         Gm<InstancedMesh, PhysicalMaterial>,
     )> = history
         .iter()
-        .map(|mesh| visualize_mesh(&mesh, &context))
+        .map(|mesh| visualize_mesh(mesh, &context))
         .collect();
     // let (_, rvs, res) = visualize_mesh(&refbox, &context);
     let ambient = AmbientLight::new(&context, 0.7, Srgba::WHITE);
