@@ -86,7 +86,7 @@ impl MeshData {
         }
     }
 
-    fn into_iter(&self) -> impl Iterator<Item = &dyn Object> {
+    fn views(&self) -> impl Iterator<Item = &dyn Object> {
         self.triangles
             .into_iter()
             .chain(&self.vertices)
@@ -122,11 +122,8 @@ impl MeshTriplet {
         )
     }
 
-    fn into_iter(&self) -> impl Iterator<Item = &dyn Object> {
-        self.0
-            .into_iter()
-            .chain(self.1.into_iter())
-            .chain(self.2.into_iter())
+    fn views(&self) -> impl Iterator<Item = &dyn Object> {
+        self.0.views().chain(self.1.views()).chain(self.2.views())
     }
 }
 
@@ -239,7 +236,7 @@ fn main() {
                 .clear(ClearState::color_and_depth(0.1, 0.1, 0.1, 1.0, 1.0))
                 .render(
                     &camera,
-                    view.into_iter(),
+                    view.views(),
                     &[&ambient, &directional0, &directional1],
                 );
         }

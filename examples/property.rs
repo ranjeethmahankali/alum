@@ -81,7 +81,7 @@ fn classify_vertices(mesh: &mut PolygonMesh) -> VProperty<Srgba> {
     vstack.extend(outer.into_iter().enumerate());
     // Start fast marching to classify the vertices.
     while let Some((i, v)) = vstack.pop_front() {
-        if let Some(_) = group[v] {
+        if group[v].is_some() {
             // This vertex has already been visited.
             continue;
         }
@@ -104,7 +104,7 @@ fn classify_vertices(mesh: &mut PolygonMesh) -> VProperty<Srgba> {
         let mut colors = colors.try_borrow_mut().unwrap();
         for v in mesh.vertices() {
             let i = group[v].unwrap();
-            colors[v] = legend[i].clone();
+            colors[v] = *legend[i];
         }
         // The borrowed reference is dropped, allowing us to return the property from the function.
     }
@@ -134,7 +134,7 @@ fn mesh_view_with_colors(
         ..Default::default()
     };
     let model_material = PhysicalMaterial::new_opaque(
-        &context,
+        context,
         &CpuMaterial {
             albedo: Srgba::new_opaque(200, 200, 200),
             roughness: 0.7,
@@ -142,7 +142,7 @@ fn mesh_view_with_colors(
             ..Default::default()
         },
     );
-    Gm::new(Mesh::new(&context, &cpumesh), model_material)
+    Gm::new(Mesh::new(context, &cpumesh), model_material)
 }
 
 fn main() {
@@ -194,11 +194,7 @@ fn main() {
             frame_input
                 .screen()
                 .clear(ClearState::color_and_depth(0.1, 0.1, 0.1, 1.0, 1.0))
-                .render(
-                    &camera,
-                    mview.into_iter(),
-                    &[&ambient, &directional0, &directional1],
-                );
+                .render(&camera, &mview, &[&ambient, &directional0, &directional1]);
         }
         FrameOutput {
             swap_buffers: redraw,

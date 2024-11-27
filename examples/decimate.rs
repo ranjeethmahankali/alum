@@ -65,14 +65,7 @@ fn bunny_mesh() -> PolygonMesh {
     mesh
 }
 
-fn visualize_mesh(
-    mesh: &PolygonMesh,
-    context: &Context,
-) -> (
-    Gm<Mesh, PhysicalMaterial>,
-    Gm<InstancedMesh, PhysicalMaterial>,
-    Gm<InstancedMesh, PhysicalMaterial>,
-) {
+fn visualize_mesh(mesh: &PolygonMesh, context: &Context) -> MeshViews {
     const CYL_RADIUS: f32 = 0.0005;
     const SPH_RADIUS: f32 = 0.001;
     // Create a CPU-side mesh consisting of a single colored triangle
@@ -154,8 +147,14 @@ fn visualize_mesh(
         InstancedMesh::new(context, &etransforms, &cylinder),
         wireframe_material,
     );
-    (model, vertices, edges)
+    MeshViews(model, vertices, edges)
 }
+
+struct MeshViews(
+    Gm<Mesh, PhysicalMaterial>,
+    Gm<InstancedMesh, PhysicalMaterial>,
+    Gm<InstancedMesh, PhysicalMaterial>,
+);
 
 pub fn main() {
     let window = Window::new(WindowSettings {
@@ -197,11 +196,7 @@ pub fn main() {
     );
     let mut control =
         CameraMouseControl::new(*camera.target(), 0.1 * scene_radius, 100.0 * scene_radius);
-    let views: Vec<(
-        Gm<Mesh, PhysicalMaterial>,
-        Gm<InstancedMesh, PhysicalMaterial>,
-        Gm<InstancedMesh, PhysicalMaterial>,
-    )> = history
+    let views: Vec<MeshViews> = history
         .iter()
         .map(|mesh| visualize_mesh(mesh, &context))
         .collect();
@@ -264,7 +259,7 @@ pub fn main() {
                 index = next;
             }
         }
-        let (model, vertices, edges) = &views[index];
+        let MeshViews(model, vertices, edges) = &views[index];
         if redraw {
             frame_input
                 .screen()
