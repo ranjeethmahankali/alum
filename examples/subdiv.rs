@@ -236,8 +236,8 @@ fn main() {
         for event in &frame_input.events {
             let next = match event {
                 Event::KeyPress { kind, .. } => match kind {
-                    Key::ArrowDown => num_iter + 1,
-                    Key::ArrowUp => num_iter.saturating_sub(1),
+                    Key::ArrowUp => num_iter + 1,
+                    Key::ArrowDown => num_iter.saturating_sub(1),
                     _ => num_iter,
                 },
                 _ => num_iter,
