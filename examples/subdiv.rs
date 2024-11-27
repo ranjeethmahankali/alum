@@ -63,19 +63,6 @@ fn translate(mesh: PolygonMesh, v: Vec3) -> PolygonMesh {
     mesh
 }
 
-fn get_views(
-    mesh: &PolygonMesh,
-    context: &Context,
-) -> (
-    Gm<Mesh, PhysicalMaterial>,
-    Gm<InstancedMesh, PhysicalMaterial>,
-    Gm<InstancedMesh, PhysicalMaterial>,
-) {
-    let mview = mesh_view(mesh, context);
-    let (verts, edges) = wireframe_view(mesh, context, 0.001, 0.0005);
-    (mview, verts, edges)
-}
-
 enum SubdivType {
     CatmullClark,
     Loop,
@@ -106,15 +93,6 @@ impl MeshData {
     fn into_iter(&self) -> impl Iterator<Item = &dyn Object> {
         self.triangles
             .into_iter()
-            .chain(&self.vertices)
-            .chain(&self.edges)
-    }
-
-    fn chain<'a>(
-        &'a self,
-        iter: impl Iterator<Item = &'a dyn Object>,
-    ) -> impl Iterator<Item = &'a dyn Object> {
-        iter.chain(&self.triangles)
             .chain(&self.vertices)
             .chain(&self.edges)
     }
