@@ -1,6 +1,6 @@
 use alum::{
-    Adaptor, CrossProductAdaptor, FloatScalarAdaptor, Handle, HasIterators, HasTopology, PolyMeshT,
-    VectorNormalizeAdaptor,
+    Adaptor, CrossProductAdaptor, DotProductAdaptor, FloatScalarAdaptor, Handle, HasIterators,
+    HasTopology, PolyMeshT, VectorLengthAdaptor, VectorNormalizeAdaptor,
 };
 use three_d::{
     vec3, Camera, CameraAction, CameraControl, Context, CpuMaterial, CpuMesh, Cull, Event, Gm,
@@ -47,6 +47,18 @@ impl CrossProductAdaptor for MeshAdaptor {
 impl VectorNormalizeAdaptor<3> for MeshAdaptor {
     fn normalized_vec(v: Self::Vector) -> Self::Vector {
         v.normalize()
+    }
+}
+
+impl VectorLengthAdaptor<3> for MeshAdaptor {
+    fn vector_length(v: Self::Vector) -> Self::Scalar {
+        v.magnitude()
+    }
+}
+
+impl DotProductAdaptor<3> for MeshAdaptor {
+    fn dot_product(a: Self::Vector, b: Self::Vector) -> Self::Scalar {
+        a.dot(b)
     }
 }
 
