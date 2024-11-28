@@ -333,7 +333,7 @@ where
     _phantom: PhantomData<H>,
 }
 
-impl<'a, H, T> Index<H> for PropRef<'a, H, T>
+impl<H, T> Index<H> for PropRef<'_, H, T>
 where
     H: Handle,
     T: Copy + Clone + 'static,
@@ -346,7 +346,7 @@ where
     }
 }
 
-impl<'a, H, T> Deref for PropRef<'a, H, T>
+impl<H, T> Deref for PropRef<'_, H, T>
 where
     H: Handle,
     T: Copy + Clone + 'static,
@@ -359,7 +359,7 @@ where
     }
 }
 
-impl<'a, H, T> Debug for PropRef<'a, H, T>
+impl<H, T> Debug for PropRef<'_, H, T>
 where
     H: Handle,
     T: Copy + Clone + Debug + 'static,
@@ -373,7 +373,7 @@ where
     }
 }
 
-impl<'a, H, T> PartialEq<&[T]> for PropRef<'a, H, T>
+impl<H, T> PartialEq<&[T]> for PropRef<'_, H, T>
 where
     H: Handle,
     T: Copy + Clone + PartialEq + 'static,
@@ -398,7 +398,7 @@ where
     _phantom: PhantomData<H>,
 }
 
-impl<'a, H, T> Index<H> for PropRefMut<'a, H, T>
+impl<H, T> Index<H> for PropRefMut<'_, H, T>
 where
     H: Handle,
     T: Copy + Clone + 'static,
@@ -412,7 +412,7 @@ where
     }
 }
 
-impl<'a, H, T> IndexMut<H> for PropRefMut<'a, H, T>
+impl<H, T> IndexMut<H> for PropRefMut<'_, H, T>
 where
     H: Handle,
     T: Copy + Clone + 'static,
@@ -424,7 +424,7 @@ where
     }
 }
 
-impl<'a, H, T> Deref for PropRefMut<'a, H, T>
+impl<H, T> Deref for PropRefMut<'_, H, T>
 where
     H: Handle,
     T: Copy + Clone + 'static,
@@ -437,7 +437,7 @@ where
     }
 }
 
-impl<'a, H, T> DerefMut for PropRefMut<'a, H, T>
+impl<H, T> DerefMut for PropRefMut<'_, H, T>
 where
     H: Handle,
     T: Copy + Clone + 'static,

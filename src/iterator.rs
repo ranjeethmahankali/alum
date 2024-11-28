@@ -34,7 +34,7 @@ impl<'a, const CCW: bool> RadialHalfedgeIter<'a, CCW> {
     }
 }
 
-impl<'a> Iterator for RadialHalfedgeIter<'a, true> {
+impl Iterator for RadialHalfedgeIter<'_, true> {
     type Item = HH;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -52,7 +52,7 @@ impl<'a> Iterator for RadialHalfedgeIter<'a, true> {
     }
 }
 
-impl<'a> Iterator for RadialHalfedgeIter<'a, false> {
+impl Iterator for RadialHalfedgeIter<'_, false> {
     type Item = HH;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -87,7 +87,7 @@ impl<'a, const CCW: bool> LoopHalfedgeIter<'a, CCW> {
     }
 }
 
-impl<'a> Iterator for LoopHalfedgeIter<'a, true> {
+impl Iterator for LoopHalfedgeIter<'_, true> {
     type Item = HH;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -106,7 +106,7 @@ impl<'a> Iterator for LoopHalfedgeIter<'a, true> {
     }
 }
 
-impl<'a> Iterator for LoopHalfedgeIter<'a, false> {
+impl Iterator for LoopHalfedgeIter<'_, false> {
     type Item = HH;
 
     fn next(&mut self) -> Option<Self::Item> {
