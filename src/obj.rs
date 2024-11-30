@@ -88,15 +88,11 @@ where
 
     fn write_obj(
         &self,
-        points: &VPropRef<A::Vector>,
+        points: VPropRef<A::Vector>,
+        vnormals: Option<VPropRef<A::Vector>>,
         mut w: impl io::Write,
     ) -> Result<(), io::Error> {
-        writeln!(
-            w,
-            "# {} vertices, {} faces",
-            self.num_vertices(),
-            self.num_faces()
-        )?;
+        writeln!(w, "# {} vertices", self.num_vertices())?;
         for pos in points.iter() {
             writeln!(
                 w,
@@ -106,6 +102,19 @@ where
                 A::to_f64(A::vector_coord(pos, 2))
             )?;
         }
+        if let Some(vnormals) = vnormals {
+            writeln!(w, "# {} normals", vnormals.len())?;
+            for n in vnormals.iter() {
+                writeln!(
+                    w,
+                    "vn {:.16} {:.16} {:.16}",
+                    A::to_f64(A::vector_coord(n, 0)),
+                    A::to_f64(A::vector_coord(n, 1)),
+                    A::to_f64(A::vector_coord(n, 2))
+                )?;
+            }
+        }
+        writeln!(w, "# {} faces", self.num_faces())?;
         for f in self.faces() {
             write!(w, "f ")?;
             for v in self.fv_ccw_iter(f) {
@@ -126,9 +135,17 @@ where
             .open(path)
             .map_err(|_| Error::CannotOpenFile(path.to_path_buf()))?;
         let points = self.points();
-        let points = points.try_borrow()?;
-        self.write_obj(&points, BufWriter::new(&file))
-            .map_err(|_| Error::CannotWriteToFile(path.to_path_buf()))
+        let vnormals = self.vertex_normals();
+        self.write_obj(
+            points.try_borrow()?,
+            match &vnormals {
+                Some(n) => Some(n.try_borrow()?),
+                None => None,
+            },
+            BufWriter::new(&file),
+        )
+        .map_err(|_| Error::CannotWriteToFile(path.to_path_buf()))?;
+        Ok(())
     }
 }
 
