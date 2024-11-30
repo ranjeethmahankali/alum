@@ -313,6 +313,25 @@ pub trait HasTopology: Sized {
     fn check_topology(&self) -> Result<(), Error> {
         self.topology().check()
     }
+
+    /// Delete the isolated vertices of this mesh.
+    ///
+    /// A vertex is isolated if it has no incident edges. If successful, the
+    /// number of vertices deleted is returned. This function may fail when
+    /// trying to borrow properties.
+    fn delete_isolated_vertices(&mut self) -> Result<usize, Error> {
+        let mut vstatus = self.vertex_status_prop();
+        let mut vstatus = vstatus.try_borrow_mut()?;
+        Ok(self
+            .vertices()
+            .fold(0usize, |count, v| match v.halfedge(self) {
+                Some(_) => count,
+                None => {
+                    vstatus[v].set_deleted(true);
+                    count + 1
+                }
+            }))
+    }
 }
 
 pub struct Topology {
