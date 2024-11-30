@@ -332,6 +332,30 @@ pub trait HasTopology: Sized {
                 }
             }))
     }
+
+    /// Check for deleted elements, and return an error if any are found.
+    ///
+    /// This is useful for making sure there are no deleted elements. If any are
+    /// found, calling garbage collection will clean them up.
+    fn check_for_deleted(&self) -> Result<(), Error> {
+        // Ensure no deleted topology.
+        let fstatus = self.face_status_prop();
+        let fstatus = fstatus.try_borrow()?;
+        if let Some(f) = self.faces().find(|f| fstatus[*f].deleted()) {
+            return Err(Error::DeletedFace(f));
+        }
+        let estatus = self.edge_status_prop();
+        let estatus = estatus.try_borrow()?;
+        if let Some(e) = self.edges().find(|e| estatus[*e].deleted()) {
+            return Err(Error::DeletedEdge(e));
+        }
+        let vstatus = self.vertex_status_prop();
+        let vstatus = vstatus.try_borrow()?;
+        if let Some(v) = self.vertices().find(|v| vstatus[*v].deleted()) {
+            return Err(Error::DeletedVertex(v));
+        }
+        Ok(())
+    }
 }
 
 pub struct Topology {

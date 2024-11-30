@@ -1,9 +1,12 @@
-use std::path::Path;
-
 use crate::{
     error::Error,
     mesh::{Adaptor, FloatScalarAdaptor, PolyMeshT},
-    HasTopology, VH,
+    Handle, HasIterators, HasTopology, VPropRef, VH,
+};
+use std::{
+    fs::OpenOptions,
+    io::{self, BufWriter},
+    path::Path,
 };
 
 impl<A> PolyMeshT<3, A>
@@ -81,6 +84,51 @@ where
             }
         }
         Ok(outmesh)
+    }
+
+    fn write_obj(
+        &self,
+        points: &VPropRef<A::Vector>,
+        mut w: impl io::Write,
+    ) -> Result<(), io::Error> {
+        writeln!(
+            w,
+            "# {} vertices, {} faces",
+            self.num_vertices(),
+            self.num_faces()
+        )?;
+        for pos in points.iter() {
+            writeln!(
+                w,
+                "v {:.16} {:.16} {:.16}",
+                A::to_f64(A::vector_coord(pos, 0)),
+                A::to_f64(A::vector_coord(pos, 1)),
+                A::to_f64(A::vector_coord(pos, 2))
+            )?;
+        }
+        for f in self.faces() {
+            write!(w, "f ")?;
+            for v in self.fv_ccw_iter(f) {
+                write!(w, "{} ", v.index())?;
+            }
+        }
+        Ok(())
+    }
+
+    pub fn save_obj<P: AsRef<Path>>(&self, path: P) -> Result<(), Error> {
+        self.check_for_deleted()?;
+        self.check_topology()?;
+        let path = path.as_ref();
+        let file = OpenOptions::new()
+            .write(true)
+            .truncate(true)
+            .create(true)
+            .open(path)
+            .map_err(|_| Error::CannotOpenFile(path.to_path_buf()))?;
+        let points = self.points();
+        let points = points.try_borrow()?;
+        self.write_obj(&points, BufWriter::new(&file))
+            .map_err(|_| Error::CannotWriteToFile(path.to_path_buf()))
     }
 }
 

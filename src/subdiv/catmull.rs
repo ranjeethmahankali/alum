@@ -7,8 +7,6 @@ use std::{
     ops::{Add, Div, Mul},
 };
 
-use super::check_for_deleted;
-
 /// This struct doesn't conatin any data. This purpose of this struct is to
 /// provide a convenient scope inside its `impl` where I can impose all the
 /// trait bounds once and write several free functions within that scope, with
@@ -245,7 +243,7 @@ where
         if iterations == 0 {
             return Ok(());
         }
-        check_for_deleted(&self.topol)?;
+        self.check_for_deleted()?;
         let mut fpos = Vec::new();
         let mut epos = Vec::new();
         let mut vpos = if update_points {

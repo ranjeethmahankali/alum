@@ -5,8 +5,8 @@ use std::{
 };
 
 use crate::{
-    subdiv::check_for_deleted, topol::Topology, EditableTopology, Error, FloatScalarAdaptor,
-    Handle, HasIterators, HasTopology, PolyMeshT, VPropRef, EH,
+    topol::Topology, EditableTopology, Error, FloatScalarAdaptor, Handle, HasIterators,
+    HasTopology, PolyMeshT, VPropRef, EH,
 };
 
 const WEIGHTS: [(f64, f64); 64] = [
@@ -154,7 +154,7 @@ where
         if iterations == 0 {
             return Ok(phase);
         }
-        check_for_deleted(&self.topol)?;
+        self.check_for_deleted()?;
         self.triangulate()?;
         // Phase cannot be true if any face has more than one boundary edge.
         if self.faces().any(|f| {

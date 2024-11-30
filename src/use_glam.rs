@@ -71,6 +71,14 @@ impl FloatScalarAdaptor<3> for BuiltInAdaptorF32 {
     fn scalarf64(val: f64) -> Self::Scalar {
         val as f32
     }
+
+    fn to_f32(val: Self::Scalar) -> f32 {
+        val
+    }
+
+    fn to_f64(val: Self::Scalar) -> f64 {
+        val as f64
+    }
 }
 
 /// Built-in adaptor for meshes that use 64-bit floating point numbers to
@@ -133,6 +141,14 @@ impl FloatScalarAdaptor<3> for BuiltInAdaptorF64 {
     }
 
     fn scalarf64(val: f64) -> Self::Scalar {
+        val
+    }
+
+    fn to_f32(val: Self::Scalar) -> f32 {
+        val as f32
+    }
+
+    fn to_f64(val: Self::Scalar) -> f64 {
         val
     }
 }
