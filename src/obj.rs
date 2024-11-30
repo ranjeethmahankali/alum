@@ -13,9 +13,7 @@ impl<A> PolyMeshT<3, A>
 where
     A: Adaptor<3> + FloatScalarAdaptor<3>,
 {
-    /**
-     * Load a polygon mesh from an obj file.
-     */
+    /// Load a polygon mesh from an obj file.
     pub fn load_obj<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
         let path: &Path = path.as_ref();
         if path
@@ -124,10 +122,20 @@ where
         Ok(())
     }
 
+    /// Write this mesh into an obj file.
     pub fn save_obj<P: AsRef<Path>>(&self, path: P) -> Result<(), Error> {
+        let path = path.as_ref();
+        if path
+            .extension()
+            .ok_or(Error::InvalidObjFile(path.to_path_buf()))?
+            .to_str()
+            .ok_or(Error::InvalidObjFile(path.to_path_buf()))?
+            != "obj"
+        {
+            return Err(Error::InvalidObjFile(path.to_path_buf()));
+        }
         self.check_for_deleted()?;
         self.check_topology()?;
-        let path = path.as_ref();
         let file = OpenOptions::new()
             .write(true)
             .truncate(true)
