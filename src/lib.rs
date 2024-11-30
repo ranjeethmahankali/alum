@@ -136,6 +136,7 @@ mod math;
 mod mesh;
 mod obj;
 mod property;
+mod queue;
 mod status;
 mod topol;
 
@@ -165,5 +166,6 @@ pub use property::{
     EPropRef, EPropRefMut, EProperty, FPropRef, FPropRefMut, FProperty, HPropRef, HPropRefMut,
     HProperty, PropRef, PropRefMut, Property, VPropRef, VPropRefMut, VProperty,
 };
+pub use queue::Queue;
 pub use status::Status;
 pub use topol::HasTopology;
