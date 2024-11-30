@@ -59,6 +59,11 @@ where
         self.items.len()
     }
 
+    /// Check if this queue is empty.
+    pub fn is_empty(&self) -> bool {
+        self.items.is_empty()
+    }
+
     // Low level functions for moving things around inside the heap.
 
     fn compare(&self, i: usize, j: usize) -> Option<Ordering> {
