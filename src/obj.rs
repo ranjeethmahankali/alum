@@ -144,6 +144,7 @@ where
             .map_err(|_| Error::CannotOpenFile(path.to_path_buf()))?;
         let points = self.points();
         let vnormals = self.vertex_normals();
+        // Deliberately not returning this directly to keep `points` alive.
         self.write_obj(
             points.try_borrow()?,
             match &vnormals {
