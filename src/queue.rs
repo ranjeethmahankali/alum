@@ -8,6 +8,10 @@ operations to update the heap.
 use crate::Handle;
 use std::{cmp::Ordering, ops::Range};
 
+/// Priorty queue implementation for mesh elements.
+///
+/// When you pop an element, the one with the lowest cost is removed from the
+/// queue and returned.
 pub struct Queue<H, Cost>
 where
     H: Handle,
