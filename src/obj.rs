@@ -114,9 +114,9 @@ where
         }
         writeln!(w, "# {} faces", self.num_faces())?;
         for f in self.faces() {
-            write!(w, "f ")?;
+            write!(w, "f")?;
             for v in self.fv_ccw_iter(f) {
-                write!(w, "{} ", v.index() + 1)?;
+                write!(w, " {}", v.index() + 1)?;
             }
             writeln!(w, "")?;
         }
