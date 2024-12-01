@@ -236,4 +236,16 @@ pub(crate) mod test {
             .check_topology()
             .expect("Found topological errors");
     }
+
+    #[test]
+    fn t_quad_bunny() {
+        let path = {
+            let mut dirpath = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+            dirpath.push("assets");
+            dirpath.push("bunny_quad.obj");
+            dirpath
+        };
+        let mesh = PolyMeshF32::load_obj(path).expect("Cannot load mesh from obj");
+        mesh.check_topology().expect("Topological errors found");
+    }
 }

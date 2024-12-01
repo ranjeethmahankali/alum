@@ -36,6 +36,14 @@ impl FloatScalarAdaptor<3> for MeshAdaptor {
     fn scalarf64(val: f64) -> Self::Scalar {
         val as f32
     }
+
+    fn to_f32(val: Self::Scalar) -> f32 {
+        val
+    }
+
+    fn to_f64(val: Self::Scalar) -> f64 {
+        val as f64
+    }
 }
 
 impl CrossProductAdaptor for MeshAdaptor {
