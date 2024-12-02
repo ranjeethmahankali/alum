@@ -37,7 +37,7 @@ pub enum Error {
     /// Cannot open file.
     CannotOpenFile(PathBuf),
     /// Cannot write to file.
-    CannotWriteToFile(PathBuf),
+    CannotWriteOBJ,
     /// The given is of the wrong length to represent the coordinates of 3d
     /// points.
     IncorrectNumberOfCoordinates(usize),
