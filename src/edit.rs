@@ -601,7 +601,13 @@ pub trait EditableTopology: HasIterators {
     ///     |         |         |             |                   |
     ///     +---------+---------+             +---------+---------+
     /// ```
-    fn remove_edge(&mut self, e: EH) -> Result<FH, Error> {
+    fn remove_edge(
+        &mut self,
+        e: EH,
+        hstatus: &mut HPropRefMut<Status>,
+        estatus: &mut EPropRefMut<Status>,
+        fstatus: &mut FPropRefMut<Status>,
+    ) -> Result<FH, Error> {
         //    <--------- <----------v0<---------- <----------
         //   |                n0    ^|     p1                ^
         //   |                      ||                       |
@@ -612,12 +618,6 @@ pub trait EditableTopology: HasIterators {
         //   v                p0    |v     n1                |
         //    ---------> ---------->v1----------> ---------->
         let topol = self.topology_mut();
-        let mut estatus = topol.estatus.clone();
-        let mut estatus = estatus.try_borrow_mut()?;
-        let mut fstatus = topol.fstatus.clone();
-        let mut fstatus = fstatus.try_borrow_mut()?;
-        let mut hstatus = topol.hstatus.clone();
-        let mut hstatus = hstatus.try_borrow_mut()?;
         if estatus[e].deleted() {
             return Err(Error::DeletedEdge(e));
         }
@@ -655,6 +655,30 @@ pub trait EditableTopology: HasIterators {
         hstatus[h1].set_deleted(true);
         fstatus[f1].set_deleted(true);
         Ok(f0)
+    }
+
+    /// Remove an edge and unite the two incident faces into one face. This is
+    /// the same as `Self::remove_edge` except it will internally try to borrow
+    /// the required properties without the caller having to supply them.
+    ///
+    /// ```text
+    ///     +---------+---------+             +---------+---------+
+    ///     |         |         |             |                   |
+    ///     |         |         |             |                   |
+    ///     |    f0   e    f1   |     ====>   |         f0        |  (f1 is deleted)
+    ///     |         |         |             |                   |
+    ///     |         |         |             |                   |
+    ///     +---------+---------+             +---------+---------+
+    /// ```
+    fn try_remove_edge(&mut self, e: EH) -> Result<FH, Error> {
+        let topol = self.topology_mut();
+        let mut estatus = topol.estatus.clone();
+        let mut estatus = estatus.try_borrow_mut()?;
+        let mut fstatus = topol.fstatus.clone();
+        let mut fstatus = fstatus.try_borrow_mut()?;
+        let mut hstatus = topol.hstatus.clone();
+        let mut hstatus = hstatus.try_borrow_mut()?;
+        self.remove_edge(e, &mut hstatus, &mut estatus, &mut fstatus)
     }
 
     /// Insert a new edge panning the end of `prev` and the start of `next` to
@@ -1148,7 +1172,7 @@ mod test {
         let mut cache = TopolCache::default();
         let mut qbox = quad_box();
         qbox.triangulate().expect("Cannot triangulate the mesh");
-        qbox.remove_edge(
+        qbox.try_remove_edge(
             qbox.find_halfedge(5.into(), 7.into())
                 .expect("Cannot find halfedge")
                 .edge(),
@@ -1170,7 +1194,7 @@ mod test {
                 }
             })
         );
-        qbox.remove_edge(
+        qbox.try_remove_edge(
             qbox.find_halfedge(1.into(), 4.into())
                 .expect("Cannot find halfedge")
                 .edge(),
