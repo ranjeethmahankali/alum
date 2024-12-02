@@ -4,6 +4,7 @@ use crate::{
     Handle, HasIterators, HasTopology, VPropRef, VH,
 };
 use std::{
+    fmt::Display,
     fs::OpenOptions,
     io::{self, BufWriter},
     path::Path,
@@ -89,15 +90,18 @@ where
         points: VPropRef<A::Vector>,
         vnormals: Option<VPropRef<A::Vector>>,
         mut w: impl io::Write,
-    ) -> Result<(), io::Error> {
+    ) -> Result<(), io::Error>
+    where
+        A::Scalar: Display,
+    {
         writeln!(w, "# {} vertices", self.num_vertices())?;
         for pos in points.iter() {
             writeln!(
                 w,
-                "v {:.16} {:.16} {:.16}",
-                A::to_f64(A::vector_coord(pos, 0)),
-                A::to_f64(A::vector_coord(pos, 1)),
-                A::to_f64(A::vector_coord(pos, 2))
+                "v {} {} {}",
+                A::vector_coord(pos, 0),
+                A::vector_coord(pos, 1),
+                A::vector_coord(pos, 2)
             )?;
         }
         if let Some(vnormals) = vnormals {
@@ -105,10 +109,10 @@ where
             for n in vnormals.iter() {
                 writeln!(
                     w,
-                    "vn {:.16} {:.16} {:.16}",
-                    A::to_f64(A::vector_coord(n, 0)),
-                    A::to_f64(A::vector_coord(n, 1)),
-                    A::to_f64(A::vector_coord(n, 2))
+                    "vn {} {} {}",
+                    A::vector_coord(n, 0),
+                    A::vector_coord(n, 1),
+                    A::vector_coord(n, 2)
                 )?;
             }
         }
@@ -124,7 +128,10 @@ where
     }
 
     /// Write this mesh into an obj file.
-    pub fn save_obj<P: AsRef<Path>>(&self, path: P) -> Result<(), Error> {
+    pub fn save_obj<P: AsRef<Path>>(&self, path: P) -> Result<(), Error>
+    where
+        A::Scalar: Display,
+    {
         let path = path.as_ref();
         if path
             .extension()

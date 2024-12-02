@@ -102,12 +102,6 @@ pub trait FloatScalarAdaptor<const DIM: usize>: Adaptor<DIM> {
 
     /// Create a scalar from [`f64`].
     fn scalarf64(val: f64) -> Self::Scalar;
-
-    /// Convert the scalar to [`f32`].
-    fn to_f32(val: Self::Scalar) -> f32;
-
-    /// Convert the scalar to [`f64`].
-    fn to_f64(val: Self::Scalar) -> f64;
 }
 
 /// A polygon mesh.
