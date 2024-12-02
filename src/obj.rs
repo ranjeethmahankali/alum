@@ -1,5 +1,3 @@
-use tobj::MTLLoadResult;
-
 use crate::{
     error::Error,
     mesh::{Adaptor, FloatScalarAdaptor, PolyMeshT},
@@ -89,9 +87,10 @@ where
     /// Read a polygon mesh from the stream assuming OBJ format.
     pub fn read_obj(reader: &mut impl io::BufRead) -> Result<Self, Error> {
         let options = tobj::LoadOptions::default();
-        let (models, _) =
-            tobj::load_obj_buf(reader, &options, |_| MTLLoadResult::Ok(Default::default()))
-                .map_err(|e| Error::ObjLoadFailed(format!("{}", e)))?;
+        let (models, _) = tobj::load_obj_buf(reader, &options, |_| {
+            tobj::MTLLoadResult::Ok(Default::default())
+        })
+        .map_err(|e| Error::ObjLoadFailed(format!("{}", e)))?;
         Self::load_from_models(models)
     }
 
