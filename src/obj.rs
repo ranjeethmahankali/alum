@@ -118,7 +118,7 @@ where
             for v in self.fv_ccw_iter(f) {
                 write!(w, " {}", v.index() + 1)?;
             }
-            writeln!(w, "")?;
+            writeln!(w)?;
         }
         Ok(())
     }
