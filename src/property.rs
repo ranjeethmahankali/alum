@@ -1,6 +1,5 @@
 use std::{
     cell::{Ref, RefCell, RefMut},
-    fmt::Debug,
     marker::PhantomData,
     ops::{Deref, DerefMut, Index, IndexMut},
     rc::{Rc, Weak},
@@ -241,20 +240,6 @@ where
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.buf
-    }
-}
-
-impl<H, T> Debug for PropBuf<H, T>
-where
-    H: Handle,
-    T: Copy + Clone + Debug + 'static,
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "[")?;
-        for val in self.buf.iter() {
-            writeln!(f, "{:?}, ", val)?;
-        }
-        writeln!(f, "[")
     }
 }
 
