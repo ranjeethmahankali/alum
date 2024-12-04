@@ -1,9 +1,9 @@
 use crate::{
     error::Error,
     mesh::{Adaptor, FloatScalarAdaptor, PolyMeshT},
-    Handle, HasIterators, HasTopology, VPropRef, VH,
+    Handle, HasIterators, HasTopology, VPropBuf, VH,
 };
-use std::{fmt::Display, fs::OpenOptions, io, path::Path};
+use std::{cell::Ref, fmt::Display, fs::OpenOptions, io, path::Path};
 
 impl<A> PolyMeshT<3, A>
 where
@@ -96,8 +96,8 @@ where
 
     fn write_obj_impl(
         &self,
-        points: VPropRef<A::Vector>,
-        vnormals: Option<VPropRef<A::Vector>>,
+        points: Ref<VPropBuf<A::Vector>>,
+        vnormals: Option<Ref<VPropBuf<A::Vector>>>,
         mut w: impl io::Write,
     ) -> Result<(), io::Error>
     where

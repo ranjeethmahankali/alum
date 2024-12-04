@@ -2,13 +2,13 @@ use crate::{
     element::Handle,
     iterator::HasIterators,
     topol::{HasTopology, Topology},
-    EPropRef, Error, FPropRef, HPropRef, Status, VPropRef,
+    EPropBuf, Error, FPropBuf, HPropBuf, Status, VPropBuf,
 };
 
 fn check_vertices(
     mesh: &Topology,
-    vstatus: &VPropRef<Status>,
-    hstatus: &HPropRef<Status>,
+    vstatus: &VPropBuf<Status>,
+    hstatus: &HPropBuf<Status>,
     hvisited: &mut [bool],
 ) -> Result<(), Error> {
     hvisited.fill(false);
@@ -49,10 +49,10 @@ fn check_vertices(
 
 fn check_edges(
     mesh: &Topology,
-    vstatus: &VPropRef<Status>,
-    hstatus: &HPropRef<Status>,
-    estatus: &EPropRef<Status>,
-    fstatus: &FPropRef<Status>,
+    vstatus: &VPropBuf<Status>,
+    hstatus: &HPropBuf<Status>,
+    estatus: &EPropBuf<Status>,
+    fstatus: &FPropBuf<Status>,
     hflags: &mut [bool],
 ) -> Result<(), Error> {
     for h in mesh.halfedges().filter(|h| !hstatus[*h].deleted()) {

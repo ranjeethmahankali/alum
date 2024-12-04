@@ -38,8 +38,8 @@ pub mod quadric;
 
 use crate::Queue;
 use crate::{
-    topol::Topology, Adaptor, EPropRef, EditableTopology, Error, HasIterators, PolyMeshT, Status,
-    VPropRefMut, HH, VH,
+    topol::Topology, Adaptor, EPropBuf, EditableTopology, Error, HasIterators, PolyMeshT, Status,
+    VPropBuf, HH, VH,
 };
 use std::cmp::Ordering;
 
@@ -119,8 +119,8 @@ where
 fn is_collapse_legal(
     mesh: &Topology,
     h: HH,
-    estatus: &EPropRef<Status>,
-    vstatus: &mut VPropRefMut<Status>,
+    estatus: &EPropBuf<Status>,
+    vstatus: &mut VPropBuf<Status>,
 ) -> bool {
     let v = h.tail(mesh);
     !vstatus[v].feature() // Vertex not a feature.
