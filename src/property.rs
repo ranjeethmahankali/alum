@@ -177,6 +177,14 @@ where
     fn is_valid(&self) -> bool;
 }
 
+/// Buffer containing the property values.
+///
+/// This is meant to be a thin wrapper around [T] that allows for convenient and
+/// type safe indexing with the handle type `H`. If you need a raw slice, you
+/// can always convert the property buffer into a &[T] at zero cost.
+///
+/// To access this buffer from the property that owns it, you have it borrow it
+/// as either [`Ref`](std::cell::Ref) or [`RefMut`](std::cell::RefMut)
 pub struct PropBuf<H, T>
 where
     H: Handle,
@@ -186,6 +194,7 @@ where
     _phantom: PhantomData<H>,
 }
 
+/// The element handle can be used to index into the property buffer.
 impl<H, T> Index<H> for PropBuf<H, T>
 where
     H: Handle,
@@ -198,6 +207,7 @@ where
     }
 }
 
+/// The element handle can be used to index into the property buffer.
 impl<H, T> IndexMut<H> for PropBuf<H, T>
 where
     H: Handle,
@@ -210,6 +220,7 @@ where
     }
 }
 
+/// A property buffer can be turned into a &[T] for conveninence.
 impl<H, T> Deref for PropBuf<H, T>
 where
     H: Handle,
@@ -222,6 +233,7 @@ where
     }
 }
 
+/// A mutable property buffer can be turned into a &mut [T] for conveninence.
 impl<H, T> DerefMut for PropBuf<H, T>
 where
     H: Handle,
@@ -243,17 +255,6 @@ where
             writeln!(f, "{:?}, ", val)?;
         }
         writeln!(f, "[")
-    }
-}
-
-impl<H, T> PartialEq<&[T]> for PropBuf<H, T>
-where
-    H: Handle,
-    T: Copy + Clone + PartialEq + 'static,
-{
-    fn eq(&self, other: &&[T]) -> bool {
-        let buf: &[T] = &self.buf;
-        buf == *other
     }
 }
 
@@ -458,14 +459,34 @@ pub type EProperty<T> = Property<EH, T>;
 /// ```
 pub type FProperty<T> = Property<FH, T>;
 
+/// Buffer containing the values of a vertex property.
+///
+/// To access this buffer from a property, you have to borrow it from the
+/// property as either [`Ref`](std::cell::Ref) or [`RefMut`](std::cell::RefMut).
 pub type VPropBuf<T> = PropBuf<VH, T>;
 
+/// Buffer containing the values of a halfedge property.
+///
+/// To access this buffer from a property, you have to borrow it from the
+/// property as either [`Ref`](std::cell::Ref) or [`RefMut`](std::cell::RefMut).
 pub type HPropBuf<T> = PropBuf<HH, T>;
 
+/// Buffer containing the values of a edge property.
+///
+/// To access this buffer from a property, you have to borrow it from the
+/// property as either [`Ref`](std::cell::Ref) or [`RefMut`](std::cell::RefMut).
 pub type EPropBuf<T> = PropBuf<EH, T>;
 
+/// Buffer containing the values of a face property.
+///
+/// To access this buffer from a property, you have to borrow it from the
+/// property as either [`Ref`](std::cell::Ref) or [`RefMut`](std::cell::RefMut).
 pub type FPropBuf<T> = PropBuf<FH, T>;
 
+/// This is what lives inside the property container. It doesn't control the
+/// lifetime of the property, but is able to resize and swap elements of the
+/// property buffer by borrowing whenever topological edits are made to the
+/// mesh.
 struct WeakProperty<H, T>
 where
     H: Handle,
