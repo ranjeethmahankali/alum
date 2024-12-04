@@ -163,8 +163,8 @@ pub use mesh::{
     VectorAngleAdaptor, VectorLengthAdaptor, VectorNormalizeAdaptor,
 };
 pub use property::{
-    EPropRef, EPropRefMut, EProperty, FPropRef, FPropRefMut, FProperty, HPropRef, HPropRefMut,
-    HProperty, PropRef, PropRefMut, Property, VPropRef, VPropRefMut, VProperty,
+    EPropBuf, EProperty, FPropBuf, FProperty, HPropBuf, HProperty, PropBuf, Property, VPropBuf,
+    VProperty,
 };
 pub use queue::Queue;
 pub use status::Status;

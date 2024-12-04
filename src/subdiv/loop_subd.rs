@@ -6,7 +6,7 @@ use std::{
 
 use crate::{
     topol::Topology, EditableTopology, Error, FloatScalarAdaptor, Handle, HasIterators,
-    HasTopology, PolyMeshT, VPropRef,
+    HasTopology, PolyMeshT, VPropBuf,
 };
 
 const WEIGHTS: [(f64, f64); 64] = [
@@ -120,7 +120,7 @@ where
 
     fn compute_vertex_points(
         mesh: &Topology,
-        points: &VPropRef<A::Vector>,
+        points: &VPropBuf<A::Vector>,
         dst: &mut Vec<A::Vector>,
     ) {
         dst.clear();
@@ -154,7 +154,7 @@ where
     fn compute_edge_points(
         mesh: &Topology,
         update_points: bool,
-        points: &VPropRef<A::Vector>,
+        points: &VPropBuf<A::Vector>,
         dst: &mut Vec<A::Vector>,
     ) {
         dst.clear();

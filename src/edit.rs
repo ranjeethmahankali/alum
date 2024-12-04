@@ -4,7 +4,7 @@ use crate::{
     iterator::HasIterators,
     status::Status,
     topol::Topology,
-    Adaptor, EPropRef, EPropRefMut, FPropRefMut, HPropRefMut, HasTopology, PolyMeshT, VPropRefMut,
+    Adaptor, EPropBuf, FPropBuf, HPropBuf, HasTopology, PolyMeshT, VPropBuf,
 };
 
 /// This trait defines functions to edit the topology of a mesh, with typical
@@ -20,8 +20,8 @@ pub trait EditableTopology: HasIterators {
     fn check_edge_collapse(
         &self,
         h: HH,
-        edge_status: &EPropRef<Status>,
-        vertex_status: &mut VPropRefMut<Status>,
+        edge_status: &EPropBuf<Status>,
+        vertex_status: &mut VPropBuf<Status>,
     ) -> bool {
         // Check if already deleted.
         if edge_status[h.edge()].deleted() {
@@ -141,9 +141,9 @@ pub trait EditableTopology: HasIterators {
     fn collapse_degenerate_triangle(
         &mut self,
         h: HH,
-        hstatus: &mut HPropRefMut<Status>,
-        estatus: &mut EPropRefMut<Status>,
-        fstatus: &mut FPropRefMut<Status>,
+        hstatus: &mut HPropBuf<Status>,
+        estatus: &mut EPropBuf<Status>,
+        fstatus: &mut FPropBuf<Status>,
     ) {
         let topol = self.topology_mut();
         let h1 = h.next(topol);
@@ -195,10 +195,10 @@ pub trait EditableTopology: HasIterators {
     fn collapse_edge(
         &mut self,
         h: HH,
-        vstatus: &mut VPropRefMut<Status>,
-        hstatus: &mut HPropRefMut<Status>,
-        estatus: &mut EPropRefMut<Status>,
-        fstatus: &mut FPropRefMut<Status>,
+        vstatus: &mut VPropBuf<Status>,
+        hstatus: &mut HPropBuf<Status>,
+        estatus: &mut EPropBuf<Status>,
+        fstatus: &mut FPropBuf<Status>,
         hcache: &mut Vec<HH>,
     ) {
         let topol = self.topology_mut();
@@ -604,9 +604,9 @@ pub trait EditableTopology: HasIterators {
     fn remove_edge(
         &mut self,
         e: EH,
-        hstatus: &mut HPropRefMut<Status>,
-        estatus: &mut EPropRefMut<Status>,
-        fstatus: &mut FPropRefMut<Status>,
+        hstatus: &mut HPropBuf<Status>,
+        estatus: &mut EPropBuf<Status>,
+        fstatus: &mut FPropBuf<Status>,
     ) -> Result<FH, Error> {
         //    <--------- <----------v0<---------- <----------
         //   |                n0    ^|     p1                ^

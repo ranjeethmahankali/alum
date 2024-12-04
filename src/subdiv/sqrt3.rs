@@ -6,7 +6,7 @@ use std::{
 
 use crate::{
     topol::Topology, EditableTopology, Error, FloatScalarAdaptor, Handle, HasIterators,
-    HasTopology, PolyMeshT, VPropRef, EH,
+    HasTopology, PolyMeshT, VPropBuf, EH,
 };
 
 const WEIGHTS: [(f64, f64); 64] = [
@@ -102,7 +102,7 @@ where
     fn compute_edge_points(
         mesh: &Topology,
         e: EH,
-        points: &VPropRef<A::Vector>,
+        points: &VPropBuf<A::Vector>,
     ) -> (A::Vector, A::Vector) {
         let h = {
             let mut h = e.halfedge(false);
