@@ -198,6 +198,18 @@ where
     }
 }
 
+impl<H, T> IndexMut<H> for PropBuf<H, T>
+where
+    H: Handle,
+    T: Copy + Clone + 'static,
+{
+    /// Get the mutable reference to the property of the element corresponding
+    /// to handle `h`.
+    fn index_mut(&mut self, h: H) -> &mut Self::Output {
+        &mut self.buf[h.index() as usize]
+    }
+}
+
 impl<H, T> Deref for PropBuf<H, T>
 where
     H: Handle,
@@ -217,6 +229,31 @@ where
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.buf
+    }
+}
+
+impl<H, T> Debug for PropBuf<H, T>
+where
+    H: Handle,
+    T: Copy + Clone + Debug + 'static,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "[")?;
+        for val in self.buf.iter() {
+            writeln!(f, "{:?}, ", val)?;
+        }
+        writeln!(f, "[")
+    }
+}
+
+impl<H, T> PartialEq<&[T]> for PropBuf<H, T>
+where
+    H: Handle,
+    T: Copy + Clone + PartialEq + 'static,
+{
+    fn eq(&self, other: &&[T]) -> bool {
+        let buf: &[T] = &self.buf;
+        buf == *other
     }
 }
 
@@ -290,16 +327,10 @@ where
     /// enforce runtime borrow checking rules. If borrowing fails,
     /// [`Error::BorrowedPropertyAccess`] is returned, otherwise a reference to
     /// the property is returned.
-    pub fn try_borrow(&self) -> Result<PropRef<'_, H, T>, Error> {
-        Ok(PropRef {
-            buf: Ref::map(
-                self.data
-                    .try_borrow()
-                    .map_err(|_| Error::BorrowedPropertyAccess)?,
-                |p| -> &[T] { p },
-            ),
-            _phantom: PhantomData,
-        })
+    pub fn try_borrow(&self) -> Result<Ref<PropBuf<H, T>>, Error> {
+        self.data
+            .try_borrow()
+            .map_err(|_| Error::BorrowedPropertyAccess)
     }
 
     /// Try to borrow the property with mutable access.
@@ -308,16 +339,10 @@ where
     /// enforce runtime borrow checking rules. If borrowing fails,
     /// [`Error::BorrowedPropertyAccess`] is returned, otherwise a mutable
     /// reference to the property is returned.
-    pub fn try_borrow_mut(&mut self) -> Result<PropRefMut<'_, H, T>, Error> {
-        Ok(PropRefMut {
-            buf: RefMut::map(
-                self.data
-                    .try_borrow_mut()
-                    .map_err(|_| Error::BorrowedPropertyAccess)?,
-                |p| -> &mut [T] { p },
-            ),
-            _phantom: PhantomData,
-        })
+    pub fn try_borrow_mut(&mut self) -> Result<RefMut<PropBuf<H, T>>, Error> {
+        self.data
+            .try_borrow_mut()
+            .map_err(|_| Error::BorrowedPropertyAccess)
     }
 
     /// Get a reference to the property value of the mesh element `h`.
@@ -362,135 +387,6 @@ where
     pub fn set(&mut self, h: H, val: T) -> Result<(), Error> {
         (*self.get_mut(h)?) = val;
         Ok(())
-    }
-}
-
-/// Borrowed reference to a property.
-///
-/// While this reference is alive, the property cannot be borrowed mutably by
-/// anyone else. This property ref can be indexed into with the handle of type
-/// `H` corresponding to the mesh element.
-pub struct PropRef<'a, H, T>
-where
-    H: Handle,
-    T: Copy + Clone + 'static,
-{
-    buf: Ref<'a, [T]>,
-    _phantom: PhantomData<H>,
-}
-
-impl<H, T> Index<H> for PropRef<'_, H, T>
-where
-    H: Handle,
-    T: Copy + Clone + 'static,
-{
-    type Output = T;
-
-    /// Get the refernce to the property of element corresponding to handle `h`.
-    fn index(&self, h: H) -> &Self::Output {
-        &self.buf[h.index() as usize]
-    }
-}
-
-impl<H, T> Deref for PropRef<'_, H, T>
-where
-    H: Handle,
-    T: Copy + Clone + 'static,
-{
-    type Target = [T];
-
-    /// Borrow the underlying property buffer as a slice.
-    fn deref(&self) -> &Self::Target {
-        &self.buf
-    }
-}
-
-impl<H, T> Debug for PropRef<'_, H, T>
-where
-    H: Handle,
-    T: Copy + Clone + Debug + 'static,
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "[")?;
-        for val in self.buf.iter() {
-            writeln!(f, "{:?}, ", val)?;
-        }
-        writeln!(f, "[")
-    }
-}
-
-impl<H, T> PartialEq<&[T]> for PropRef<'_, H, T>
-where
-    H: Handle,
-    T: Copy + Clone + PartialEq + 'static,
-{
-    fn eq(&self, other: &&[T]) -> bool {
-        let buf: &[T] = &self.buf;
-        buf == *other
-    }
-}
-
-/// Borrowed mutable reference to a property.
-///
-/// While this is alive, no one else can borrow the property either mutably or
-/// otherwise. This property ref can be indexed into with the handle of type `H`
-/// corresponding to the mesh element.
-pub struct PropRefMut<'a, H, T>
-where
-    H: Handle,
-    T: Copy + Clone + 'static,
-{
-    buf: RefMut<'a, [T]>,
-    _phantom: PhantomData<H>,
-}
-
-impl<H, T> Index<H> for PropRefMut<'_, H, T>
-where
-    H: Handle,
-    T: Copy + Clone + 'static,
-{
-    type Output = T;
-
-    /// Get the reference to the property of the element corresponding to handle
-    /// `h`.
-    fn index(&self, h: H) -> &Self::Output {
-        &self.buf[h.index() as usize]
-    }
-}
-
-impl<H, T> IndexMut<H> for PropRefMut<'_, H, T>
-where
-    H: Handle,
-    T: Copy + Clone + 'static,
-{
-    /// Get the mutable reference to the property of the element corresponding
-    /// to handle `h`.
-    fn index_mut(&mut self, h: H) -> &mut Self::Output {
-        &mut self.buf[h.index() as usize]
-    }
-}
-
-impl<H, T> Deref for PropRefMut<'_, H, T>
-where
-    H: Handle,
-    T: Copy + Clone + 'static,
-{
-    type Target = [T];
-
-    /// Borrow the underlying property buffer as a slice.
-    fn deref(&self) -> &Self::Target {
-        &self.buf
-    }
-}
-
-impl<H, T> DerefMut for PropRefMut<'_, H, T>
-where
-    H: Handle,
-    T: Copy + Clone + 'static,
-{
-    /// Mutably borrow the underlying property buffer as a slice.
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.buf
     }
 }
 
@@ -562,53 +458,13 @@ pub type EProperty<T> = Property<EH, T>;
 /// ```
 pub type FProperty<T> = Property<FH, T>;
 
-/// Borrowed reference to a vertex property of type `T`.
-///
-/// While this is alive, any attempt to borrow the property mutably will result
-/// in an error.
-pub type VPropRef<'a, T> = PropRef<'a, VH, T>;
+pub type VPropBuf<T> = PropBuf<VH, T>;
 
-/// Borrowed reference to a halfedge property of type `T`.
-///
-/// While this is alive, any attempt to borrow the property mutably will result
-/// in an error.
-pub type HPropRef<'a, T> = PropRef<'a, HH, T>;
+pub type HPropBuf<T> = PropBuf<HH, T>;
 
-/// Borrowed reference to a edge property of type `T`.
-///
-/// While this is alive, any attempt to borrow the property mutably will result
-/// in an error.
-pub type EPropRef<'a, T> = PropRef<'a, EH, T>;
+pub type EPropBuf<T> = PropBuf<EH, T>;
 
-/// Borrowed reference to a face property of type `T`.
-///
-/// While this is alive, any attempt to borrow the property mutably will result
-/// in an error.
-pub type FPropRef<'a, T> = PropRef<'a, FH, T>;
-
-/// Borrowed mutable reference to a vertex property of type `T`.
-///
-/// While this is alive, any attempt to borrow the property mutably or
-/// otherwise, will result in an error.
-pub type VPropRefMut<'a, T> = PropRefMut<'a, VH, T>;
-
-/// Borrowed mutable reference to a halfedge property of type `T`.
-///
-/// While this is alive, any attempt to borrow the property mutably or
-/// otherwise, will result in an error.
-pub type HPropRefMut<'a, T> = PropRefMut<'a, HH, T>;
-
-/// Borrowed mutable reference to a edge property of type `T`.
-///
-/// While this is alive, any attempt to borrow the property mutably or
-/// otherwise, will result in an error.
-pub type EPropRefMut<'a, T> = PropRefMut<'a, EH, T>;
-
-/// Borrowed mutable reference to a face property of type `T`.
-///
-/// While this is alive, any attempt to borrow the property mutably or
-/// otherwise, will result in an error.
-pub type FPropRefMut<'a, T> = PropRefMut<'a, FH, T>;
+pub type FPropBuf<T> = PropBuf<FH, T>;
 
 struct WeakProperty<H, T>
 where
