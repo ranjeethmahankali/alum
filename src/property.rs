@@ -177,6 +177,49 @@ where
     fn is_valid(&self) -> bool;
 }
 
+pub struct PropBuf<H, T>
+where
+    H: Handle,
+    T: Clone + Copy,
+{
+    buf: Vec<T>,
+    _phantom: PhantomData<H>,
+}
+
+impl<H, T> Index<H> for PropBuf<H, T>
+where
+    H: Handle,
+    T: Clone + Copy,
+{
+    type Output = T;
+
+    fn index(&self, handle: H) -> &Self::Output {
+        &self.buf[handle.index() as usize]
+    }
+}
+
+impl<H, T> Deref for PropBuf<H, T>
+where
+    H: Handle,
+    T: Clone + Copy,
+{
+    type Target = [T];
+
+    fn deref(&self) -> &Self::Target {
+        &self.buf
+    }
+}
+
+impl<H, T> DerefMut for PropBuf<H, T>
+where
+    H: Handle,
+    T: Clone + Copy,
+{
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.buf
+    }
+}
+
 /// This represents a property defined on the elements of the mesh. `T` is the
 /// type of data associated with each element of the mesh, whose handle type is
 /// `H`.
@@ -195,9 +238,8 @@ where
     H: Handle,
     T: Clone + Copy,
 {
-    data: Rc<RefCell<Vec<T>>>,
+    data: Rc<RefCell<PropBuf<H, T>>>,
     default: T,
-    _phantom: PhantomData<H>,
 }
 
 impl<H, T> Property<H, T>
@@ -207,9 +249,11 @@ where
 {
     pub(crate) fn new(container: &mut PropertyContainer<H>, default: T) -> Self {
         let prop = Property {
-            data: Rc::new(RefCell::new(vec![default; container.len()])),
+            data: Rc::new(RefCell::new(PropBuf {
+                buf: vec![default; container.len()],
+                _phantom: PhantomData,
+            })),
             default,
-            _phantom: PhantomData,
         };
         container.push_property(prop.generic_ref());
         prop
@@ -223,16 +267,18 @@ where
         let mut buf = Vec::with_capacity(n);
         buf.resize(container.len(), default);
         let prop = Property {
-            data: Rc::new(RefCell::new(buf)),
+            data: Rc::new(RefCell::new(PropBuf {
+                buf,
+                _phantom: PhantomData,
+            })),
             default,
-            _phantom: PhantomData,
         };
         container.push_property(prop.generic_ref());
         prop
     }
 
     fn generic_ref(&self) -> Box<dyn GenericProperty<H>> {
-        Box::new(WeakProperty {
+        Box::new(WeakProperty::<H, T> {
             data: Rc::downgrade(&self.data),
             default: self.default,
         })
@@ -283,7 +329,7 @@ where
             self.data
                 .try_borrow()
                 .map_err(|_| Error::BorrowedPropertyAccess)?,
-            |v| &v[h.index() as usize],
+            |v| &v.buf[h.index() as usize],
         ))
     }
 
@@ -305,7 +351,7 @@ where
             self.data
                 .try_borrow_mut()
                 .map_err(|_| Error::BorrowedPropertyAccess)?,
-            |v| &mut v[h.index() as usize],
+            |v| &mut v.buf[h.index() as usize],
         ))
     }
 
@@ -564,15 +610,16 @@ pub type EPropRefMut<'a, T> = PropRefMut<'a, EH, T>;
 /// otherwise, will result in an error.
 pub type FPropRefMut<'a, T> = PropRefMut<'a, FH, T>;
 
-struct WeakProperty<T>
+struct WeakProperty<H, T>
 where
+    H: Handle,
     T: Clone + Copy,
 {
-    data: Weak<RefCell<Vec<T>>>,
+    data: Weak<RefCell<PropBuf<H, T>>>,
     default: T,
 }
 
-impl<H, T> GenericProperty<H> for WeakProperty<T>
+impl<H, T> GenericProperty<H> for WeakProperty<H, T>
 where
     T: Clone + Copy,
     H: Handle,
@@ -580,7 +627,8 @@ where
     fn reserve(&mut self, n: usize) -> Result<(), Error> {
         if let Some(prop) = self.data.upgrade() {
             prop.try_borrow_mut()
-                .map_err(|_| Error::BorrowedPropertyAccess)? // reserve memory.
+                .map_err(|_| Error::BorrowedPropertyAccess)?
+                .buf
                 .reserve(n);
         }
         Ok(())
@@ -590,6 +638,7 @@ where
         if let Some(prop) = self.data.upgrade() {
             prop.try_borrow_mut()
                 .map_err(|_| Error::BorrowedPropertyAccess)?
+                .buf
                 .resize(n, self.default);
         }
         Ok(())
@@ -599,6 +648,7 @@ where
         if let Some(prop) = self.data.upgrade() {
             prop.try_borrow_mut()
                 .map_err(|_| Error::BorrowedPropertyAccess)?
+                .buf
                 .clear();
         }
         Ok(())
@@ -608,6 +658,7 @@ where
         if let Some(prop) = self.data.upgrade() {
             prop.try_borrow_mut()
                 .map_err(|_| Error::BorrowedPropertyAccess)?
+                .buf
                 .push(self.default);
         }
         Ok(())
@@ -618,7 +669,7 @@ where
             let mut prop = prop
                 .try_borrow_mut()
                 .map_err(|_| Error::BorrowedPropertyAccess)?;
-            let prop: &mut Vec<T> = &mut prop;
+            let prop: &mut Vec<T> = &mut prop.buf;
             prop.resize(prop.len() + num, self.default);
         }
         Ok(())
