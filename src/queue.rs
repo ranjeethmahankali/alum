@@ -8,6 +8,10 @@ operations to update the heap.
 use crate::Handle;
 use std::{cmp::Ordering, ops::Range};
 
+/// Priorty queue implementation for mesh elements.
+///
+/// When you pop an element, the one with the lowest cost is removed from the
+/// queue and returned.
 pub struct Queue<H, Cost>
 where
     H: Handle,
@@ -57,6 +61,11 @@ where
     /// Number of items currently in the queue.
     pub fn len(&self) -> usize {
         self.items.len()
+    }
+
+    /// Check if this queue is empty.
+    pub fn is_empty(&self) -> bool {
+        self.items.is_empty()
     }
 
     // Low level functions for moving things around inside the heap.

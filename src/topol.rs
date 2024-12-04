@@ -313,6 +313,49 @@ pub trait HasTopology: Sized {
     fn check_topology(&self) -> Result<(), Error> {
         self.topology().check()
     }
+
+    /// Delete the isolated vertices of this mesh.
+    ///
+    /// A vertex is isolated if it has no incident edges. If successful, the
+    /// number of vertices deleted is returned. This function may fail when
+    /// trying to borrow properties.
+    fn delete_isolated_vertices(&mut self) -> Result<usize, Error> {
+        let mut vstatus = self.vertex_status_prop();
+        let mut vstatus = vstatus.try_borrow_mut()?;
+        Ok(self
+            .vertices()
+            .fold(0usize, |count, v| match v.halfedge(self) {
+                Some(_) => count,
+                None => {
+                    vstatus[v].set_deleted(true);
+                    count + 1
+                }
+            }))
+    }
+
+    /// Check for deleted elements, and return an error if any are found.
+    ///
+    /// This is useful for making sure there are no deleted elements. If any are
+    /// found, calling garbage collection will clean them up.
+    fn check_for_deleted(&self) -> Result<(), Error> {
+        // Ensure no deleted topology.
+        let fstatus = self.face_status_prop();
+        let fstatus = fstatus.try_borrow()?;
+        if let Some(f) = self.faces().find(|f| fstatus[*f].deleted()) {
+            return Err(Error::DeletedFace(f));
+        }
+        let estatus = self.edge_status_prop();
+        let estatus = estatus.try_borrow()?;
+        if let Some(e) = self.edges().find(|e| estatus[*e].deleted()) {
+            return Err(Error::DeletedEdge(e));
+        }
+        let vstatus = self.vertex_status_prop();
+        let vstatus = vstatus.try_borrow()?;
+        if let Some(v) = self.vertices().find(|v| vstatus[*v].deleted()) {
+            return Err(Error::DeletedVertex(v));
+        }
+        Ok(())
+    }
 }
 
 pub struct Topology {

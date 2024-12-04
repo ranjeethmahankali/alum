@@ -9,8 +9,6 @@ use crate::{
     HasTopology, PolyMeshT, VPropRef,
 };
 
-use super::check_for_deleted;
-
 const WEIGHTS: [(f64, f64); 64] = [
     (f64::MAX, f64::MAX), // Should never happen.
     (0.765625, 0.234375),
@@ -208,7 +206,7 @@ where
         if iterations == 0 {
             return Ok(());
         }
-        check_for_deleted(&self.topol)?;
+        self.check_for_deleted()?;
         self.triangulate()?;
         let mut vpos = Vec::new();
         let mut epos = Vec::new();

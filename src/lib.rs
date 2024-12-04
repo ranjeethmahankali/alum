@@ -136,6 +136,7 @@ mod math;
 mod mesh;
 mod obj;
 mod property;
+mod queue;
 mod status;
 mod topol;
 
@@ -149,8 +150,8 @@ mod subdiv;
 pub mod decimate;
 #[cfg(feature = "decimate")]
 pub use decimate::{
-    edge_length::EdgeLengthDecimater, quadric::QuadricDecimater, quadric::QuadricType, Decimater,
-    HasDecimation,
+    edge_length::EdgeLengthDecimater, quadric::Quadric, quadric::QuadricDecimater,
+    quadric::QuadricType, Decimater, HasDecimation,
 };
 
 pub use edit::EditableTopology;
@@ -165,5 +166,6 @@ pub use property::{
     EPropRef, EPropRefMut, EProperty, FPropRef, FPropRefMut, FProperty, HPropRef, HPropRefMut,
     HProperty, PropRef, PropRefMut, Property, VPropRef, VPropRefMut, VProperty,
 };
+pub use queue::Queue;
 pub use status::Status;
 pub use topol::HasTopology;

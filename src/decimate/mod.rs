@@ -35,13 +35,12 @@ Out of the box, this module also provides the following implementations of
 
 pub mod edge_length;
 pub mod quadric;
-mod queue;
 
+use crate::Queue;
 use crate::{
     topol::Topology, Adaptor, EPropRef, EditableTopology, Error, HasIterators, PolyMeshT, Status,
     VPropRefMut, HH, VH,
 };
-use queue::Queue;
 use std::cmp::Ordering;
 
 /// An implementation of this trait is required to control the mesh decimation.

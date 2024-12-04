@@ -7,7 +7,7 @@ use std::ops::{Add, AddAssign, Div, Mul, Neg, Sub};
 
 // Credit to:
 // https://github.com/Philip-Trettner/probabilistic-quadrics/blob/master/probabilistic-quadrics.hh
-struct Quadric<A>
+pub struct Quadric<A>
 where
     A: Adaptor<3>,
 {
@@ -64,7 +64,7 @@ impl<A> Quadric<A>
 where
     A: FloatScalarAdaptor<3>,
 {
-    fn _plane_quadric(pos: A::Vector, normal: A::Vector) -> Self
+    pub fn plane_quadric(pos: A::Vector, normal: A::Vector) -> Self
     where
         A: DotProductAdaptor<3>,
         A::Scalar: Mul<Output = A::Scalar>,
@@ -91,7 +91,7 @@ where
         }
     }
 
-    fn triangle_quadric(p: A::Vector, q: A::Vector, r: A::Vector) -> Self
+    pub fn triangle_quadric(p: A::Vector, q: A::Vector, r: A::Vector) -> Self
     where
         A: CrossProductAdaptor + DotProductAdaptor<3>,
         A::Vector: Add<Output = A::Vector>,
@@ -134,7 +134,7 @@ where
         [b2 + c2, -a * b, -a * c, a2 + c2, -b * c, a2 + b2]
     }
 
-    fn probabilistic_triangle_quadric(
+    pub fn probabilistic_triangle_quadric(
         p: A::Vector,
         q: A::Vector,
         r: A::Vector,
@@ -202,7 +202,7 @@ where
         }
     }
 
-    fn minimizer(&self) -> A::Vector
+    pub fn minimizer(&self) -> A::Vector
     where
         A::Scalar: Div<Output = A::Scalar>
             + Neg<Output = A::Scalar>
@@ -241,7 +241,7 @@ where
         A::vector([x0, x1, x2])
     }
 
-    fn residual(&self, p: A::Vector) -> A::Scalar
+    pub fn residual(&self, p: A::Vector) -> A::Scalar
     where
         A: DotProductAdaptor<3>,
         A::Scalar: Mul<Output = A::Scalar> + Add<Output = A::Scalar> + Sub<Output = A::Scalar>,

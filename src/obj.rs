@@ -1,32 +1,15 @@
-use std::path::Path;
-
 use crate::{
     error::Error,
     mesh::{Adaptor, FloatScalarAdaptor, PolyMeshT},
-    HasTopology, VH,
+    Handle, HasIterators, HasTopology, VPropRef, VH,
 };
+use std::{fmt::Display, fs::OpenOptions, io, path::Path};
 
 impl<A> PolyMeshT<3, A>
 where
     A: Adaptor<3> + FloatScalarAdaptor<3>,
 {
-    /**
-     * Load a polygon mesh from an obj file.
-     */
-    pub fn load_obj<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
-        let path: &Path = path.as_ref();
-        if path
-            .extension()
-            .ok_or(Error::InvalidObjFile(path.to_path_buf()))?
-            .to_str()
-            .ok_or(Error::InvalidObjFile(path.to_path_buf()))?
-            != "obj"
-        {
-            return Err(Error::InvalidObjFile(path.to_path_buf()));
-        }
-        let options = tobj::LoadOptions::default();
-        let (models, _) =
-            tobj::load_obj(path, &options).map_err(|e| Error::ObjLoadFailed(format!("{}", e)))?;
+    fn load_from_models(models: Vec<tobj::Model>) -> Result<Self, Error> {
         let (nverts, nfaces) = models
             .iter()
             .fold((0usize, 0usize), |(nverts, nfaces), model| {
@@ -82,12 +65,129 @@ where
         }
         Ok(outmesh)
     }
+
+    /// Load a polygon mesh from an obj file.
+    pub fn load_obj<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
+        let path: &Path = path.as_ref();
+        if path
+            .extension()
+            .ok_or(Error::InvalidObjFile(path.to_path_buf()))?
+            .to_str()
+            .ok_or(Error::InvalidObjFile(path.to_path_buf()))?
+            != "obj"
+        {
+            return Err(Error::InvalidObjFile(path.to_path_buf()));
+        }
+        let options = tobj::LoadOptions::default();
+        let (models, _) =
+            tobj::load_obj(path, &options).map_err(|e| Error::ObjLoadFailed(format!("{}", e)))?;
+        Self::load_from_models(models)
+    }
+
+    /// Read a polygon mesh from the stream assuming OBJ format.
+    pub fn read_obj(reader: &mut impl io::BufRead) -> Result<Self, Error> {
+        let options = tobj::LoadOptions::default();
+        let (models, _) = tobj::load_obj_buf(reader, &options, |_| {
+            tobj::MTLLoadResult::Ok(Default::default())
+        })
+        .map_err(|e| Error::ObjLoadFailed(format!("{}", e)))?;
+        Self::load_from_models(models)
+    }
+
+    fn write_obj_impl(
+        &self,
+        points: VPropRef<A::Vector>,
+        vnormals: Option<VPropRef<A::Vector>>,
+        mut w: impl io::Write,
+    ) -> Result<(), io::Error>
+    where
+        A::Scalar: Display,
+    {
+        writeln!(w, "# {} vertices", self.num_vertices())?;
+        for pos in points.iter() {
+            writeln!(
+                w,
+                "v {} {} {}",
+                A::vector_coord(pos, 0),
+                A::vector_coord(pos, 1),
+                A::vector_coord(pos, 2)
+            )?;
+        }
+        if let Some(vnormals) = vnormals {
+            writeln!(w, "# {} normals", vnormals.len())?;
+            for n in vnormals.iter() {
+                writeln!(
+                    w,
+                    "vn {} {} {}",
+                    A::vector_coord(n, 0),
+                    A::vector_coord(n, 1),
+                    A::vector_coord(n, 2)
+                )?;
+            }
+        }
+        writeln!(w, "# {} faces", self.num_faces())?;
+        for f in self.faces() {
+            write!(w, "f")?;
+            for v in self.fv_ccw_iter(f) {
+                write!(w, " {}", v.index() + 1)?;
+            }
+            writeln!(w)?;
+        }
+        Ok(())
+    }
+
+    pub fn write_obj(&self, out: &mut impl io::Write) -> Result<(), Error>
+    where
+        A::Scalar: Display,
+    {
+        self.check_for_deleted()?;
+        self.check_topology()?;
+        let points = self.points();
+        let vnormals = self.vertex_normals();
+        // Deliberately not returning this directly to keep `points` alive.
+        self.write_obj_impl(
+            points.try_borrow()?,
+            match &vnormals {
+                Some(n) => Some(n.try_borrow()?),
+                None => None,
+            },
+            out,
+        )
+        .map_err(|_| Error::CannotWriteOBJ)?;
+        Ok(())
+    }
+
+    /// Write this mesh into an obj file.
+    pub fn save_obj<P: AsRef<Path>>(&self, path: P) -> Result<(), Error>
+    where
+        A::Scalar: Display,
+    {
+        let path = path.as_ref();
+        if path
+            .extension()
+            .ok_or(Error::InvalidObjFile(path.to_path_buf()))?
+            .to_str()
+            .ok_or(Error::InvalidObjFile(path.to_path_buf()))?
+            != "obj"
+        {
+            return Err(Error::InvalidObjFile(path.to_path_buf()));
+        }
+        let file = OpenOptions::new()
+            .write(true)
+            .truncate(true)
+            .create(true)
+            .open(path)
+            .map_err(|_| Error::CannotOpenFile(path.to_path_buf()))?;
+        let mut writer = io::BufWriter::new(&file);
+        self.write_obj(&mut writer)
+    }
 }
 
 #[cfg(all(test, feature = "use_glam"))]
 pub(crate) mod test {
     use crate::{use_glam::PolyMeshF32, HasTopology};
-    use std::path::PathBuf;
+    use core::str;
+    use std::{io, path::PathBuf};
 
     pub(crate) fn bunny_mesh() -> PolyMeshF32 {
         let path = {
@@ -160,5 +260,79 @@ pub(crate) mod test {
         large_bunny_mesh()
             .check_topology()
             .expect("Found topological errors");
+    }
+
+    #[test]
+    fn t_quad_bunny() {
+        let path = {
+            let mut dirpath = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+            dirpath.push("assets");
+            dirpath.push("bunny_quad.obj");
+            dirpath
+        };
+        let mesh = PolyMeshF32::load_obj(path).expect("Cannot load mesh from obj");
+        mesh.check_topology().expect("Topological errors found");
+    }
+
+    #[test]
+    fn t_write_obj_to_string() {
+        let mesh = PolyMeshF32::hexahedron(1.0).expect("Cannot make a box");
+        let mut writer = io::BufWriter::new(Vec::new());
+        mesh.write_obj(&mut writer)
+            .expect("Cannot write obj to string");
+        assert_eq!(
+            "
+# 8 vertices
+v -0.57735026 -0.57735026 -0.57735026
+v 0.57735026 -0.57735026 -0.57735026
+v 0.57735026 0.57735026 -0.57735026
+v -0.57735026 0.57735026 -0.57735026
+v -0.57735026 -0.57735026 0.57735026
+v 0.57735026 -0.57735026 0.57735026
+v 0.57735026 0.57735026 0.57735026
+v -0.57735026 0.57735026 0.57735026
+# 6 faces
+f 4 3 2 1
+f 3 7 6 2
+f 6 7 8 5
+f 1 5 8 4
+f 4 8 7 3
+f 2 6 5 1
+"
+            .trim(),
+            str::from_utf8(writer.buffer())
+                .expect("Cannot decode utf8 string")
+                .trim()
+        );
+    }
+
+    #[test]
+    fn t_obj_string_round_trip() {
+        let meshin = PolyMeshF32::hexahedron(1.0).expect("Cannot make a box");
+        let mut writer = io::BufWriter::new(Vec::new());
+        meshin
+            .write_obj(&mut writer)
+            .expect("Cannot write obj to string");
+        let mut bytes = writer.buffer();
+        let meshout = PolyMeshF32::read_obj(&mut bytes).expect("Cannot read mesh from obj string");
+        assert_eq!(meshin.num_vertices(), meshout.num_vertices());
+        assert_eq!(meshin.num_edges(), meshout.num_edges());
+        assert_eq!(meshin.num_faces(), meshout.num_faces());
+        assert_eq!(
+            meshin.try_calc_area().expect("Cannot compute area"),
+            meshout.try_calc_area().expect("Cannot compute area")
+        );
+        assert_eq!(
+            meshin.try_calc_volume().expect("Cannot compute volume"),
+            meshout.try_calc_volume().expect("Cannot compute volume")
+        );
+        assert_eq!(
+            meshin.try_calc_vertex_centroid().unwrap(),
+            meshout.try_calc_vertex_centroid().unwrap()
+        );
+        assert_eq!(
+            meshin.try_calc_area_centroid().unwrap(),
+            meshout.try_calc_area_centroid().unwrap()
+        );
     }
 }
