@@ -149,6 +149,8 @@ pub trait EditableTopology: HasIterators {
         let h1 = h.next(topol);
         let o = h.opposite();
         let o1 = h1.opposite();
+        let on = o.next(topol);
+        let op = o.prev(topol);
         let v0 = h.head(topol);
         let v1 = h1.head(topol);
         let fh = h.face(topol);
@@ -159,8 +161,8 @@ pub trait EditableTopology: HasIterators {
         debug_assert_eq!(h1.next(topol), h);
         debug_assert_ne!(h1, o);
         // Rewire halfedge -> halfedge.
-        topol.link_halfedges(h1, o.next(topol));
-        topol.link_halfedges(o.prev(topol), h1);
+        topol.link_halfedges(h1, on);
+        topol.link_halfedges(op, h1);
         // Rewire halfedge -> face.
         topol.halfedge_mut(h1).face = fo;
         // Rewire vertex -> halfedge.

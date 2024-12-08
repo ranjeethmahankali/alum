@@ -130,6 +130,7 @@ mod create;
 mod edit;
 mod element;
 mod error;
+mod history;
 mod iterator;
 mod macros;
 mod math;
@@ -148,6 +149,7 @@ mod subdiv;
 
 #[cfg(feature = "decimate")]
 pub mod decimate;
+
 #[cfg(feature = "decimate")]
 pub use decimate::{
     edge_length::EdgeLengthDecimater, quadric::Quadric, quadric::QuadricDecimater,
@@ -157,6 +159,7 @@ pub use decimate::{
 pub use edit::EditableTopology;
 pub use element::{Handle, EH, FH, HH, VH};
 pub use error::Error;
+pub use history::TopolHistory;
 pub use iterator::HasIterators;
 pub use mesh::{
     Adaptor, CrossProductAdaptor, DotProductAdaptor, FloatScalarAdaptor, PolyMeshT,

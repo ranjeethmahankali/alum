@@ -12,7 +12,7 @@ const UNUSED: u8 = 1 << 7;
 /// This can be used to keep track of whether an element is deleted, marked as a
 /// feature, tagged, marked hidden etc. This is used internally to keep track of
 /// deletion, and garbage collection.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Status {
     flags: u8,
 }
