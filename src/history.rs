@@ -186,9 +186,11 @@ mod test {
         let bpts = b.points();
         let bpts = bpts.try_borrow().unwrap();
         for (av, bv) in a.vertices().zip(b.vertices()) {
+            print!("Checking vertex {}...", av);
             assert_eq!(a.topology().vertex(av), b.topology().vertex(bv));
             assert_eq!(avs[av], bvs[bv]);
             assert_eq!(apts[av], bpts[bv]);
+            println!("✔ Passed");
         }
         // Compare edge status.
         assert_eq!(a.num_edges(), b.num_edges());
@@ -197,7 +199,9 @@ mod test {
         let bes = b.edge_status_prop();
         let bes = bes.try_borrow().unwrap();
         for (ae, be) in a.edges().zip(b.edges()) {
+            print!("Checking edge {}...", ae);
             assert_eq!(aes[ae], bes[be]);
+            println!("✔ Passed");
         }
         // Compare halfedges.
         assert_eq!(a.num_halfedges(), b.num_halfedges());
@@ -206,7 +210,7 @@ mod test {
         let bhs = b.halfedge_status_prop();
         let bhs = bhs.try_borrow().unwrap();
         for (ah, bh) in a.halfedges().zip(b.halfedges()) {
-            print!("Checking halfedge {:?}...", ah);
+            print!("Checking halfedge {}...", ah);
             assert_eq!(a.topology().halfedge(ah), b.topology().halfedge(bh));
             assert_eq!(ahs[ah], bhs[bh]);
             println!("✔ Passed");
@@ -218,8 +222,10 @@ mod test {
         let bfs = b.face_status_prop();
         let bfs = bfs.try_borrow().unwrap();
         for (af, bf) in a.faces().zip(b.faces()) {
+            print!("Checking face {}...", af);
             assert_eq!(a.topology().face(af), b.topology().face(bf));
             assert_eq!(afs[af], bfs[bf]);
+            println!("✔ Passed");
         }
     }
 
