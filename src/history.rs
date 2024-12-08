@@ -172,26 +172,76 @@ mod test {
     use crate::{use_glam::PolyMeshF32, EditableTopology, HasIterators, HasTopology, HH};
     use glam::vec3;
 
+    fn compare_meshes(a: PolyMeshF32, b: PolyMeshF32) {
+        // Compare vertices.
+        assert_eq!(a.num_vertices(), b.num_vertices());
+        let avs = a.vertex_status_prop();
+        let avs = avs.try_borrow().unwrap();
+        let bvs = b.vertex_status_prop();
+        let bvs = bvs.try_borrow().unwrap();
+        let apts = a.points();
+        let apts = apts.try_borrow().unwrap();
+        let bpts = b.points();
+        let bpts = bpts.try_borrow().unwrap();
+        for (av, bv) in a.vertices().zip(b.vertices()) {
+            assert_eq!(a.topology().vertex(av), b.topology().vertex(bv));
+            assert_eq!(avs[av], bvs[bv]);
+            assert_eq!(apts[av], bpts[bv]);
+        }
+        // Compare edge status.
+        assert_eq!(a.num_edges(), b.num_edges());
+        let aes = a.edge_status_prop();
+        let aes = aes.try_borrow().unwrap();
+        let bes = b.edge_status_prop();
+        let bes = bes.try_borrow().unwrap();
+        for (ae, be) in a.edges().zip(b.edges()) {
+            assert_eq!(aes[ae], bes[be]);
+        }
+        // Compare halfedges.
+        assert_eq!(a.num_halfedges(), b.num_halfedges());
+        let ahs = a.halfedge_status_prop();
+        let ahs = ahs.try_borrow().unwrap();
+        let bhs = b.halfedge_status_prop();
+        let bhs = bhs.try_borrow().unwrap();
+        for (ah, bh) in a.halfedges().zip(b.halfedges()) {
+            assert_eq!(a.topology().halfedge(ah), b.topology().halfedge(bh));
+            assert_eq!(ahs[ah], bhs[bh]);
+        }
+        // Compare faces.
+        assert_eq!(a.num_faces(), b.num_faces());
+        let afs = a.face_status_prop();
+        let afs = afs.try_borrow().unwrap();
+        let bfs = b.face_status_prop();
+        let bfs = bfs.try_borrow().unwrap();
+        for (af, bf) in a.faces().zip(b.faces()) {
+            assert_eq!(a.topology().face(af), b.topology().face(bf));
+            assert_eq!(afs[af], bfs[bf]);
+        }
+    }
+
     fn test_edge_collapse(mut mesh: PolyMeshF32, h: HH) {
         let mut history = TopolHistory::default();
         let area = mesh.try_calc_area().expect("Cannot compute area");
         let volume = mesh.try_calc_volume().expect("Cannot compute volume");
         let closed = mesh.is_closed();
-        let (nv, ne, nf) = (mesh.num_vertices(), mesh.num_edges(), mesh.num_faces());
+        let copy = mesh.try_clone().expect("Cannot clone mesh");
+        // Compute expected element counts after collapse.
         let is_triangle_1 = mesh.loop_ccw_iter(h).take(4).count() == 3;
         let is_triangle_2 = mesh.loop_ccw_iter(h.opposite()).take(4).count() == 3;
-        let (nv2, ne2, nf2) = (
-            nv - 1,
-            ne - match (is_triangle_1, is_triangle_2) {
-                (true, true) => 3,
-                (true, false) | (false, true) => 2,
-                (false, false) => 1,
-            },
-            nf - match (is_triangle_1, is_triangle_2) {
-                (true, true) => 2,
-                (true, false) | (false, true) => 1,
-                (false, false) => 0,
-            },
+        let (nv, ne, nf) = (
+            mesh.num_vertices() - 1,
+            mesh.num_edges()
+                - match (is_triangle_1, is_triangle_2) {
+                    (true, true) => 3,
+                    (true, false) | (false, true) => 2,
+                    (false, false) => 1,
+                },
+            mesh.num_faces()
+                - match (is_triangle_1, is_triangle_2) {
+                    (true, true) => 2,
+                    (true, false) | (false, true) => 1,
+                    (false, false) => 0,
+                },
         );
         {
             let (mut vstatus, mut hstatus, mut estatus, mut fstatus) = (
@@ -228,11 +278,11 @@ mod test {
                 assert!(volume > newvol);
             }
             assert_eq!(
-                nv2,
+                nv,
                 mesh.vertices().filter(|&v| !vstatus[v].deleted()).count()
             );
-            assert_eq!(ne2, mesh.edges().filter(|&e| !estatus[e].deleted()).count());
-            assert_eq!(nf2, mesh.faces().filter(|&f| !fstatus[f].deleted()).count());
+            assert_eq!(ne, mesh.edges().filter(|&e| !estatus[e].deleted()).count());
+            assert_eq!(nf, mesh.faces().filter(|&f| !fstatus[f].deleted()).count());
             // Revert and check again.
             assert!(history.restore(
                 checkpt,
@@ -246,14 +296,13 @@ mod test {
         // Nothing should be deleted.
         mesh.check_for_deleted()
             .expect("Unexpected deleted elements");
-        assert_eq!(nv, mesh.num_vertices());
-        assert_eq!(ne, mesh.num_edges());
-        assert_eq!(nf, mesh.num_faces());
-        assert_eq!(area, mesh.try_calc_area().expect("Cannot compute area"));
-        assert_eq!(
-            volume,
-            mesh.try_calc_volume().expect("Cannot compute volume")
-        );
+        // TODO Bring these asserts back.
+        // assert_eq!(area, mesh.try_calc_area().expect("Cannot compute area"));
+        // assert_eq!(
+        //     volume,
+        //     mesh.try_calc_volume().expect("Cannot compute volume")
+        // );
+        compare_meshes(mesh, copy);
     }
 
     #[test]
