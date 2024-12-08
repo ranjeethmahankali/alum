@@ -171,22 +171,8 @@ impl TopolHistory {
 #[cfg(test)]
 mod test {
     use super::TopolHistory;
-    use crate::{
-        element::HandleRange, use_glam::PolyMeshF32, EditableTopology, Handle, HasIterators,
-        HasTopology, PropBuf, Status, HH,
-    };
+    use crate::{use_glam::PolyMeshF32, EditableTopology, HasIterators, HasTopology, HH};
     use glam::vec3;
-
-    fn compare_elements<H>(
-        a: HandleRange<H>,
-        b: HandleRange<H>,
-        astatus: &PropBuf<H, Status>,
-        bstatus: &PropBuf<H, Status>,
-    ) where
-        H: Handle,
-    {
-        todo!("Properly compare elements accounting for deleted elements at the end of iterator");
-    }
 
     fn compare_meshes(a: PolyMeshF32, b: PolyMeshF32) {
         // Compare vertices.
@@ -199,7 +185,10 @@ mod test {
         let apts = apts.try_borrow().unwrap();
         let bpts = b.points();
         let bpts = bpts.try_borrow().unwrap();
-        for (av, bv) in a.vertices().zip(b.vertices()) {
+        let nv = usize::min(a.num_vertices(), b.num_vertices());
+        assert!(a.vertices().skip(nv).all(|v| avs[v].deleted()));
+        assert!(b.vertices().skip(nv).all(|v| bvs[v].deleted()));
+        for (av, bv) in a.vertices().take(nv).zip(b.vertices().take(nv)) {
             print!("Checking vertex {}...", av);
             assert_eq!(a.topology().vertex(av), b.topology().vertex(bv));
             assert_eq!(avs[av], bvs[bv]);
@@ -212,7 +201,10 @@ mod test {
         let aes = aes.try_borrow().unwrap();
         let bes = b.edge_status_prop();
         let bes = bes.try_borrow().unwrap();
-        for (ae, be) in a.edges().zip(b.edges()) {
+        let ne = usize::min(a.num_edges(), b.num_edges());
+        assert!(a.edges().skip(ne).all(|e| aes[e].deleted()));
+        assert!(b.edges().skip(ne).all(|e| bes[e].deleted()));
+        for (ae, be) in a.edges().take(ne).zip(b.edges().take(ne)) {
             print!("Checking edge {}...", ae);
             assert_eq!(aes[ae], bes[be]);
             println!("✔ Passed");
@@ -223,7 +215,10 @@ mod test {
         let ahs = ahs.try_borrow().unwrap();
         let bhs = b.halfedge_status_prop();
         let bhs = bhs.try_borrow().unwrap();
-        for (ah, bh) in a.halfedges().zip(b.halfedges()) {
+        let nh = usize::min(a.num_halfedges(), b.num_halfedges());
+        assert!(a.halfedges().skip(nh).all(|e| ahs[e].deleted()));
+        assert!(b.halfedges().skip(nh).all(|e| bhs[e].deleted()));
+        for (ah, bh) in a.halfedges().take(nh).zip(b.halfedges().take(nh)) {
             print!("Checking halfedge {}...", ah);
             assert_eq!(a.topology().halfedge(ah), b.topology().halfedge(bh));
             assert_eq!(ahs[ah], bhs[bh]);
@@ -235,7 +230,10 @@ mod test {
         let afs = afs.try_borrow().unwrap();
         let bfs = b.face_status_prop();
         let bfs = bfs.try_borrow().unwrap();
-        for (af, bf) in a.faces().zip(b.faces()) {
+        let nf = usize::min(a.num_faces(), b.num_faces());
+        assert!(a.faces().skip(nf).all(|f| afs[f].deleted()));
+        assert!(b.faces().skip(nf).all(|f| bfs[f].deleted()));
+        for (af, bf) in a.faces().take(nf).zip(b.faces().take(nf)) {
             print!("Checking face {}...", af);
             assert_eq!(a.topology().face(af), b.topology().face(bf));
             assert_eq!(afs[af], bfs[bf]);
