@@ -433,15 +433,17 @@ where
     /// Calling this function with borrowed `points` property avoids an internal
     /// borrow of properties.
     pub fn calc_volume(&self, points: &VPropBuf<A::Vector>) -> A::Scalar {
-        if self.halfedges().any(|h| h.is_boundary(&self.topol)) {
-            // Not closed.
-            return A::scalarf64(0.0);
+        if !self.is_closed() {
+            A::scalarf64(0.0)
+        } else {
+            self.triangulated_vertices()
+                .fold(A::scalarf64(0.0), |total, vs| {
+                    let (p0, p1, p2) = (points[vs[0]], points[vs[1]], points[vs[2]]);
+                    total
+                        + (A::dot_product(p0, A::cross_product(p1 - p0, p2 - p0))
+                            / A::scalarf64(6.0))
+                })
         }
-        self.triangulated_vertices()
-            .fold(A::scalarf64(0.0), |total, vs| {
-                let (p0, p1, p2) = (points[vs[0]], points[vs[1]], points[vs[2]]);
-                total + (A::dot_product(p0, A::cross_product(p1 - p0, p2 - p0)) / A::scalarf64(6.0))
-            })
     }
 
     /// Similar to [`Self::calc_volume`], except this function attempts to
