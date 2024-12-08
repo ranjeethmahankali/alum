@@ -44,7 +44,7 @@ impl Decimater<PolygonMesh> for RecordingDecimater {
 
     fn after_collapse(&mut self, mesh: &PolygonMesh, v: alum::VH) -> Result<(), alum::Error> {
         self.inner.after_collapse(mesh, v)?;
-        let mut copy = mesh.clone();
+        let mut copy = mesh.try_clone()?;
         copy.garbage_collection()?;
         copy.check_topology()?;
         self.history.push(copy);

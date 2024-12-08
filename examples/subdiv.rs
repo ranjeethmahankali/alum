@@ -94,7 +94,7 @@ impl MeshData {
     }
 
     fn subdivide(&self, context: &Context) -> Self {
-        let mut mesh = self.mesh.clone();
+        let mut mesh = self.mesh.try_clone().unwrap();
         let stype = match self.stype {
             SubdivType::CatmullClark => {
                 mesh.subdivide_catmull_clark(1, true).unwrap();
@@ -144,11 +144,11 @@ fn main() {
         const SHIFT: f32 = 2.0;
         let mut views = vec![MeshTriplet(
             MeshData::new(
-                translate(mesh.clone(), vec3(-SHIFT, 0.0, 0.0)),
+                translate(mesh.try_clone().unwrap(), vec3(-SHIFT, 0.0, 0.0)),
                 SubdivType::CatmullClark,
                 &context,
             ),
-            MeshData::new(mesh.clone(), SubdivType::Loop, &context),
+            MeshData::new(mesh.try_clone().unwrap(), SubdivType::Loop, &context),
             MeshData::new(
                 translate(mesh, vec3(SHIFT, 0.0, 0.0)),
                 SubdivType::Sqrt3(false),
