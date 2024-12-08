@@ -69,7 +69,9 @@ impl TopolHistory {
         let h1 = h.next(mesh);
         let o = h.opposite();
         let o1 = h1.opposite();
-        self.halfedges.extend_from_slice(&[h1, o, o1]);
+        let on = o.next(mesh);
+        let op = o.prev(mesh);
+        self.halfedges.extend_from_slice(&[h1, o, o1, on, op]);
         let v0 = h.head(mesh);
         let v1 = h1.head(mesh);
         self.vertices.extend_from_slice(&[v0, v1]);
@@ -106,7 +108,7 @@ impl TopolHistory {
         let o = h.opposite();
         let on = o.next(mesh);
         let op = o.prev(mesh);
-        self.halfedges.extend_from_slice(&[hn, hp, o, on, op]);
+        self.halfedges.extend_from_slice(&[h, hn, hp, o, on, op]);
         let fh = h.face(mesh);
         let fo = o.face(mesh);
         self.faces.extend([fh, fo].iter().filter_map(|f| *f));
@@ -204,8 +206,10 @@ mod test {
         let bhs = b.halfedge_status_prop();
         let bhs = bhs.try_borrow().unwrap();
         for (ah, bh) in a.halfedges().zip(b.halfedges()) {
+            print!("Checking halfedge {:?}...", ah);
             assert_eq!(a.topology().halfedge(ah), b.topology().halfedge(bh));
             assert_eq!(ahs[ah], bhs[bh]);
+            println!("✔ Passed");
         }
         // Compare faces.
         assert_eq!(a.num_faces(), b.num_faces());
@@ -296,12 +300,11 @@ mod test {
         // Nothing should be deleted.
         mesh.check_for_deleted()
             .expect("Unexpected deleted elements");
-        // TODO Bring these asserts back.
-        // assert_eq!(area, mesh.try_calc_area().expect("Cannot compute area"));
-        // assert_eq!(
-        //     volume,
-        //     mesh.try_calc_volume().expect("Cannot compute volume")
-        // );
+        assert_eq!(area, mesh.try_calc_area().expect("Cannot compute area"));
+        assert_eq!(
+            volume,
+            mesh.try_calc_volume().expect("Cannot compute volume")
+        );
         compare_meshes(mesh, copy);
     }
 
@@ -317,6 +320,15 @@ mod test {
     #[test]
     fn t_octahedron_revert_edge_collapse() {
         let mesh = PolyMeshF32::octahedron(1.0).expect("Cannot make an icosahedron");
+        let h = mesh
+            .find_halfedge(0.into(), 1.into())
+            .expect("Cannot find halfedge");
+        test_edge_collapse(mesh, h);
+    }
+
+    #[test]
+    fn t_icosahedron_revert_edge_collapse() {
+        let mesh = PolyMeshF32::icosahedron(1.0).expect("Cannot make an icosahedron");
         let h = mesh
             .find_halfedge(0.into(), 1.into())
             .expect("Cannot find halfedge");
