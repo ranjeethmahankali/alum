@@ -120,9 +120,9 @@ impl TopolHistory {
         estatus: &EPropBuf<Status>,
         fstatus: &FPropBuf<Status>,
     ) {
+        self.commit_vertices(mesh, vstatus);
         self.commit_edges(mesh, hstatus, estatus);
         self.commit_faces(mesh, fstatus);
-        self.commit_vertices(mesh, vstatus);
     }
 
     pub fn check_point(&self) -> usize {
