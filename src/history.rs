@@ -168,6 +168,8 @@ impl TopolHistory {
 
 #[cfg(test)]
 mod test {
+    use glam::vec3;
+
     use super::TopolHistory;
     use crate::{use_glam::PolyMeshF32, EditableTopology, HasIterators, HasTopology};
 
@@ -237,14 +239,15 @@ mod test {
     }
 
     #[test]
-    fn t_icosahedron_revert_edge_collapse() {
-        let mut mesh = PolyMeshF32::icosahedron(1.0).expect("Cannot make an icosahedron");
+    fn t_octahedron_revert_edge_collapse() {
+        let mut mesh = PolyMeshF32::octahedron(1.0).expect("Cannot make an icosahedron");
         let h = mesh
             .find_halfedge(0.into(), 1.into())
             .expect("Cannot find halfedge");
         let mut history = TopolHistory::default();
         let area = mesh.try_calc_area().expect("Cannot compute area");
         let volume = mesh.try_calc_volume().expect("Cannot compute volume");
+        let indices_before: Vec<_> = mesh.triangulated_vertices().collect();
         {
             let (mut vstatus, mut hstatus, mut estatus, mut fstatus) = (
                 mesh.vertex_status_prop(),
@@ -273,11 +276,11 @@ mod test {
             assert!(area > (mesh.try_calc_area().expect("Cannot compute area")));
             assert!(volume > mesh.try_calc_volume().expect("Cannot compute volume"));
             assert_eq!(
-                11,
+                5,
                 mesh.vertices().filter(|&v| !vstatus[v].deleted()).count()
             );
-            assert_eq!(27, mesh.edges().filter(|&e| !estatus[e].deleted()).count());
-            assert_eq!(18, mesh.faces().filter(|&f| !fstatus[f].deleted()).count());
+            assert_eq!(9, mesh.edges().filter(|&e| !estatus[e].deleted()).count());
+            assert_eq!(6, mesh.faces().filter(|&f| !fstatus[f].deleted()).count());
             // Revert and check again.
             assert!(history.restore(
                 checkpt,
@@ -291,13 +294,109 @@ mod test {
         // Nothing should be deleted.
         mesh.check_for_deleted()
             .expect("Unexpected deleted elements");
-        assert_eq!(12, mesh.num_vertices());
-        assert_eq!(30, mesh.num_edges());
-        assert_eq!(20, mesh.num_faces());
+        let indices_after: Vec<_> = mesh.triangulated_vertices().collect();
+        assert_eq!(indices_before, indices_after);
+        assert_eq!(6, mesh.num_vertices());
+        assert_eq!(12, mesh.num_edges());
+        assert_eq!(8, mesh.num_faces());
         assert_eq!(area, mesh.try_calc_area().expect("Cannot compute area"));
         assert_eq!(
             volume,
             mesh.try_calc_volume().expect("Cannot compute volume")
         );
+    }
+
+    #[test]
+    fn t_triangles_revert_edge_collapse() {
+        let mut mesh = {
+            let mut mesh = PolyMeshF32::default();
+            mesh.add_vertices(&[
+                vec3(2.0, 2.0, 0.0),
+                vec3(4.0, 2.0, 0.0),
+                vec3(1.0, 0.0, 0.0),
+                vec3(3.0, 0.0, 0.0),
+                vec3(5.0, 0.0, 0.0),
+                vec3(0.0, 2.0, 0.0),
+                vec3(6.0, 2.0, 0.0),
+                vec3(1.0, 4.0, 0.0),
+                vec3(3.0, 4.0, 0.0),
+                vec3(5.0, 4.0, 0.0),
+            ])
+            .expect("Cannot add vertices");
+            for (a, b, c) in [
+                (0u32, 5, 2),
+                (0, 2, 3),
+                (0, 3, 1),
+                (1, 3, 4),
+                (1, 4, 6),
+                (0, 7, 5),
+                (0, 8, 7),
+                (0, 1, 8),
+                (1, 9, 8),
+                (1, 6, 9),
+            ] {
+                mesh.add_tri_face(a.into(), b.into(), c.into())
+                    .expect("Cannot add face");
+            }
+            mesh
+        };
+        let h = mesh
+            .find_halfedge(0.into(), 1.into())
+            .expect("Cannot find halfedge");
+        let mut history = TopolHistory::default();
+        let indices_before: Vec<_> = mesh.triangulated_vertices().collect();
+        let area = mesh.try_calc_area().expect("Cannot compute area");
+        {
+            let (mut vstatus, mut hstatus, mut estatus, mut fstatus) = (
+                mesh.vertex_status_prop(),
+                mesh.halfedge_status_prop(),
+                mesh.edge_status_prop(),
+                mesh.face_status_prop(),
+            );
+            let (mut vstatus, mut hstatus, mut estatus, mut fstatus) = (
+                vstatus.try_borrow_mut().unwrap(),
+                hstatus.try_borrow_mut().unwrap(),
+                estatus.try_borrow_mut().unwrap(),
+                fstatus.try_borrow_mut().unwrap(),
+            );
+            let checkpt = history.check_point();
+            history.commit_edge_collapse(&mesh, h, &vstatus, &hstatus, &estatus, &fstatus);
+            let mut hcache = Vec::new();
+            // Collapse and check.
+            mesh.collapse_edge(
+                h,
+                &mut vstatus,
+                &mut hstatus,
+                &mut estatus,
+                &mut fstatus,
+                &mut hcache,
+            );
+            // The mesh was a collection of planar triangles, so the area should not change.
+            assert!(area == (mesh.try_calc_area().expect("Cannot compute area")));
+            assert_eq!(
+                9,
+                mesh.vertices().filter(|&v| !vstatus[v].deleted()).count()
+            );
+            assert_eq!(16, mesh.edges().filter(|&e| !estatus[e].deleted()).count());
+            assert_eq!(8, mesh.faces().filter(|&f| !fstatus[f].deleted()).count());
+            // Revert and check again.
+            assert!(history.restore(
+                checkpt,
+                &mut mesh,
+                &mut vstatus,
+                &mut hstatus,
+                &mut estatus,
+                &mut fstatus
+            ));
+        }
+        // Nothing should be deleted.
+        mesh.check_for_deleted()
+            .expect("Unexpected deleted elements");
+        assert_eq!(10, mesh.num_vertices());
+        assert_eq!(19, mesh.num_edges());
+        assert_eq!(10, mesh.num_faces());
+        assert_eq!(area, mesh.try_calc_area().expect("Cannot compute area"));
+        let indices_after: Vec<_> = mesh.triangulated_vertices().collect();
+        assert_eq!(indices_before, indices_after);
     }
 }
