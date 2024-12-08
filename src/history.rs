@@ -171,8 +171,22 @@ impl TopolHistory {
 #[cfg(test)]
 mod test {
     use super::TopolHistory;
-    use crate::{use_glam::PolyMeshF32, EditableTopology, HasIterators, HasTopology, HH};
+    use crate::{
+        element::HandleRange, use_glam::PolyMeshF32, EditableTopology, Handle, HasIterators,
+        HasTopology, PropBuf, Status, HH,
+    };
     use glam::vec3;
+
+    fn compare_elements<H>(
+        a: HandleRange<H>,
+        b: HandleRange<H>,
+        astatus: &PropBuf<H, Status>,
+        bstatus: &PropBuf<H, Status>,
+    ) where
+        H: Handle,
+    {
+        todo!("Properly compare elements accounting for deleted elements at the end of iterator");
+    }
 
     fn compare_meshes(a: PolyMeshF32, b: PolyMeshF32) {
         // Compare vertices.
