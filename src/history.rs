@@ -13,7 +13,7 @@ enum Element {
 
 #[derive(Default)]
 pub struct TopolHistory {
-    cache: Vec<Element>,
+    ops: Vec<Element>,
     vertices: Vec<VH>,
     halfedges: Vec<HH>,
     edges: Vec<EH>,
@@ -24,7 +24,7 @@ impl TopolHistory {
     fn commit_vertices(&mut self, mesh: &Topology, vstatus: &VPropBuf<Status>) {
         self.vertices.sort();
         self.vertices.dedup();
-        self.cache.extend(
+        self.ops.extend(
             self.vertices
                 .drain(..)
                 .map(|v| Element::Vertex(v, *mesh.vertex(v), vstatus[v])),
@@ -43,12 +43,12 @@ impl TopolHistory {
         self.edges.extend(self.halfedges.iter().map(|h| h.edge()));
         self.edges.sort();
         self.edges.dedup();
-        self.cache.extend(
+        self.ops.extend(
             self.halfedges
                 .drain(..)
                 .map(|h| Element::Halfedge(h, *mesh.halfedge(h), hstatus[h])),
         );
-        self.cache.extend(
+        self.ops.extend(
             self.edges
                 .drain(..)
                 .map(|e| Element::EdgeStatus(e, estatus[e])),
@@ -58,7 +58,7 @@ impl TopolHistory {
     fn commit_faces(&mut self, mesh: &Topology, fstatus: &FPropBuf<Status>) {
         self.faces.sort();
         self.faces.dedup();
-        self.cache.extend(
+        self.ops.extend(
             self.faces
                 .drain(..)
                 .map(|f| Element::Face(f, *mesh.face(f), fstatus[f])),
@@ -126,7 +126,7 @@ impl TopolHistory {
     }
 
     pub fn check_point(&self) -> usize {
-        self.cache.len()
+        self.ops.len()
     }
 
     pub fn restore(
@@ -138,11 +138,11 @@ impl TopolHistory {
         estatus: &mut EPropBuf<Status>,
         fstatus: &mut FPropBuf<Status>,
     ) -> bool {
-        if check_point >= self.cache.len() {
+        if check_point >= self.ops.len() {
             return false;
         }
         let mesh = mesh.topology_mut();
-        for op in self.cache[check_point..].iter().rev() {
+        for op in self.ops[check_point..].iter().rev() {
             match op {
                 Element::Vertex(vh, vertex, status) => {
                     *mesh.vertex_mut(*vh) = *vertex;
@@ -161,7 +161,7 @@ impl TopolHistory {
                 }
             }
         }
-        self.cache.truncate(check_point);
+        self.ops.truncate(check_point);
         true
     }
 }
