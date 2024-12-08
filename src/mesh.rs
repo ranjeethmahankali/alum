@@ -353,11 +353,23 @@ where
     /// all the elements, points, and normals. This does not copy any other
     /// properties, because the mesh doesn't fully own the other properties. The
     /// properties are owned by whoever created them, and it is their
-    /// responsibilities to properly clone the data in those
-    /// properties. Furthermore, this only copies the data in built-in
-    /// properties if they can be borrowed successfully. If someone upstream
-    /// already borrowed these properties mutably, then the borrow during clone
-    /// will fail and the data won't be copied. An error is returned in this case.
+    /// responsibilities to properly clone the data in those properties. In
+    /// order to clone the built-in properties, they have to be borrowed
+    /// immutably. If the borrowing fails, an error is returned.
+    ///
+    /// ```rust
+    /// use alum::use_glam::PolyMeshF32;
+    ///
+    /// let mut mesh = PolyMeshF32::unit_box().expect("Cannot make a box");
+    /// {
+    ///     let mut points = mesh.points();
+    ///     let mut points = points.try_borrow_mut().unwrap();
+    ///     let try_copy = mesh.try_clone();
+    ///     assert!(try_copy.is_err()); // Failed because unable to borrow points.
+    /// }
+    /// let try_copy = mesh.try_clone();
+    /// assert!(try_copy.is_ok()); // Passed because the borrow was successful.
+    /// ```
     pub fn try_clone(&self) -> Result<Self, Error> {
         let mut topol = self.topol.clone();
         let mut points = VProperty::new(&mut topol.vprops, A::zero_vector());
