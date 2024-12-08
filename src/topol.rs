@@ -361,7 +361,7 @@ pub trait HasTopology: Sized {
     ///
     /// A mesh is closed edges have exactly two incident faces.
     fn is_closed(&self) -> bool {
-        self.halfedges().all(|h| h.is_boundary(self))
+        self.halfedges().all(|h| !h.is_boundary(self))
     }
 }
 
