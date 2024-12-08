@@ -78,7 +78,20 @@ impl TopolHistory {
         self.faces.extend([fh, fo].iter().filter_map(|f| *f));
     }
 
-    pub fn record_edge_collapse(
+    fn commit(
+        &mut self,
+        mesh: &Topology,
+        vstatus: &VPropBuf<Status>,
+        hstatus: &HPropBuf<Status>,
+        estatus: &EPropBuf<Status>,
+        fstatus: &FPropBuf<Status>,
+    ) {
+        self.commit_vertices(mesh, vstatus);
+        self.commit_edges(mesh, hstatus, estatus);
+        self.commit_faces(mesh, fstatus);
+    }
+
+    pub fn commit_edge_collapse(
         &mut self,
         mesh: &impl EditableTopology,
         h: HH,
@@ -110,19 +123,6 @@ impl TopolHistory {
         }
         // Commit to history.
         self.commit(mesh.topology(), vstatus, hstatus, estatus, fstatus);
-    }
-
-    fn commit(
-        &mut self,
-        mesh: &Topology,
-        vstatus: &VPropBuf<Status>,
-        hstatus: &HPropBuf<Status>,
-        estatus: &EPropBuf<Status>,
-        fstatus: &FPropBuf<Status>,
-    ) {
-        self.commit_vertices(mesh, vstatus);
-        self.commit_edges(mesh, hstatus, estatus);
-        self.commit_faces(mesh, fstatus);
     }
 
     pub fn check_point(&self) -> usize {
@@ -172,14 +172,14 @@ mod test {
     use crate::{use_glam::PolyMeshF32, EditableTopology, HasIterators, HasTopology};
 
     #[test]
-    fn t_revert_edge_collapse() {
+    fn t_box_revert_edge_collapse() {
         let mut mesh = PolyMeshF32::unit_box().expect("Cannot make a box");
-        let mut history = TopolHistory::default();
-        let area = mesh.try_calc_area().expect("Cannot compute area");
-        let volume = mesh.try_calc_volume().expect("Cannot compute volume");
         let h = mesh
             .find_halfedge(0.into(), 1.into())
             .expect("Cannot find halfedge");
+        let mut history = TopolHistory::default();
+        let area = mesh.try_calc_area().expect("Cannot compute area");
+        let volume = mesh.try_calc_volume().expect("Cannot compute volume");
         {
             let (mut vstatus, mut hstatus, mut estatus, mut fstatus) = (
                 mesh.vertex_status_prop(),
@@ -194,7 +194,7 @@ mod test {
                 fstatus.try_borrow_mut().unwrap(),
             );
             let checkpt = history.check_point();
-            history.record_edge_collapse(&mesh, h, &vstatus, &hstatus, &estatus, &fstatus);
+            history.commit_edge_collapse(&mesh, h, &vstatus, &hstatus, &estatus, &fstatus);
             let mut hcache = Vec::new();
             // Collapse and check.
             mesh.collapse_edge(
@@ -229,6 +229,71 @@ mod test {
         assert_eq!(8, mesh.num_vertices());
         assert_eq!(12, mesh.num_edges());
         assert_eq!(6, mesh.num_faces());
+        assert_eq!(area, mesh.try_calc_area().expect("Cannot compute area"));
+        assert_eq!(
+            volume,
+            mesh.try_calc_volume().expect("Cannot compute volume")
+        );
+    }
+
+    #[test]
+    fn t_icosahedron_revert_edge_collapse() {
+        let mut mesh = PolyMeshF32::icosahedron(1.0).expect("Cannot make an icosahedron");
+        let h = mesh
+            .find_halfedge(0.into(), 1.into())
+            .expect("Cannot find halfedge");
+        let mut history = TopolHistory::default();
+        let area = mesh.try_calc_area().expect("Cannot compute area");
+        let volume = mesh.try_calc_volume().expect("Cannot compute volume");
+        {
+            let (mut vstatus, mut hstatus, mut estatus, mut fstatus) = (
+                mesh.vertex_status_prop(),
+                mesh.halfedge_status_prop(),
+                mesh.edge_status_prop(),
+                mesh.face_status_prop(),
+            );
+            let (mut vstatus, mut hstatus, mut estatus, mut fstatus) = (
+                vstatus.try_borrow_mut().unwrap(),
+                hstatus.try_borrow_mut().unwrap(),
+                estatus.try_borrow_mut().unwrap(),
+                fstatus.try_borrow_mut().unwrap(),
+            );
+            let checkpt = history.check_point();
+            history.commit_edge_collapse(&mesh, h, &vstatus, &hstatus, &estatus, &fstatus);
+            let mut hcache = Vec::new();
+            // Collapse and check.
+            mesh.collapse_edge(
+                h,
+                &mut vstatus,
+                &mut hstatus,
+                &mut estatus,
+                &mut fstatus,
+                &mut hcache,
+            );
+            assert!(area > (mesh.try_calc_area().expect("Cannot compute area")));
+            assert!(volume > mesh.try_calc_volume().expect("Cannot compute volume"));
+            assert_eq!(
+                11,
+                mesh.vertices().filter(|&v| !vstatus[v].deleted()).count()
+            );
+            assert_eq!(27, mesh.edges().filter(|&e| !estatus[e].deleted()).count());
+            assert_eq!(18, mesh.faces().filter(|&f| !fstatus[f].deleted()).count());
+            // Revert and check again.
+            assert!(history.restore(
+                checkpt,
+                &mut mesh,
+                &mut vstatus,
+                &mut hstatus,
+                &mut estatus,
+                &mut fstatus
+            ));
+        }
+        // Nothing should be deleted.
+        mesh.check_for_deleted()
+            .expect("Unexpected deleted elements");
+        assert_eq!(12, mesh.num_vertices());
+        assert_eq!(30, mesh.num_edges());
+        assert_eq!(20, mesh.num_faces());
         assert_eq!(area, mesh.try_calc_area().expect("Cannot compute area"));
         assert_eq!(
             volume,
