@@ -345,12 +345,7 @@ where
     pub fn garbage_collection(&mut self) -> Result<(), Error> {
         self.topol.garbage_collection(&mut self.cache)
     }
-}
 
-impl<const DIM: usize, A> Clone for PolyMeshT<DIM, A>
-where
-    A: Adaptor<DIM>,
-{
     /// Clone the mesh. This doesn't clone all the properties.
     ///
     /// This clones the topology of the mesh, i.e. the vertices, halfedges,
@@ -358,17 +353,29 @@ where
     /// all the elements, points, and normals. This does not copy any other
     /// properties, because the mesh doesn't fully own the other properties. The
     /// properties are owned by whoever created them, and it is their
-    /// responsibilities to properly clone the data in those
-    /// properties. Furthermore, this only copies the data in built-in
-    /// properties if they can be borrowed successfully. If someone upstream
-    /// already borrowed these properties mutably, then the borrow during clone
-    /// will fail and the data won't be copied. The new mesh will have default
-    /// initialized properties.
-    fn clone(&self) -> Self {
+    /// responsibilities to properly clone the data in those properties. In
+    /// order to clone the built-in properties, they have to be borrowed
+    /// immutably. If the borrowing fails, an error is returned.
+    ///
+    /// ```rust
+    /// use alum::use_glam::PolyMeshF32;
+    ///
+    /// let mut mesh = PolyMeshF32::unit_box().expect("Cannot make a box");
+    /// {
+    ///     let mut points = mesh.points();
+    ///     let mut points = points.try_borrow_mut().unwrap();
+    ///     let try_copy = mesh.try_clone();
+    ///     assert!(try_copy.is_err()); // Failed because unable to borrow points.
+    /// }
+    /// let try_copy = mesh.try_clone();
+    /// assert!(try_copy.is_ok()); // Passed because the borrow was successful.
+    /// ```
+    pub fn try_clone(&self) -> Result<Self, Error> {
         let mut topol = self.topol.clone();
         let mut points = VProperty::new(&mut topol.vprops, A::zero_vector());
         match (self.points.try_borrow(), points.try_borrow_mut()) {
             (Ok(src), Ok(mut dst)) if src.len() == dst.len() => dst.copy_from_slice(&src),
+            (Err(_), _) => return Err(Error::CannotBorrowPoints),
             _ => {}
         }
         let vnormals = match &self.vnormals {
@@ -376,6 +383,7 @@ where
                 let mut dst = VProperty::new(&mut topol.vprops, A::zero_vector());
                 match (normals.try_borrow(), dst.try_borrow_mut()) {
                     (Ok(src), Ok(mut dst)) if src.len() == dst.len() => dst.copy_from_slice(&src),
+                    (Err(_), _) => return Err(Error::CannotBorrowVertexNormals),
                     _ => {}
                 }
                 Some(dst)
@@ -387,19 +395,20 @@ where
                 let mut dst = FProperty::new(&mut topol.fprops, A::zero_vector());
                 match (normals.try_borrow(), dst.try_borrow_mut()) {
                     (Ok(src), Ok(mut dst)) if src.len() == dst.len() => dst.copy_from_slice(&src),
+                    (Err(_), _) => return Err(Error::CannotBorrowFaceNormals),
                     _ => {}
                 }
                 Some(dst)
             }
             None => None,
         };
-        Self {
+        Ok(Self {
             topol,
             cache: Default::default(),
             points,
             vnormals,
             fnormals,
-        }
+        })
     }
 }
 
@@ -449,7 +458,7 @@ mod test {
                 .expect("Cannot access face status")
                 .set_tagged(true);
         }
-        let copy = mesh.clone();
+        let copy = mesh.try_clone().unwrap();
         let src = mesh.points.try_borrow().expect("Cannot borrow points");
         let dst = copy.points.try_borrow().expect("Cannot borrow points");
         let src: &[glam::Vec3] = &src;

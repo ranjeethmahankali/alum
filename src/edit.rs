@@ -780,6 +780,8 @@ mod test {
             test::{loop_mesh, quad_box},
             HasTopology, TopolCache,
         },
+        use_glam::PolyMeshF32,
+        HH,
     };
 
     #[test]
@@ -1344,5 +1346,21 @@ mod test {
                 }
             })
         );
+    }
+
+    #[test]
+    fn t_box_insert_collapse() {
+        let mut mesh = PolyMeshF32::unit_box().expect("Cannot make a box");
+        let h: HH = 6.into();
+        let (hnew, _) = mesh.insert_edge(h.next(&mesh), h).unwrap().halfedges();
+        mesh.check_topology().unwrap();
+        assert!(mesh.try_check_edge_collapse(hnew).unwrap());
+        let mut hcache = Vec::new();
+        mesh.try_collapse_edge(hnew, &mut hcache).unwrap();
+        mesh.check_topology().unwrap();
+        mesh.garbage_collection().unwrap();
+        assert_eq!(5, mesh.num_faces());
+        assert_eq!(7, mesh.num_vertices());
+        assert_eq!(10, mesh.num_edges());
     }
 }

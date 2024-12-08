@@ -8,6 +8,7 @@ use crate::mesh::{
     self, Adaptor, CrossProductAdaptor, DotProductAdaptor, FloatScalarAdaptor, VectorAngleAdaptor,
     VectorLengthAdaptor, VectorNormalizeAdaptor,
 };
+pub use glam;
 
 /// Built-in adaptor for meshes that use 32-bit floating point numbers to
 /// represetn the geometry of the mesh.

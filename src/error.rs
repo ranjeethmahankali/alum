@@ -10,6 +10,12 @@ use crate::{
 pub enum Error {
     /// Trying to borrow a property that is already borrowed.
     BorrowedPropertyAccess,
+    /// Unable to borrow the built-in points property.
+    CannotBorrowPoints,
+    /// Unable to borrow the built-in vertex normals.
+    CannotBorrowVertexNormals,
+    /// Unable to borrow the built-in face normals.
+    CannotBorrowFaceNormals,
     /// Accessing a property that has been dropped.
     PropertyDoesNotExist,
     /// Face have not been computed for the given mesh.
