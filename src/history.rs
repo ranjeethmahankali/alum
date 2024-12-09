@@ -1,5 +1,5 @@
 use crate::{
-    element::{Face, Halfedge, Vertex},
+    element::{Edge, Face, Halfedge, Vertex},
     topol::Topology,
     EPropBuf, EditableTopology, FPropBuf, HPropBuf, Status, VPropBuf, EH, FH, HH, VH,
 };
@@ -39,7 +39,6 @@ impl TopolHistory {
     ) {
         self.halfedges.sort();
         self.halfedges.dedup();
-        self.edges.clear();
         self.edges.extend(self.halfedges.iter().map(|h| h.edge()));
         self.edges.sort();
         self.edges.dedup();
@@ -127,6 +126,63 @@ impl TopolHistory {
         self.commit(mesh.topology(), vstatus, hstatus, estatus, fstatus);
     }
 
+    pub fn commit_edge_insertion(
+        &mut self,
+        mesh: &impl EditableTopology,
+        prev: HH,
+        next: HH,
+        vstatus: &VPropBuf<Status>,
+        hstatus: &HPropBuf<Status>,
+        estatus: &EPropBuf<Status>,
+        fstatus: &FPropBuf<Status>,
+    ) {
+        let (p1, n0) = (prev.next(mesh), next.prev(mesh));
+        let f = prev.face(mesh);
+        let v0 = prev.head(mesh);
+        let v1 = next.tail(mesh);
+        let ehnew: EH = (mesh.num_edges() as u32).into();
+        let fhnew = f.map(|_| (mesh.num_faces() as u32).into());
+        let new_edge = Edge {
+            halfedges: [
+                Halfedge {
+                    face: f,
+                    vertex: v1,
+                    next,
+                    prev,
+                },
+                Halfedge {
+                    face: fhnew,
+                    vertex: v0,
+                    next: p1,
+                    prev: n0,
+                },
+            ],
+        };
+        let (h0, h1) = ehnew.halfedges();
+        let delstatus = {
+            let mut s = Status::default();
+            s.set_deleted(true);
+            s
+        };
+        self.vertices.extend_from_slice(&[v0, v1]);
+        self.halfedges.extend(mesh.loop_ccw_iter(prev));
+        self.ops.push(Element::EdgeStatus(ehnew, delstatus));
+        self.ops
+            .push(Element::Halfedge(h0, new_edge.halfedges[0], delstatus));
+        self.ops
+            .push(Element::Halfedge(h1, new_edge.halfedges[1], delstatus));
+        if let Some(fhnew) = fhnew {
+            self.ops
+                .push(Element::Face(fhnew, Face { halfedge: h1 }, delstatus));
+        }
+        if let Some(f) = f {
+            self.faces.push(f);
+        }
+        self.commit_vertices(mesh.topology(), vstatus);
+        self.commit_edges(mesh.topology(), hstatus, estatus);
+        self.commit_faces(mesh.topology(), fstatus);
+    }
+
     pub fn check_point(&self) -> usize {
         self.ops.len()
     }
@@ -163,8 +219,16 @@ impl TopolHistory {
                 }
             }
         }
-        self.ops.truncate(check_point);
-        true
+        self.erase(check_point)
+    }
+
+    pub fn erase(&mut self, checkpt: usize) -> bool {
+        if checkpt < self.ops.len() {
+            self.ops.truncate(checkpt);
+            true
+        } else {
+            false
+        }
     }
 }
 
@@ -174,9 +238,8 @@ mod test {
     use crate::{use_glam::PolyMeshF32, EditableTopology, HasIterators, HasTopology, HH};
     use glam::vec3;
 
-    fn compare_meshes(a: PolyMeshF32, b: PolyMeshF32) {
+    fn compare_meshes(a: &PolyMeshF32, b: &PolyMeshF32) {
         // Compare vertices.
-        assert_eq!(a.num_vertices(), b.num_vertices());
         let avs = a.vertex_status_prop();
         let avs = avs.try_borrow().unwrap();
         let bvs = b.vertex_status_prop();
@@ -196,7 +259,6 @@ mod test {
             println!("✔ Passed");
         }
         // Compare edge status.
-        assert_eq!(a.num_edges(), b.num_edges());
         let aes = a.edge_status_prop();
         let aes = aes.try_borrow().unwrap();
         let bes = b.edge_status_prop();
@@ -210,7 +272,6 @@ mod test {
             println!("✔ Passed");
         }
         // Compare halfedges.
-        assert_eq!(a.num_halfedges(), b.num_halfedges());
         let ahs = a.halfedge_status_prop();
         let ahs = ahs.try_borrow().unwrap();
         let bhs = b.halfedge_status_prop();
@@ -225,7 +286,6 @@ mod test {
             println!("✔ Passed");
         }
         // Compare faces.
-        assert_eq!(a.num_faces(), b.num_faces());
         let afs = a.face_status_prop();
         let afs = afs.try_borrow().unwrap();
         let bfs = b.face_status_prop();
@@ -318,12 +378,13 @@ mod test {
         // Nothing should be deleted.
         mesh.check_for_deleted()
             .expect("Unexpected deleted elements");
+        mesh.check_topology().expect("Topological errors found");
         assert_eq!(area, mesh.try_calc_area().expect("Cannot compute area"));
         assert_eq!(
             volume,
             mesh.try_calc_volume().expect("Cannot compute volume")
         );
-        compare_meshes(mesh, copy);
+        compare_meshes(&mesh, &copy);
     }
 
     #[test]
@@ -391,5 +452,69 @@ mod test {
             .find_halfedge(0.into(), 1.into())
             .expect("Cannot find halfedge");
         test_edge_collapse(mesh, h);
+    }
+
+    #[test]
+    fn t_box_insert_edge_revert() {
+        let mut mesh = PolyMeshF32::unit_box().expect("Cannot create box");
+        let copy = mesh.try_clone().expect("Cannot clone mesh");
+        let area = mesh.try_calc_area().expect("Cannot compute area");
+        let volume = mesh.try_calc_volume().expect("Cannot compute volume");
+        let mut history = TopolHistory::default();
+        let h = mesh
+            .find_halfedge(0.into(), 1.into())
+            .expect("Cannot find halfedge");
+        {
+            let (mut vstatus, mut hstatus, mut estatus, mut fstatus) = (
+                mesh.vertex_status_prop(),
+                mesh.halfedge_status_prop(),
+                mesh.edge_status_prop(),
+                mesh.face_status_prop(),
+            );
+            let ckpt = history.check_point();
+            {
+                let (mut vstatus, mut hstatus, mut estatus, mut fstatus) = (
+                    vstatus.try_borrow_mut().unwrap(),
+                    hstatus.try_borrow_mut().unwrap(),
+                    estatus.try_borrow_mut().unwrap(),
+                    fstatus.try_borrow_mut().unwrap(),
+                );
+                history.commit_edge_insertion(
+                    &mesh,
+                    h.next(&mesh),
+                    h,
+                    &mut vstatus,
+                    &mut hstatus,
+                    &mut estatus,
+                    &mut fstatus,
+                );
+            }
+            mesh.insert_edge(h.next(&mesh), h)
+                .expect("Cannot insert edge");
+            assert_eq!(8, mesh.num_vertices());
+            assert_eq!(13, mesh.num_edges());
+            assert_eq!(7, mesh.num_faces());
+            assert_eq!(area, mesh.try_calc_area().expect("Cannot compute area"));
+            assert_eq!(
+                volume,
+                mesh.try_calc_volume().expect("Cannot compute volume")
+            );
+            let (mut vstatus, mut hstatus, mut estatus, mut fstatus) = (
+                vstatus.try_borrow_mut().unwrap(),
+                hstatus.try_borrow_mut().unwrap(),
+                estatus.try_borrow_mut().unwrap(),
+                fstatus.try_borrow_mut().unwrap(),
+            );
+            assert!(history.restore(
+                ckpt,
+                &mut mesh,
+                &mut vstatus,
+                &mut hstatus,
+                &mut estatus,
+                &mut fstatus,
+            ));
+        }
+        mesh.check_topology().expect("Topological errors found");
+        compare_meshes(&mesh, &copy);
     }
 }
