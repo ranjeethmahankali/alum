@@ -1,7 +1,7 @@
 use crate::{
     element::{Edge, Face, Halfedge, Vertex},
     topol::Topology,
-    EPropBuf, EditableTopology, FPropBuf, HPropBuf, Status, VPropBuf, EH, FH, HH, VH,
+    EPropBuf, EditableTopology, Error, FPropBuf, HPropBuf, Status, VPropBuf, EH, FH, HH, VH,
 };
 
 enum Element {
@@ -92,6 +92,27 @@ impl TopolHistory {
         self.commit_faces(mesh, fstatus);
     }
 
+    pub fn try_commit_edge_collapse(
+        &mut self,
+        mesh: &impl EditableTopology,
+        h: HH,
+    ) -> Result<(), Error> {
+        let (vstatus, hstatus, estatus, fstatus) = (
+            mesh.vertex_status_prop(),
+            mesh.halfedge_status_prop(),
+            mesh.edge_status_prop(),
+            mesh.face_status_prop(),
+        );
+        let (vstatus, hstatus, estatus, fstatus) = (
+            vstatus.try_borrow()?,
+            hstatus.try_borrow()?,
+            estatus.try_borrow()?,
+            fstatus.try_borrow()?,
+        );
+        self.commit_edge_collapse(mesh, h, &vstatus, &hstatus, &estatus, &fstatus);
+        Ok(())
+    }
+
     pub fn commit_edge_collapse(
         &mut self,
         mesh: &impl EditableTopology,
@@ -124,6 +145,28 @@ impl TopolHistory {
         }
         // Commit to history.
         self.commit(mesh.topology(), vstatus, hstatus, estatus, fstatus);
+    }
+
+    pub fn try_commit_edge_insertion(
+        &mut self,
+        mesh: &impl EditableTopology,
+        prev: HH,
+        next: HH,
+    ) -> Result<(), Error> {
+        let (vstatus, hstatus, estatus, fstatus) = (
+            mesh.vertex_status_prop(),
+            mesh.halfedge_status_prop(),
+            mesh.edge_status_prop(),
+            mesh.face_status_prop(),
+        );
+        let (vstatus, hstatus, estatus, fstatus) = (
+            vstatus.try_borrow()?,
+            hstatus.try_borrow()?,
+            estatus.try_borrow()?,
+            fstatus.try_borrow()?,
+        );
+        self.commit_edge_insertion(mesh, prev, next, &vstatus, &hstatus, &estatus, &fstatus);
+        Ok(())
     }
 
     pub fn commit_edge_insertion(
@@ -185,6 +228,33 @@ impl TopolHistory {
 
     pub fn check_point(&self) -> usize {
         self.ops.len()
+    }
+
+    pub fn try_restore(
+        &mut self,
+        check_point: usize,
+        mesh: &mut impl EditableTopology,
+    ) -> Result<bool, Error> {
+        let (mut vstatus, mut hstatus, mut estatus, mut fstatus) = (
+            mesh.vertex_status_prop(),
+            mesh.halfedge_status_prop(),
+            mesh.edge_status_prop(),
+            mesh.face_status_prop(),
+        );
+        let (mut vstatus, mut hstatus, mut estatus, mut fstatus) = (
+            vstatus.try_borrow_mut().unwrap(),
+            hstatus.try_borrow_mut().unwrap(),
+            estatus.try_borrow_mut().unwrap(),
+            fstatus.try_borrow_mut().unwrap(),
+        );
+        Ok(self.restore(
+            check_point,
+            mesh,
+            &mut vstatus,
+            &mut hstatus,
+            &mut estatus,
+            &mut fstatus,
+        ))
     }
 
     pub fn restore(
@@ -465,30 +535,10 @@ mod test {
             .find_halfedge(0.into(), 1.into())
             .expect("Cannot find halfedge");
         {
-            let (mut vstatus, mut hstatus, mut estatus, mut fstatus) = (
-                mesh.vertex_status_prop(),
-                mesh.halfedge_status_prop(),
-                mesh.edge_status_prop(),
-                mesh.face_status_prop(),
-            );
             let ckpt = history.check_point();
-            {
-                let (mut vstatus, mut hstatus, mut estatus, mut fstatus) = (
-                    vstatus.try_borrow_mut().unwrap(),
-                    hstatus.try_borrow_mut().unwrap(),
-                    estatus.try_borrow_mut().unwrap(),
-                    fstatus.try_borrow_mut().unwrap(),
-                );
-                history.commit_edge_insertion(
-                    &mesh,
-                    h.next(&mesh),
-                    h,
-                    &mut vstatus,
-                    &mut hstatus,
-                    &mut estatus,
-                    &mut fstatus,
-                );
-            }
+            history
+                .try_commit_edge_insertion(&mesh, h.next(&mesh), h)
+                .expect("Cannot commit edge insertion to history");
             mesh.insert_edge(h.next(&mesh), h)
                 .expect("Cannot insert edge");
             assert_eq!(8, mesh.num_vertices());
@@ -499,22 +549,16 @@ mod test {
                 volume,
                 mesh.try_calc_volume().expect("Cannot compute volume")
             );
-            let (mut vstatus, mut hstatus, mut estatus, mut fstatus) = (
-                vstatus.try_borrow_mut().unwrap(),
-                hstatus.try_borrow_mut().unwrap(),
-                estatus.try_borrow_mut().unwrap(),
-                fstatus.try_borrow_mut().unwrap(),
-            );
-            assert!(history.restore(
-                ckpt,
-                &mut mesh,
-                &mut vstatus,
-                &mut hstatus,
-                &mut estatus,
-                &mut fstatus,
-            ));
+            assert!(history
+                .try_restore(ckpt, &mut mesh,)
+                .expect("Cannot restore from history"));
         }
         mesh.check_topology().expect("Topological errors found");
         compare_meshes(&mesh, &copy);
+        assert_eq!(area, mesh.try_calc_area().expect("Cannot compute area"));
+        assert_eq!(
+            volume,
+            mesh.try_calc_volume().expect("Cannot compute volume")
+        );
     }
 }
