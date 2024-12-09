@@ -1,3 +1,15 @@
+/*!
+# Recording and Undoing Mesh Edits
+
+Often algorithms require performing topological edits to a mesh. When something
+goes wrong, it is quite useful to be able to go back to a previous state of the
+mesh with a valid state. This module provides features that allow just that.
+
+`TopolHistory` can be used to record topological edits being made to a mesh, and
+that can be later used to revert said operations and restore the topology of the
+mesh to an earlier checkpoint.
+*/
+
 use crate::{
     element::{Edge, Face, Halfedge, Vertex},
     topol::Topology,
@@ -11,6 +23,37 @@ enum Element {
     Face(FH, Face, Status),
 }
 
+/// This can be used to remember and revert the topological edits being made to
+/// a mesh.
+///
+/// ```rust
+/// use alum::{use_glam::PolyMeshF32, TopolHistory, HasTopology, EditableTopology, HH};
+///
+/// let mut mesh = PolyMeshF32::unit_box().unwrap();
+/// let mut history = TopolHistory::default();
+/// let ckpt = history.check_point();
+/// let h: HH = 0.into();
+/// history.try_commit_edge_collapse(&mesh, h).unwrap();
+/// let mut hcache = Vec::new();
+/// mesh.try_collapse_edge(h, &mut hcache).unwrap();
+/// {
+///     let estatus = mesh.edge_status_prop();
+///     let estatus = estatus.try_borrow().unwrap();
+///     assert_eq!(11, mesh.edges().filter(|&e| !estatus[e].deleted()).count());
+///     let vstatus = mesh.vertex_status_prop();
+///     let vstatus = vstatus.try_borrow().unwrap();
+///     assert_eq!(7, mesh.vertices().filter(|&v| !vstatus[v].deleted()).count());
+/// }
+/// assert!(history.try_restore(ckpt, &mut mesh).unwrap());
+/// {
+///     let estatus = mesh.edge_status_prop();
+///     let estatus = estatus.try_borrow().unwrap();
+///     assert_eq!(12, mesh.edges().filter(|&e| !estatus[e].deleted()).count());
+///     let vstatus = mesh.vertex_status_prop();
+///     let vstatus = vstatus.try_borrow().unwrap();
+///     assert_eq!(8, mesh.vertices().filter(|&v| !vstatus[v].deleted()).count());
+/// }
+/// ```
 #[derive(Default)]
 pub struct TopolHistory {
     ops: Vec<Element>,
@@ -92,6 +135,9 @@ impl TopolHistory {
         self.commit_faces(mesh, fstatus);
     }
 
+    /// This is similar to [`commit_edge_collapse`](Self::commit_edge_collapse),
+    /// except it tries to borrow the required properties and returns an error
+    /// if borrowing fails.
     pub fn try_commit_edge_collapse(
         &mut self,
         mesh: &impl EditableTopology,
@@ -113,6 +159,11 @@ impl TopolHistory {
         Ok(())
     }
 
+    /// Commit an edge collapse to history.
+    ///
+    /// This encodes the necessary information into the history to later revert
+    /// the edge collapse and restore the topology as it was before the edge
+    /// collapse.
     pub fn commit_edge_collapse(
         &mut self,
         mesh: &impl EditableTopology,
@@ -147,6 +198,10 @@ impl TopolHistory {
         self.commit(mesh.topology(), vstatus, hstatus, estatus, fstatus);
     }
 
+    /// This is similar to
+    /// [`commit_edge_insertion`](Self::commit_edge_insertion), except it tries
+    /// to borrow the necessary properties and returns an error if the borrowing
+    /// fails.
     pub fn try_commit_edge_insertion(
         &mut self,
         mesh: &impl EditableTopology,
@@ -169,6 +224,12 @@ impl TopolHistory {
         Ok(())
     }
 
+    /// Commit an edge insertion to history.
+    ///
+    /// This encodes the necessary information into the history to later revert
+    /// the edge insertion and restore the previous topology of the mesh. Once
+    /// reverted, the inserted edge and the corresponding halfedges will still
+    /// be present in the mesh as a deleted elements.
     pub fn commit_edge_insertion(
         &mut self,
         mesh: &impl EditableTopology,
@@ -228,10 +289,13 @@ impl TopolHistory {
         self.commit_faces(mesh.topology(), fstatus);
     }
 
+    /// Get the checkpoint representing the current state of the history.
     pub fn check_point(&self) -> usize {
         self.ops.len()
     }
 
+    /// This is similar to [`restore`](Self::restore) except it tries to borrow
+    /// the necessary properties and returns an error if the borrowing fails.
     pub fn try_restore(
         &mut self,
         check_point: usize,
@@ -259,6 +323,11 @@ impl TopolHistory {
         ))
     }
 
+    /// Undo the commited operations on the given mesh and revert it's topology
+    /// up to the provided checkpoint.
+    ///
+    /// If the checkpoint is valid, and the restoration occurs successfully
+    /// `true` is returned. Otherwise `false` is returned.
     pub fn restore(
         &mut self,
         check_point: usize,
@@ -294,6 +363,11 @@ impl TopolHistory {
         self.erase(check_point)
     }
 
+    /// Erase the history up to the given checkpoint.
+    ///
+    /// This will remove all operations commited after the checkpoint from the
+    /// history. This is meant to be used when a topological edit failed, and
+    /// remembering that edit in the history is not necessary.
     pub fn erase(&mut self, checkpt: usize) -> bool {
         if checkpt < self.ops.len() {
             self.ops.truncate(checkpt);
