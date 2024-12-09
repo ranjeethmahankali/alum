@@ -74,10 +74,12 @@ fn visualize_mesh(mesh: &PolygonMesh, context: &Context) -> MeshViews {
         let points = points.try_borrow().expect("Cannot borrow points");
         let vnormals = mesh.vertex_normals().expect("Cannot borrow vertex normals");
         let vnormals = vnormals.try_borrow().expect("Cannot borrow vertex normals");
+        let fstatus = mesh.face_status_prop();
+        let fstatus = fstatus.try_borrow().unwrap();
         let cpumesh = CpuMesh {
             positions: Positions::F32(points.iter().map(|p| vec3(p.x, p.y, p.z)).collect()),
             indices: Indices::U32(
-                mesh.triangulated_vertices()
+                mesh.triangulated_vertices(&fstatus)
                     .flatten()
                     .map(|v| v.index())
                     .collect(),

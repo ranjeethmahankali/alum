@@ -523,7 +523,7 @@ mod test {
         let volume = mesh.try_calc_volume().expect("Cannot compute volume");
         let mut history = TopolHistory::default();
         let h = mesh
-            .find_halfedge(0.into(), 1.into())
+            .find_halfedge(4.into(), 5.into())
             .expect("Cannot find halfedge");
         {
             let ckpt = history.check_point();

@@ -436,9 +436,13 @@ where
     ///
     /// Calling this function with borrowed `points` property avoids an internal
     /// borrow of properties.
-    pub fn calc_volume(&self, points: &VPropBuf<A::Vector>) -> A::Scalar {
+    pub fn calc_volume(
+        &self,
+        points: &VPropBuf<A::Vector>,
+        fstatus: &FPropBuf<Status>,
+    ) -> A::Scalar {
         if self.is_closed() {
-            self.triangulated_vertices()
+            self.triangulated_vertices(fstatus)
                 .fold(A::scalarf64(0.0), |total, vs| {
                     let (p0, p1, p2) = (points[vs[0]], points[vs[1]], points[vs[2]]);
                     total
@@ -463,7 +467,9 @@ where
     pub fn try_calc_volume(&self) -> Result<A::Scalar, Error> {
         let points = self.points();
         let points = points.try_borrow()?;
-        Ok(self.calc_volume(&points))
+        let fstatus = self.face_status_prop();
+        let fstatus = fstatus.try_borrow()?;
+        Ok(self.calc_volume(&points, &fstatus))
     }
 }
 

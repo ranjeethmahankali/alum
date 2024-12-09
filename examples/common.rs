@@ -70,10 +70,12 @@ pub fn mesh_view(mesh: &PolygonMesh, context: &Context) -> Gm<Mesh, PhysicalMate
     let points = points.try_borrow().expect("Cannot borrow points");
     let vnormals = mesh.vertex_normals().unwrap();
     let vnormals = vnormals.try_borrow().unwrap();
+    let fstatus = mesh.face_status_prop();
+    let fstatus = fstatus.try_borrow().unwrap();
     let cpumesh = CpuMesh {
         positions: Positions::F32(points.iter().map(|p| vec3(p.x, p.y, p.z)).collect()),
         indices: Indices::U32(
-            mesh.triangulated_vertices()
+            mesh.triangulated_vertices(&fstatus)
                 .flatten()
                 .map(|v| v.index())
                 .collect(),

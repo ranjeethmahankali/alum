@@ -445,12 +445,14 @@ pub trait EditableTopology: HasIterators {
     /// mesh.add_vertices(&verts).expect("Cannot add vertices");
     /// mesh.add_tri_face(0.into(), 1.into(), 2.into()).expect("Cannot add face");
     /// mesh.add_tri_face(0.into(), 2.into(), 3.into()).expect("Cannot add face");
-    /// assert_eq!(mesh.triangulated_vertices().flatten().map(|v| v.index())
+    /// let fstatus = mesh.face_status_prop();
+    /// let fstatus = fstatus.try_borrow().unwrap();
+    /// assert_eq!(mesh.triangulated_vertices(&fstatus).flatten().map(|v| v.index())
     ///                .collect::<Vec<u32>>(), [2, 0, 1, 3, 0, 2]);
     /// let e = mesh.find_halfedge(0.into(), 2.into())
     ///             .expect("Cannot find halfedge").edge();
     /// mesh.swap_edge_ccw(e);
-    /// assert_eq!(mesh.triangulated_vertices().flatten().map(|v| v.index())
+    /// assert_eq!(mesh.triangulated_vertices(&fstatus).flatten().map(|v| v.index())
     ///                .collect::<Vec<u32>>(), [3, 1, 2, 3, 0, 1]);
     /// ```
     fn swap_edge_ccw(&mut self, e: EH) -> Result<(), Error> {
@@ -518,12 +520,14 @@ pub trait EditableTopology: HasIterators {
     /// mesh.add_vertices(&verts).expect("Cannot add vertices");
     /// mesh.add_tri_face(0.into(), 1.into(), 2.into()).expect("Cannot add face");
     /// mesh.add_tri_face(0.into(), 2.into(), 3.into()).expect("Cannot add face");
-    /// assert_eq!(mesh.triangulated_vertices().flatten().map(|v| v.index())
+    /// let fstatus = mesh.face_status_prop();
+    /// let fstatus = fstatus.try_borrow().unwrap();
+    /// assert_eq!(mesh.triangulated_vertices(&fstatus).flatten().map(|v| v.index())
     ///                .collect::<Vec<u32>>(), [2, 0, 1, 3, 0, 2]);
     /// let e = mesh.find_halfedge(0.into(), 2.into())
     ///             .expect("Cannot find halfedge").edge();
     /// mesh.swap_edge_cw(e);
-    /// assert_eq!(mesh.triangulated_vertices().flatten().map(|v| v.index())
+    /// assert_eq!(mesh.triangulated_vertices(&fstatus).flatten().map(|v| v.index())
     ///                .collect::<Vec<u32>>(), [1, 3, 0, 3, 1, 2]);
     /// ```
     fn swap_edge_cw(&mut self, e: EH) -> bool {
