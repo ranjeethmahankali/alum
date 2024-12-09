@@ -396,30 +396,14 @@ mod test {
                 },
         );
         {
-            let (mut vstatus, mut hstatus, mut estatus, mut fstatus) = (
-                mesh.vertex_status_prop(),
-                mesh.halfedge_status_prop(),
-                mesh.edge_status_prop(),
-                mesh.face_status_prop(),
-            );
-            let (mut vstatus, mut hstatus, mut estatus, mut fstatus) = (
-                vstatus.try_borrow_mut().unwrap(),
-                hstatus.try_borrow_mut().unwrap(),
-                estatus.try_borrow_mut().unwrap(),
-                fstatus.try_borrow_mut().unwrap(),
-            );
             let checkpt = history.check_point();
-            history.commit_edge_collapse(&mesh, h, &vstatus, &hstatus, &estatus, &fstatus);
+            history
+                .try_commit_edge_collapse(&mesh, h)
+                .expect("Cannot commit edge collapse to history");
             let mut hcache = Vec::new();
             // Collapse and check.
-            mesh.collapse_edge(
-                h,
-                &mut vstatus,
-                &mut hstatus,
-                &mut estatus,
-                &mut fstatus,
-                &mut hcache,
-            );
+            mesh.try_collapse_edge(h, &mut hcache)
+                .expect("Cannot collapse edge");
             if closed {
                 assert!(area > mesh.try_calc_area().expect("Cannot compute area"));
             }
@@ -429,21 +413,28 @@ mod test {
             } else {
                 assert!(volume > newvol);
             }
-            assert_eq!(
-                nv,
-                mesh.vertices().filter(|&v| !vstatus[v].deleted()).count()
-            );
-            assert_eq!(ne, mesh.edges().filter(|&e| !estatus[e].deleted()).count());
-            assert_eq!(nf, mesh.faces().filter(|&f| !fstatus[f].deleted()).count());
+            {
+                let (vstatus, estatus, fstatus) = (
+                    mesh.vertex_status_prop(),
+                    mesh.edge_status_prop(),
+                    mesh.face_status_prop(),
+                );
+                let (vstatus, estatus, fstatus) = (
+                    vstatus.try_borrow().expect("Cannot borrow property"),
+                    estatus.try_borrow().expect("Cannot borrow property"),
+                    fstatus.try_borrow().expect("Cannot borrow property"),
+                );
+                assert_eq!(
+                    nv,
+                    mesh.vertices().filter(|&v| !vstatus[v].deleted()).count()
+                );
+                assert_eq!(ne, mesh.edges().filter(|&e| !estatus[e].deleted()).count());
+                assert_eq!(nf, mesh.faces().filter(|&f| !fstatus[f].deleted()).count());
+            }
             // Revert and check again.
-            assert!(history.restore(
-                checkpt,
-                &mut mesh,
-                &mut vstatus,
-                &mut hstatus,
-                &mut estatus,
-                &mut fstatus
-            ));
+            assert!(history
+                .try_restore(checkpt, &mut mesh,)
+                .expect("Cannot restore from history"));
         }
         // Nothing should be deleted.
         mesh.check_for_deleted()

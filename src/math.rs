@@ -7,7 +7,7 @@ use crate::{
         VectorAngleAdaptor, VectorLengthAdaptor, VectorNormalizeAdaptor,
     },
     property::{FProperty, VProperty},
-    FPropBuf, HasTopology, VPropBuf,
+    FPropBuf, HasTopology, Status, VPropBuf,
 };
 use std::ops::{Add, AddAssign, Div, Mul, Neg, Sub};
 
@@ -326,10 +326,12 @@ where
     /// Compute the total area of this mesh. `points` must be the positions of vertices.
     ///
     /// Calling this function with borrowed `points` property avoids an internal borrow.
-    pub fn calc_area(&self, points: &VPropBuf<A::Vector>) -> A::Scalar {
-        self.faces().fold(A::scalarf64(0.0), |total, f| {
-            total + self.calc_face_area(f, points)
-        })
+    pub fn calc_area(&self, points: &VPropBuf<A::Vector>, fstatus: &FPropBuf<Status>) -> A::Scalar {
+        self.faces()
+            .filter(|&f| !fstatus[f].deleted())
+            .fold(A::scalarf64(0.0), |total, f| {
+                total + self.calc_face_area(f, points)
+            })
     }
 
     /// Similar to [`Self::calc_area`], except this function tries to borrow the
@@ -344,7 +346,9 @@ where
     pub fn try_calc_area(&self) -> Result<A::Scalar, Error> {
         let points = self.points();
         let points = points.try_borrow()?;
-        Ok(self.calc_area(&points))
+        let fstatus = self.face_status_prop();
+        let fstatus = fstatus.try_borrow()?;
+        Ok(self.calc_area(&points, &fstatus))
     }
 }
 
