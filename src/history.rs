@@ -165,7 +165,7 @@ impl TopolHistory {
             estatus.try_borrow()?,
             fstatus.try_borrow()?,
         );
-        self.commit_edge_insertion(mesh, prev, next, &vstatus, &hstatus, &estatus, &fstatus);
+        self.commit_edge_insertion(mesh, prev, next, (&vstatus, &hstatus, &estatus, &fstatus));
         Ok(())
     }
 
@@ -174,10 +174,12 @@ impl TopolHistory {
         mesh: &impl EditableTopology,
         prev: HH,
         next: HH,
-        vstatus: &VPropBuf<Status>,
-        hstatus: &HPropBuf<Status>,
-        estatus: &EPropBuf<Status>,
-        fstatus: &FPropBuf<Status>,
+        (vstatus, hstatus, estatus, fstatus): (
+            &VPropBuf<Status>,
+            &HPropBuf<Status>,
+            &EPropBuf<Status>,
+            &FPropBuf<Status>,
+        ),
     ) {
         let (p1, n0) = (prev.next(mesh), next.prev(mesh));
         let f = prev.face(mesh);
