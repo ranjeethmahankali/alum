@@ -13,7 +13,8 @@ mesh to an earlier checkpoint.
 use crate::{
     element::{Edge, Face, Halfedge, Vertex},
     topol::Topology,
-    EPropBuf, EditableTopology, Error, FPropBuf, HPropBuf, Status, VPropBuf, EH, FH, HH, VH,
+    EPropBuf, EditableTopology, Error, FPropBuf, HPropBuf, Handle, PropBuf, Status, VPropBuf, EH,
+    FH, HH, VH,
 };
 
 enum Element {
@@ -375,6 +376,39 @@ impl TopolHistory {
         } else {
             false
         }
+    }
+}
+
+#[derive(Default)]
+struct PropHistory<H, T>
+where
+    H: Handle,
+    T: Copy + Clone + 'static,
+{
+    values: Vec<(H, T)>,
+}
+
+impl<H, T> PropHistory<H, T>
+where
+    H: Handle,
+    T: Copy + Clone + 'static,
+{
+    pub fn commit(&mut self, handle: H, prop: &PropBuf<H, T>) {
+        self.values.push((handle, prop[handle]));
+    }
+
+    pub fn check_point(&self) -> usize {
+        self.values.len()
+    }
+
+    pub fn restore(&mut self, check_point: usize, prop: &mut PropBuf<H, T>) -> bool {
+        if check_point >= self.values.len() {
+            return false;
+        }
+        for (h, v) in self.values.drain(..).rev() {
+            prop[h] = v;
+        }
+        true
     }
 }
 
