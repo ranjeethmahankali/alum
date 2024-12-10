@@ -342,26 +342,26 @@ impl TopolHistory {
             return false;
         }
         let mesh = mesh.topology_mut();
-        for op in self.ops[check_point..].iter().rev() {
+        for op in self.ops.drain(check_point..).rev() {
             match op {
                 Element::Vertex(vh, vertex, status) => {
-                    *mesh.vertex_mut(*vh) = *vertex;
-                    vstatus[*vh] = *status;
+                    *mesh.vertex_mut(vh) = vertex;
+                    vstatus[vh] = status;
                 }
                 Element::Halfedge(hh, halfedge, status) => {
-                    *mesh.halfedge_mut(*hh) = *halfedge;
-                    hstatus[*hh] = *status;
+                    *mesh.halfedge_mut(hh) = halfedge;
+                    hstatus[hh] = status;
                 }
                 Element::EdgeStatus(eh, status) => {
-                    estatus[*eh] = *status;
+                    estatus[eh] = status;
                 }
                 Element::Face(fh, face, status) => {
-                    *mesh.face_mut(*fh) = *face;
-                    fstatus[*fh] = *status;
+                    *mesh.face_mut(fh) = face;
+                    fstatus[fh] = status;
                 }
             }
         }
-        self.erase(check_point)
+        true
     }
 
     /// Erase the history up to the given checkpoint.
@@ -405,7 +405,7 @@ where
         if check_point >= self.values.len() {
             return false;
         }
-        for (h, v) in self.values.drain(..).rev() {
+        for (h, v) in self.values.drain(check_point..).rev() {
             prop[h] = v;
         }
         true
