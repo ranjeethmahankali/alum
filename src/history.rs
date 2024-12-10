@@ -379,6 +379,9 @@ impl TopolHistory {
     }
 }
 
+/// This can be used to keep track of the changes being made to a property
+/// buffer, and later restore the property buffer to a previous check point if
+/// needed.
 #[derive(Default)]
 pub struct PropHistory<H, T>
 where
@@ -393,14 +396,22 @@ where
     H: Handle,
     T: Copy + Clone + 'static,
 {
+    /// Commit the current property value of the `handle` in the `prop` property
+    /// buffer into the history.
     pub fn commit(&mut self, handle: H, prop: &PropBuf<H, T>) {
         self.values.push((handle, prop[handle]));
     }
 
+    /// Get the checkpoint representing the current state of the property
+    /// buffer.
     pub fn check_point(&self) -> usize {
         self.values.len()
     }
 
+    /// Restore the `prop` property buffer to the `check_point`.
+    ///
+    /// Returns `true` when the checkpoint is valid and the property buffer is
+    /// returned to it's previous state.
     pub fn restore(&mut self, check_point: usize, prop: &mut PropBuf<H, T>) -> bool {
         if check_point >= self.values.len() {
             return false;
