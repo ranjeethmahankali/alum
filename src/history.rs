@@ -380,7 +380,7 @@ impl TopolHistory {
 }
 
 #[derive(Default)]
-struct PropHistory<H, T>
+pub struct PropHistory<H, T>
 where
     H: Handle,
     T: Copy + Clone + 'static,
