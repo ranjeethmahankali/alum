@@ -149,6 +149,8 @@ pub trait EditableTopology: HasIterators {
         let h1 = h.next(topol);
         let o = h.opposite();
         let o1 = h1.opposite();
+        let on = o.next(topol);
+        let op = o.prev(topol);
         let v0 = h.head(topol);
         let v1 = h1.head(topol);
         let fh = h.face(topol);
@@ -159,8 +161,8 @@ pub trait EditableTopology: HasIterators {
         debug_assert_eq!(h1.next(topol), h);
         debug_assert_ne!(h1, o);
         // Rewire halfedge -> halfedge.
-        topol.link_halfedges(h1, o.next(topol));
-        topol.link_halfedges(o.prev(topol), h1);
+        topol.link_halfedges(h1, on);
+        topol.link_halfedges(op, h1);
         // Rewire halfedge -> face.
         topol.halfedge_mut(h1).face = fo;
         // Rewire vertex -> halfedge.
@@ -443,12 +445,14 @@ pub trait EditableTopology: HasIterators {
     /// mesh.add_vertices(&verts).expect("Cannot add vertices");
     /// mesh.add_tri_face(0.into(), 1.into(), 2.into()).expect("Cannot add face");
     /// mesh.add_tri_face(0.into(), 2.into(), 3.into()).expect("Cannot add face");
-    /// assert_eq!(mesh.triangulated_vertices().flatten().map(|v| v.index())
+    /// let fstatus = mesh.face_status_prop();
+    /// let fstatus = fstatus.try_borrow().unwrap();
+    /// assert_eq!(mesh.triangulated_vertices(&fstatus).flatten().map(|v| v.index())
     ///                .collect::<Vec<u32>>(), [2, 0, 1, 3, 0, 2]);
     /// let e = mesh.find_halfedge(0.into(), 2.into())
     ///             .expect("Cannot find halfedge").edge();
     /// mesh.swap_edge_ccw(e);
-    /// assert_eq!(mesh.triangulated_vertices().flatten().map(|v| v.index())
+    /// assert_eq!(mesh.triangulated_vertices(&fstatus).flatten().map(|v| v.index())
     ///                .collect::<Vec<u32>>(), [3, 1, 2, 3, 0, 1]);
     /// ```
     fn swap_edge_ccw(&mut self, e: EH) -> Result<(), Error> {
@@ -516,12 +520,14 @@ pub trait EditableTopology: HasIterators {
     /// mesh.add_vertices(&verts).expect("Cannot add vertices");
     /// mesh.add_tri_face(0.into(), 1.into(), 2.into()).expect("Cannot add face");
     /// mesh.add_tri_face(0.into(), 2.into(), 3.into()).expect("Cannot add face");
-    /// assert_eq!(mesh.triangulated_vertices().flatten().map(|v| v.index())
+    /// let fstatus = mesh.face_status_prop();
+    /// let fstatus = fstatus.try_borrow().unwrap();
+    /// assert_eq!(mesh.triangulated_vertices(&fstatus).flatten().map(|v| v.index())
     ///                .collect::<Vec<u32>>(), [2, 0, 1, 3, 0, 2]);
     /// let e = mesh.find_halfedge(0.into(), 2.into())
     ///             .expect("Cannot find halfedge").edge();
     /// mesh.swap_edge_cw(e);
-    /// assert_eq!(mesh.triangulated_vertices().flatten().map(|v| v.index())
+    /// assert_eq!(mesh.triangulated_vertices(&fstatus).flatten().map(|v| v.index())
     ///                .collect::<Vec<u32>>(), [1, 3, 0, 3, 1, 2]);
     /// ```
     fn swap_edge_cw(&mut self, e: EH) -> bool {

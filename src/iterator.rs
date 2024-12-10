@@ -1,7 +1,7 @@
 use crate::{
     element::{EH, FH, HH, VH},
     topol::Topology,
-    Adaptor, HasTopology, PolyMeshT,
+    Adaptor, FPropBuf, HasTopology, PolyMeshT, Status,
 };
 use std::{marker::PhantomData, ptr::NonNull};
 
@@ -763,13 +763,16 @@ pub trait HasIterators: HasTopology {
     ///              glam::vec3(1.0, 1.0, 0.0), glam::vec3(0.0, 1.0, 0.0)];
     /// mesh.add_vertices(&verts).expect("Cannot add vertices");
     /// mesh.add_quad_face(0.into(), 1.into(), 2.into(), 3.into());
-    /// assert_eq!(mesh.triangulated_vertices()
+    /// let fstatus = mesh.face_status_prop();
+    /// let fstatus = fstatus.try_borrow().unwrap();
+    /// assert_eq!(mesh.triangulated_vertices(&fstatus)
     ///                .flatten()
     ///                .map(|v| v.index())
     ///                .collect::<Vec<u32>>(), [3, 0, 1, 3, 1, 2]);
     /// ```
-    fn triangulated_vertices(&self) -> impl Iterator<Item = [VH; 3]> {
+    fn triangulated_vertices(&self, fstatus: &FPropBuf<Status>) -> impl Iterator<Item = [VH; 3]> {
         self.faces()
+            .filter(|&f| !fstatus[f].deleted())
             .flat_map(move |f| self.triangulated_face_vertices(f))
     }
 

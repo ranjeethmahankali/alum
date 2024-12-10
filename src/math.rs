@@ -7,7 +7,7 @@ use crate::{
         VectorAngleAdaptor, VectorLengthAdaptor, VectorNormalizeAdaptor,
     },
     property::{FProperty, VProperty},
-    FPropBuf, HasTopology, VPropBuf,
+    FPropBuf, HasTopology, Status, VPropBuf,
 };
 use std::ops::{Add, AddAssign, Div, Mul, Neg, Sub};
 
@@ -326,10 +326,12 @@ where
     /// Compute the total area of this mesh. `points` must be the positions of vertices.
     ///
     /// Calling this function with borrowed `points` property avoids an internal borrow.
-    pub fn calc_area(&self, points: &VPropBuf<A::Vector>) -> A::Scalar {
-        self.faces().fold(A::scalarf64(0.0), |total, f| {
-            total + self.calc_face_area(f, points)
-        })
+    pub fn calc_area(&self, points: &VPropBuf<A::Vector>, fstatus: &FPropBuf<Status>) -> A::Scalar {
+        self.faces()
+            .filter(|&f| !fstatus[f].deleted())
+            .fold(A::scalarf64(0.0), |total, f| {
+                total + self.calc_face_area(f, points)
+            })
     }
 
     /// Similar to [`Self::calc_area`], except this function tries to borrow the
@@ -344,7 +346,9 @@ where
     pub fn try_calc_area(&self) -> Result<A::Scalar, Error> {
         let points = self.points();
         let points = points.try_borrow()?;
-        Ok(self.calc_area(&points))
+        let fstatus = self.face_status_prop();
+        let fstatus = fstatus.try_borrow()?;
+        Ok(self.calc_area(&points, &fstatus))
     }
 }
 
@@ -432,16 +436,22 @@ where
     ///
     /// Calling this function with borrowed `points` property avoids an internal
     /// borrow of properties.
-    pub fn calc_volume(&self, points: &VPropBuf<A::Vector>) -> A::Scalar {
-        if self.halfedges().any(|h| h.is_boundary(&self.topol)) {
-            // Not closed.
-            return A::scalarf64(0.0);
+    pub fn calc_volume(
+        &self,
+        points: &VPropBuf<A::Vector>,
+        fstatus: &FPropBuf<Status>,
+    ) -> A::Scalar {
+        if self.is_closed() {
+            self.triangulated_vertices(fstatus)
+                .fold(A::scalarf64(0.0), |total, vs| {
+                    let (p0, p1, p2) = (points[vs[0]], points[vs[1]], points[vs[2]]);
+                    total
+                        + (A::dot_product(p0, A::cross_product(p1 - p0, p2 - p0))
+                            / A::scalarf64(6.0))
+                })
+        } else {
+            A::scalarf64(0.0)
         }
-        self.triangulated_vertices()
-            .fold(A::scalarf64(0.0), |total, vs| {
-                let (p0, p1, p2) = (points[vs[0]], points[vs[1]], points[vs[2]]);
-                total + (A::dot_product(p0, A::cross_product(p1 - p0, p2 - p0)) / A::scalarf64(6.0))
-            })
     }
 
     /// Similar to [`Self::calc_volume`], except this function attempts to
@@ -457,7 +467,9 @@ where
     pub fn try_calc_volume(&self) -> Result<A::Scalar, Error> {
         let points = self.points();
         let points = points.try_borrow()?;
-        Ok(self.calc_volume(&points))
+        let fstatus = self.face_status_prop();
+        let fstatus = fstatus.try_borrow()?;
+        Ok(self.calc_volume(&points, &fstatus))
     }
 }
 
