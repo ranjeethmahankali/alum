@@ -382,13 +382,24 @@ impl TopolHistory {
 /// This can be used to keep track of the changes being made to a property
 /// buffer, and later restore the property buffer to a previous check point if
 /// needed.
-#[derive(Default)]
 pub struct PropHistory<H, T>
 where
     H: Handle,
     T: Copy + Clone + 'static,
 {
     values: Vec<(H, T)>,
+}
+
+impl<H, T> Default for PropHistory<H, T>
+where
+    H: Handle,
+    T: Copy + Clone + 'static,
+{
+    fn default() -> Self {
+        Self {
+            values: Default::default(),
+        }
+    }
 }
 
 impl<H, T> PropHistory<H, T>
@@ -423,10 +434,18 @@ where
     }
 }
 
+pub type VPropHistory<T> = PropHistory<VH, T>;
+
+pub type HPropHistory<T> = PropHistory<HH, T>;
+
+pub type EPropHistory<T> = PropHistory<EH, T>;
+
+pub type FPropHistory<T> = PropHistory<FH, T>;
+
 #[cfg(test)]
 mod test {
-    use super::TopolHistory;
-    use crate::{use_glam::PolyMeshF32, EditableTopology, HasIterators, HasTopology, HH};
+    use super::{TopolHistory, VPropHistory};
+    use crate::{use_glam::PolyMeshF32, EditableTopology, Handle, HasIterators, HasTopology, HH};
     use glam::vec3;
 
     fn compare_meshes(a: &PolyMeshF32, b: &PolyMeshF32) {
@@ -672,5 +691,36 @@ mod test {
             volume,
             mesh.try_calc_volume().expect("Cannot compute volume")
         );
+    }
+
+    #[test]
+    fn t_box_prop_history() {
+        let mut fibo = [1u32, 1, 2];
+        let mut mesh = PolyMeshF32::unit_box().expect("Cannot make a box");
+        let mut idx = mesh.create_vertex_prop(u32::MAX);
+        let mut history = VPropHistory::<u32>::default();
+        let mut expected: Vec<Vec<u32>> = Vec::new();
+        let mut idx = idx.try_borrow_mut().expect("Cannot borrow property");
+        for v in mesh.vertices() {
+            idx[v] = v.index();
+        }
+        let mut checkpoints = Vec::new();
+        for _iter in 0..10 {
+            expected.push(idx.to_vec());
+            checkpoints.push(history.check_point());
+            for v in mesh.vertices() {
+                history.commit(v, &idx);
+                idx[v] = fibo[2];
+                fibo.rotate_right(1);
+                fibo[2] = (fibo[0] + fibo[1]) % 4096;
+                println!("Fibo: {}", idx[v]);
+            }
+        }
+        // Now restore to checkpoints and verify the values are the same.
+        assert_eq!(expected.len(), checkpoints.len());
+        for (vals, &ckpt) in expected.iter().zip(checkpoints.iter()).rev() {
+            assert!(history.restore(ckpt, &mut idx));
+            assert_eq!(vals, idx.as_ref());
+        }
     }
 }

@@ -159,7 +159,9 @@ pub use decimate::{
 pub use edit::EditableTopology;
 pub use element::{Handle, EH, FH, HH, VH};
 pub use error::Error;
-pub use history::{PropHistory, TopolHistory};
+pub use history::{
+    EPropHistory, FPropHistory, HPropHistory, PropHistory, TopolHistory, VPropHistory,
+};
 pub use iterator::HasIterators;
 pub use mesh::{
     Adaptor, CrossProductAdaptor, DotProductAdaptor, FloatScalarAdaptor, PolyMeshT,
