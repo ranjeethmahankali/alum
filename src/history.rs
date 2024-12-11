@@ -382,6 +382,24 @@ impl TopolHistory {
 /// This can be used to keep track of the changes being made to a property
 /// buffer, and later restore the property buffer to a previous check point if
 /// needed.
+///
+/// ```rust
+/// use alum::{use_glam::PolyMeshF32, VPropHistory, Handle, HasTopology};
+///
+/// let mut mesh = PolyMeshF32::unit_box().expect("Cannot make a box");
+/// let mut prop = mesh.create_vertex_prop(42u32);
+/// let mut prop = prop.try_borrow_mut().expect("Cannot borrow property");
+/// let mut history = VPropHistory::<u32>::default();
+/// let ckpt = history.check_point(); // Checkpoint before modifying any property values.
+/// for v in mesh.vertices() {
+///     history.commit(v, &prop); // Commit to history before modifying the value.
+///     prop[v] = v.index();
+/// }
+/// history.restore(ckpt, &mut prop);
+/// for v in mesh.vertices() {
+///     assert_eq!(prop[v], 42);
+/// }
+/// ```
 pub struct PropHistory<H, T>
 where
     H: Handle,
@@ -434,12 +452,28 @@ where
     }
 }
 
+/// Vertex property history.
+///
+/// This can be used to keep track of changes being made to a vertex property of
+/// type `T`.
 pub type VPropHistory<T> = PropHistory<VH, T>;
 
+/// Halfedge property history.
+///
+/// This can be used to keep track of changes being made to a halfedge property
+/// of type `T`.
 pub type HPropHistory<T> = PropHistory<HH, T>;
 
+/// Edge property history.
+///
+/// This can be used to keep track of changes being made to an edge property of
+/// type `T`.
 pub type EPropHistory<T> = PropHistory<EH, T>;
 
+/// Face property history.
+///
+/// This can be used to keep track of changes being made to a face property of
+/// type `T`.
 pub type FPropHistory<T> = PropHistory<FH, T>;
 
 #[cfg(test)]
