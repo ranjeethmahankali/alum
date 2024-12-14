@@ -364,20 +364,6 @@ impl TopolHistory {
         true
     }
 
-    /// Erase the history up to the given checkpoint.
-    ///
-    /// This will remove all operations commited after the checkpoint from the
-    /// history. This is meant to be used when a topological edit failed, and
-    /// remembering that edit in the history is not necessary.
-    pub fn erase(&mut self, checkpt: usize) -> bool {
-        if checkpt < self.ops.len() {
-            self.ops.truncate(checkpt);
-            true
-        } else {
-            false
-        }
-    }
-
     /// Clear the history.
     ///
     /// This deletes all stored elements and operations.
@@ -459,6 +445,13 @@ where
             prop[h] = v;
         }
         true
+    }
+
+    /// Clear the history.
+    ///
+    /// This deletes all saved property values.
+    pub fn clear(&mut self) {
+        self.values.clear();
     }
 }
 
