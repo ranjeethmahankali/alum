@@ -377,6 +377,16 @@ impl TopolHistory {
             false
         }
     }
+
+    /// Clear the history.
+    ///
+    /// This deletes all stored elements and operations.
+    pub fn clear(&mut self) {
+        self.ops.clear();
+        self.vertices.clear();
+        self.halfedges.clear();
+        self.faces.clear();
+    }
 }
 
 /// This can be used to keep track of the changes being made to a property
