@@ -412,12 +412,12 @@ impl FH {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub(crate) struct Vertex {
     pub(crate) halfedge: Option<HH>,
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub(crate) struct Halfedge {
     pub(crate) face: Option<FH>,
     pub(crate) vertex: VH,
@@ -425,12 +425,12 @@ pub(crate) struct Halfedge {
     pub(crate) prev: HH,
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub(crate) struct Edge {
     pub(crate) halfedges: [Halfedge; 2],
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub(crate) struct Face {
     pub(crate) halfedge: HH,
 }

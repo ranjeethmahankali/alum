@@ -30,7 +30,7 @@ Or by adding the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-alum = "0.5.7"
+alum = "0.6.1"
 ```
 
 ## Usage and Features

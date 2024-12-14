@@ -178,9 +178,9 @@ where
 
 /// Buffer containing the property values.
 ///
-/// This is meant to be a thin wrapper around [T] that allows for convenient and
+/// This is meant to be a thin wrapper around `T` that allows for convenient and
 /// type safe indexing with the handle type `H`. If you need a raw slice, you
-/// can always convert the property buffer into a &[T] at zero cost.
+/// can always convert the property buffer into a `&[T]` at zero cost.
 ///
 /// To access this buffer from the property that owns it, you have it borrow it
 /// as either [`Ref`](std::cell::Ref) or [`RefMut`](std::cell::RefMut)
@@ -219,7 +219,7 @@ where
     }
 }
 
-/// A property buffer can be turned into a &[T] for conveninence.
+/// A property buffer can be turned into a `&[T]` for conveninence.
 impl<H, T> Deref for PropBuf<H, T>
 where
     H: Handle,
@@ -232,7 +232,7 @@ where
     }
 }
 
-/// A mutable property buffer can be turned into a &mut [T] for conveninence.
+/// A mutable property buffer can be turned into a `&mut [T]` for conveninence.
 impl<H, T> DerefMut for PropBuf<H, T>
 where
     H: Handle,
