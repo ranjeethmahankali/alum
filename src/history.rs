@@ -338,7 +338,7 @@ impl TopolHistory {
         estatus: &mut EPropBuf<Status>,
         fstatus: &mut FPropBuf<Status>,
     ) -> bool {
-        if check_point >= self.ops.len() {
+        if check_point > self.ops.len() {
             return false;
         }
         let mesh = mesh.topology_mut();
@@ -438,7 +438,7 @@ where
     /// Returns `true` when the checkpoint is valid and the property buffer is
     /// returned to it's previous state.
     pub fn restore(&mut self, check_point: usize, prop: &mut PropBuf<H, T>) -> bool {
-        if check_point >= self.values.len() {
+        if check_point > self.values.len() {
             return false;
         }
         for (h, v) in self.values.drain(check_point..).rev() {
