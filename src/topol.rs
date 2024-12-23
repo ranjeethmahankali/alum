@@ -998,9 +998,7 @@ impl Topology {
         self.fprops.garbage_collection();
         Ok(())
     }
-}
 
-impl Clone for Topology {
     /// Clone the topology. This is not a full clone.
     ///
     /// This clones the topology, the elements and the built-in properties such
@@ -1009,8 +1007,8 @@ impl Clone for Topology {
     /// other properties. It is upto the owners of the property (i.e. users of
     /// the API) to clone the other properties. Furthermore, the built-in
     /// properties are only cloned if they can be successfully borrowed. If the
-    /// caller already borrowed the builtin properties, they may not be copied.
-    fn clone(&self) -> Self {
+    /// caller already borrowed the builtin properties, an error is returned.
+    pub fn try_clone(&self) -> Result<Self, Error> {
         let (mut vprops, mut hprops, mut eprops, mut fprops) = (
             PropertyContainer::new_with_size(self.num_vertices()),
             PropertyContainer::new_with_size(self.num_halfedges()),
@@ -1025,21 +1023,25 @@ impl Clone for Topology {
         );
         match (self.vstatus.try_borrow(), vstatus.try_borrow_mut()) {
             (Ok(src), Ok(mut dst)) if src.len() == dst.len() => dst.copy_from_slice(&src),
-            _ => {} //
+            (Err(_), _) => return Err(Error::CannotBorrowVertexStatus),
+            _ => {}
         }
         match (self.hstatus.try_borrow(), hstatus.try_borrow_mut()) {
             (Ok(src), Ok(mut dst)) if src.len() == dst.len() => dst.copy_from_slice(&src),
-            _ => {} //
+            (Err(_), _) => return Err(Error::CannotBorrowHalfedgeStatus),
+            _ => {}
         }
         match (self.estatus.try_borrow(), estatus.try_borrow_mut()) {
             (Ok(src), Ok(mut dst)) if src.len() == dst.len() => dst.copy_from_slice(&src),
-            _ => {} //
+            (Err(_), _) => return Err(Error::CannotBorrowEdgeStatus),
+            _ => {}
         }
         match (self.fstatus.try_borrow(), fstatus.try_borrow_mut()) {
             (Ok(src), Ok(mut dst)) if src.len() == dst.len() => dst.copy_from_slice(&src),
-            _ => {} //
+            (Err(_), _) => return Err(Error::CannotBorrowFaceStatus),
+            _ => {}
         }
-        Self {
+        Ok(Self {
             vertices: self.vertices.clone(),
             edges: self.edges.clone(),
             faces: self.faces.clone(),
@@ -1051,7 +1053,7 @@ impl Clone for Topology {
             hprops,
             eprops,
             fprops,
-        }
+        })
     }
 }
 
@@ -1618,7 +1620,7 @@ pub(crate) mod test {
                 .expect("Cannot access face status")
                 .set_tagged(true);
         }
-        let copy = mesh.clone();
+        let copy = mesh.try_clone().expect("Cannot clone topology");
         for v in copy.vertices() {
             assert_eq!(
                 v.index() % 2 != 0,

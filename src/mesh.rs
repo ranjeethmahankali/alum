@@ -371,7 +371,7 @@ where
     /// assert!(try_copy.is_ok()); // Passed because the borrow was successful.
     /// ```
     pub fn try_clone(&self) -> Result<Self, Error> {
-        let mut topol = self.topol.clone();
+        let mut topol = self.topol.try_clone()?;
         let mut points = VProperty::new(&mut topol.vprops, A::zero_vector());
         match (self.points.try_borrow(), points.try_borrow_mut()) {
             (Ok(src), Ok(mut dst)) if src.len() == dst.len() => dst.copy_from_slice(&src),
