@@ -1023,23 +1023,19 @@ impl Topology {
         );
         match (self.vstatus.try_borrow(), vstatus.try_borrow_mut()) {
             (Ok(src), Ok(mut dst)) if src.len() == dst.len() => dst.copy_from_slice(&src),
-            (Err(_), _) => return Err(Error::CannotBorrowVertexStatus),
-            _ => {}
+            _ => return Err(Error::CannotBorrowVertexStatus),
         }
         match (self.hstatus.try_borrow(), hstatus.try_borrow_mut()) {
             (Ok(src), Ok(mut dst)) if src.len() == dst.len() => dst.copy_from_slice(&src),
-            (Err(_), _) => return Err(Error::CannotBorrowHalfedgeStatus),
-            _ => {}
+            _ => return Err(Error::CannotBorrowHalfedgeStatus),
         }
         match (self.estatus.try_borrow(), estatus.try_borrow_mut()) {
             (Ok(src), Ok(mut dst)) if src.len() == dst.len() => dst.copy_from_slice(&src),
-            (Err(_), _) => return Err(Error::CannotBorrowEdgeStatus),
-            _ => {}
+            _ => return Err(Error::CannotBorrowEdgeStatus),
         }
         match (self.fstatus.try_borrow(), fstatus.try_borrow_mut()) {
             (Ok(src), Ok(mut dst)) if src.len() == dst.len() => dst.copy_from_slice(&src),
-            (Err(_), _) => return Err(Error::CannotBorrowFaceStatus),
-            _ => {}
+            _ => return Err(Error::CannotBorrowFaceStatus),
         }
         Ok(Self {
             vertices: self.vertices.clone(),
