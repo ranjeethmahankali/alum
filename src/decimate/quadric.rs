@@ -7,6 +7,7 @@ use std::ops::{Add, AddAssign, Div, Mul, Neg, Sub};
 
 // Credit to:
 // https://github.com/Philip-Trettner/probabilistic-quadrics/blob/master/probabilistic-quadrics.hh
+#[derive(PartialEq)]
 pub struct Quadric<A>
 where
     A: Adaptor<3>,
