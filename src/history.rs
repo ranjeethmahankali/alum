@@ -208,6 +208,7 @@ impl TopolHistory {
         mesh: &impl EditableTopology,
         prev: HH,
         next: HH,
+        newface: Option<FH>,
     ) -> Result<(), Error> {
         let (vstatus, hstatus, estatus, fstatus) = (
             mesh.vertex_status_prop(),
@@ -221,7 +222,13 @@ impl TopolHistory {
             estatus.try_borrow()?,
             fstatus.try_borrow()?,
         );
-        self.commit_edge_insertion(mesh, prev, next, (&vstatus, &hstatus, &estatus, &fstatus));
+        self.commit_edge_insertion(
+            mesh,
+            prev,
+            next,
+            newface,
+            (&vstatus, &hstatus, &estatus, &fstatus),
+        );
         Ok(())
     }
 
@@ -236,6 +243,7 @@ impl TopolHistory {
         mesh: &impl EditableTopology,
         prev: HH,
         next: HH,
+        newface: Option<FH>,
         (vstatus, hstatus, estatus, fstatus): (
             &VPropBuf<Status>,
             &HPropBuf<Status>,
@@ -244,21 +252,28 @@ impl TopolHistory {
         ),
     ) {
         let (p1, n0) = (prev.next(mesh), next.prev(mesh));
-        let f = prev.face(mesh);
         let v0 = prev.head(mesh);
         let v1 = next.tail(mesh);
         let ehnew: EH = (mesh.num_edges() as u32).into();
-        let fhnew = f.map(|_| (mesh.num_faces() as u32).into());
+        let (fl, fr): (Option<(FH, bool)>, Option<(FH, bool)>) = match (prev.face(mesh), newface) {
+            (None, None) => (Some(((mesh.num_faces() as u32).into(), true)), None),
+            (Some(f), None) => (
+                Some((f, false)),
+                Some(((mesh.num_faces() as u32).into(), true)),
+            ),
+            (None, Some(nf)) => (Some((nf, false)), None),
+            (Some(f), Some(nf)) => (Some((f, false)), Some((nf, false))),
+        };
         let new_edge = Edge {
             halfedges: [
                 Halfedge {
-                    face: f,
+                    face: fl.map(|(f, _)| f),
                     vertex: v1,
                     next,
                     prev,
                 },
                 Halfedge {
-                    face: fhnew,
+                    face: fr.map(|(f, _)| f),
                     vertex: v0,
                     next: p1,
                     prev: n0,
@@ -278,12 +293,21 @@ impl TopolHistory {
             .push(Element::Halfedge(h0, new_edge.halfedges[0], delstatus));
         self.ops
             .push(Element::Halfedge(h1, new_edge.halfedges[1], delstatus));
-        if let Some(fhnew) = fhnew {
-            self.ops
-                .push(Element::Face(fhnew, Face { halfedge: h1 }, delstatus));
+        if let Some((fl, isnew)) = fl {
+            if isnew {
+                self.ops
+                    .push(Element::Face(fl, Face { halfedge: h0 }, delstatus));
+            } else {
+                self.faces.push(fl);
+            }
         }
-        if let Some(f) = f {
-            self.faces.push(f);
+        if let Some((fr, isnew)) = fr {
+            if isnew {
+                self.ops
+                    .push(Element::Face(fr, Face { halfedge: h1 }, delstatus));
+            } else {
+                self.faces.push(fr);
+            }
         }
         self.commit_vertices(mesh.topology(), vstatus);
         self.commit_edges(mesh.topology(), hstatus, estatus);
@@ -705,9 +729,9 @@ mod test {
         {
             let ckpt = history.check_point();
             history
-                .try_commit_edge_insertion(&mesh, h.next(&mesh), h)
+                .try_commit_edge_insertion(&mesh, h.next(&mesh), h, None)
                 .expect("Cannot commit edge insertion to history");
-            mesh.insert_edge(h.next(&mesh), h)
+            mesh.insert_edge(h.next(&mesh), h, None)
                 .expect("Cannot insert edge");
             assert_eq!(8, mesh.num_vertices());
             assert_eq!(13, mesh.num_edges());
