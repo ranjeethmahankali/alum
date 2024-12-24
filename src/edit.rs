@@ -735,12 +735,13 @@ pub trait EditableTopology: HasIterators {
         if f != next.face(topol) {
             return Err(Error::HalfedgesNotInTheSameLoop(prev, next));
         }
-        // Check to make sure the new face, if provided is a dleeted face.
+        // Check to make sure the new face, if provided is a deleted face.
         if let Some(fnew) = newface {
-            let fstatus = topol.fstatus.try_borrow()?;
+            let mut fstatus = topol.fstatus.try_borrow_mut()?;
             if !fstatus[fnew].deleted() {
                 return Err(Error::NotDeletedFace(fnew));
             }
+            fstatus[fnew].set_deleted(false);
         }
         if f.is_none() {
             // Check if the halfedges are part of the same boundary loop. March
