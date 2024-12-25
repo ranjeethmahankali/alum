@@ -21,11 +21,6 @@ fn check_vertices(
             if hstatus[h].deleted() {
                 return Err(Error::DeletedHalfedge(h));
             }
-            // The outgoing halfedge must be a boundary halfedge, or none of the
-            // halfedges are boundary.
-            if !h.is_boundary(mesh) && mesh.voh_ccw_iter(v).any(|h| h.is_boundary(mesh)) {
-                return Err(Error::OutgoingHalfedgeNotBoundary(v));
-            }
             // Outgoing halfedge must point back to this vertex.
             if h.tail(mesh) != v {
                 return Err(Error::InvalidOutgoingHalfedges(v));
@@ -41,6 +36,13 @@ fn check_vertices(
         for h in mesh.voh_cw_iter(v) {
             if !std::mem::replace(&mut hvisited[h.index() as usize], false) {
                 return Err(Error::InvalidOutgoingHalfedges(v));
+            }
+        }
+        if let Some(h) = v.halfedge(mesh) {
+            // The outgoing halfedge must be a boundary halfedge, or none of the
+            // halfedges are boundary.
+            if !h.is_boundary(mesh) && mesh.voh_ccw_iter(v).any(|h| h.is_boundary(mesh)) {
+                return Err(Error::OutgoingHalfedgeNotBoundary(v));
             }
         }
     }

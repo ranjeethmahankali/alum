@@ -244,8 +244,8 @@ where
                     let (va, vb) = (self.add_vertex(pa)?, self.add_vertex(pb)?);
                     let hleft = self.split_edge(hright, va, true)?;
                     self.split_edge(hright, vb, true)?;
-                    self.insert_edge(hleft, hleft.prev(self))?;
-                    self.insert_edge(hright.next(self), hright)?;
+                    self.insert_edge(hleft, hleft.prev(self), None)?;
+                    self.insert_edge(hright.next(self), hright, None)?;
                 }
             }
             // Flip old edges.

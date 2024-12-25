@@ -23,6 +23,25 @@ where
     c: A::Scalar,
 }
 
+impl<A> PartialEq for Quadric<A>
+where
+    A: Adaptor<3>,
+    A::Scalar: PartialEq,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.a00 == other.a00
+            && self.a01 == other.a01
+            && self.a02 == other.a02
+            && self.a11 == other.a11
+            && self.a12 == other.a12
+            && self.a22 == other.a22
+            && self.b0 == other.b0
+            && self.b1 == other.b1
+            && self.b2 == other.b2
+            && self.c == other.c
+    }
+}
+
 impl<A> Default for Quadric<A>
 where
     A: FloatScalarAdaptor<3>,

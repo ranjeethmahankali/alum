@@ -16,6 +16,14 @@ pub enum Error {
     CannotBorrowVertexNormals,
     /// Unable to borrow the built-in face normals.
     CannotBorrowFaceNormals,
+    /// Unable to borrow vertex status.
+    CannotBorrowVertexStatus,
+    /// Unable to borrow halfedge status.
+    CannotBorrowHalfedgeStatus,
+    /// Unable to borrow edge status.
+    CannotBorrowEdgeStatus,
+    /// Unable to borrow face status.
+    CannotBorrowFaceStatus,
     /// Accessing a property that has been dropped.
     PropertyDoesNotExist,
     /// Face have not been computed for the given mesh.
@@ -36,6 +44,8 @@ pub enum Error {
     DeletedHalfedge(HH),
     /// Encountered a vertex that has been deleted.
     DeletedVertex(VH),
+    /// Encountered a face that is not deleted, while expecting a deleted face.
+    NotDeletedFace(FH),
     /// The given OBJ file is not valid.
     InvalidObjFile(PathBuf),
     /// Failed to load a mesh from the given obj file.

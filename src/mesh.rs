@@ -371,20 +371,18 @@ where
     /// assert!(try_copy.is_ok()); // Passed because the borrow was successful.
     /// ```
     pub fn try_clone(&self) -> Result<Self, Error> {
-        let mut topol = self.topol.clone();
+        let mut topol = self.topol.try_clone()?;
         let mut points = VProperty::new(&mut topol.vprops, A::zero_vector());
         match (self.points.try_borrow(), points.try_borrow_mut()) {
             (Ok(src), Ok(mut dst)) if src.len() == dst.len() => dst.copy_from_slice(&src),
-            (Err(_), _) => return Err(Error::CannotBorrowPoints),
-            _ => {}
+            _ => return Err(Error::CannotBorrowPoints),
         }
         let vnormals = match &self.vnormals {
             Some(normals) => {
                 let mut dst = VProperty::new(&mut topol.vprops, A::zero_vector());
                 match (normals.try_borrow(), dst.try_borrow_mut()) {
                     (Ok(src), Ok(mut dst)) if src.len() == dst.len() => dst.copy_from_slice(&src),
-                    (Err(_), _) => return Err(Error::CannotBorrowVertexNormals),
-                    _ => {}
+                    _ => return Err(Error::CannotBorrowVertexNormals),
                 }
                 Some(dst)
             }
@@ -395,8 +393,7 @@ where
                 let mut dst = FProperty::new(&mut topol.fprops, A::zero_vector());
                 match (normals.try_borrow(), dst.try_borrow_mut()) {
                     (Ok(src), Ok(mut dst)) if src.len() == dst.len() => dst.copy_from_slice(&src),
-                    (Err(_), _) => return Err(Error::CannotBorrowFaceNormals),
-                    _ => {}
+                    _ => return Err(Error::CannotBorrowFaceNormals),
                 }
                 Some(dst)
             }

@@ -706,9 +706,17 @@ pub trait EditableTopology: HasIterators {
     /// edge to span `prev` and `next`. The two halfedges must be part of the
     /// same loop. If this loop is a boundary loop, a new face is inserted in
     /// the loop containing `prev` and `next`. If the original loop contains a
-    /// face, the face is split into two new faces. The existing face will
-    /// remain valid and correspond to the loop containing `prev` and `next`.
-    fn insert_edge(&mut self, prev: HH, next: HH) -> Result<EH, Error> {
+    /// face, the face is split into two faces. The existing face will remain
+    /// valid and correspond to the loop containing `prev` and `next`, and a new
+    /// face is created for the right loop.
+    ///
+    /// So in both cases, i.e. whether or not the loop is a boundary loop, or
+    /// has a face, 1 new face is created during this operation. This can be
+    /// avoided by optionally supplying a `newface`. If `newface` has `Some`
+    /// face in it, that will be reused instead of creating a new face. The face
+    /// supplied for reuse MUST be a deleted face, otherwise an error is
+    /// returned.
+    fn insert_edge(&mut self, prev: HH, next: HH, newface: Option<FH>) -> Result<EH, Error> {
         //    <--------- <----------v1<---------- <----------
         //   |                next  ^|     n0                ^
         //   |                      ||                       |
@@ -726,6 +734,14 @@ pub trait EditableTopology: HasIterators {
         let f = prev.face(topol);
         if f != next.face(topol) {
             return Err(Error::HalfedgesNotInTheSameLoop(prev, next));
+        }
+        // Check to make sure the new face, if provided is a deleted face.
+        if let Some(fnew) = newface {
+            let mut fstatus = topol.fstatus.try_borrow_mut()?;
+            if !fstatus[fnew].deleted() {
+                return Err(Error::NotDeletedFace(fnew));
+            }
+            fstatus[fnew].set_deleted(false);
         }
         if f.is_none() {
             // Check if the halfedges are part of the same boundary loop. March
@@ -750,22 +766,38 @@ pub trait EditableTopology: HasIterators {
         topol.link_halfedges(n0, h1);
         topol.link_halfedges(h1, p1);
         // Rewire face -> halfedge and halfedge -> face.
-        if let Some(f) = f {
-            let fnew = topol.new_face(h1)?;
-            let hf = f.halfedge(topol);
-            topol.halfedge_mut(h0).face = Some(f);
-            for (mesh, h) in topol.loop_ccw_iter_mut(h1) {
-                if hf == h {
-                    mesh.face_mut(f).halfedge = h0;
+        match f {
+            Some(f) => {
+                let fnew = match newface {
+                    Some(fnew) => {
+                        topol.face_mut(fnew).halfedge = h1;
+                        fnew
+                    }
+                    None => topol.new_face(h1)?,
+                };
+                let hf = f.halfedge(topol);
+                topol.halfedge_mut(h0).face = Some(f);
+                for (mesh, h) in topol.loop_ccw_iter_mut(h1) {
+                    if hf == h {
+                        mesh.face_mut(f).halfedge = h0;
+                    }
+                    mesh.halfedge_mut(h).face = Some(fnew);
                 }
-                mesh.halfedge_mut(h).face = Some(fnew);
             }
-        } else {
-            let fnew = topol.new_face(h0)?;
-            for (mesh, h) in topol.loop_ccw_iter_mut(h0) {
-                mesh.halfedge_mut(h).face = Some(fnew);
+            None => {
+                let fnew = match newface {
+                    Some(fnew) => {
+                        topol.face_mut(fnew).halfedge = h0;
+                        fnew
+                    }
+                    None => topol.new_face(h0)?,
+                };
+                for (mesh, h) in topol.loop_ccw_iter_mut(h0) {
+                    mesh.halfedge_mut(h).face = Some(fnew);
+                }
             }
-        };
+        }
+        // Adjust vertex halfedges.
         topol.adjust_outgoing_halfedge(v0);
         topol.adjust_outgoing_halfedge(v1);
         Ok(enew)
@@ -1235,6 +1267,7 @@ mod test {
                     .expect("Cannot find halfedge"),
                 mesh.find_halfedge(9.into(), 5.into())
                     .expect("Cannot find halfedge"),
+                None,
             )
             .expect("Cannot insert halfedge");
         let (h, oh) = e.halfedges();
@@ -1264,6 +1297,7 @@ mod test {
                     .expect("Cannot find halfedge"),
                 mesh.find_halfedge(7.into(), 4.into())
                     .expect("Cannot find halfedge"),
+                None,
             )
             .expect("Cannot insert edge");
         let (h, oh) = e.halfedges();
@@ -1272,6 +1306,63 @@ mod test {
         assert!(!oh.is_boundary(&mesh));
         assert_eq!(3, mesh.loop_ccw_iter(h).count());
         assert_eq!(3, mesh.loop_ccw_iter(oh).count());
+    }
+
+    #[test]
+    fn t_open_box_insert_edge_reuse_face() {
+        let mut mesh = PolyMeshF32::unit_box().unwrap();
+        mesh.delete_face(5.into(), false).unwrap();
+        {
+            let fstatus = mesh.face_status_prop();
+            let fstatus = fstatus.try_borrow().unwrap();
+            assert_eq!(5, mesh.faces().filter(|&f| !fstatus[f].deleted()).count());
+            assert_eq!(6, mesh.num_faces());
+        }
+        let h = mesh.halfedges().find(|h| h.is_boundary(&mesh)).unwrap();
+        let e = mesh.insert_edge(h, h.prev(&mesh), Some(5.into())).unwrap();
+        let (h, oh) = e.halfedges();
+        assert!(!h.is_boundary(&mesh));
+        assert!(oh.is_boundary(&mesh));
+        assert_eq!(3, mesh.loop_ccw_iter(oh).count());
+        assert_eq!(3, mesh.loop_ccw_iter(h).count());
+        {
+            let fstatus = mesh.face_status_prop();
+            let fstatus = fstatus.try_borrow().unwrap();
+            assert_eq!(6, mesh.faces().filter(|&f| !fstatus[f].deleted()).count());
+            assert_eq!(6, mesh.num_faces());
+        }
+    }
+
+    #[test]
+    fn t_box_insert_edge_reuse_face() {
+        let mut mesh = PolyMeshF32::unit_box().unwrap();
+        mesh.delete_face(5.into(), false).unwrap();
+        let fstatus = mesh.face_status_prop();
+        {
+            let fstatus = fstatus.try_borrow().unwrap();
+            assert_eq!(5, mesh.faces().filter(|&f| !fstatus[f].deleted()).count());
+            assert_eq!(6, mesh.num_faces());
+        }
+        mesh.add_quad_face(4.into(), 5.into(), 6.into(), 7.into())
+            .unwrap();
+        {
+            let fstatus = fstatus.try_borrow().unwrap();
+            assert_eq!(6, mesh.faces().filter(|&f| !fstatus[f].deleted()).count());
+        }
+        assert_eq!(7, mesh.num_faces());
+        let h = mesh.find_halfedge(4.into(), 5.into()).unwrap();
+        let e = mesh.insert_edge(h, h.prev(&mesh), Some(5.into())).unwrap();
+        let (h, oh) = e.halfedges();
+        assert!(!h.is_boundary(&mesh));
+        assert!(!oh.is_boundary(&mesh));
+        assert_eq!(3, mesh.loop_ccw_iter(oh).count());
+        assert_eq!(3, mesh.loop_ccw_iter(h).count());
+        {
+            let fstatus = mesh.face_status_prop();
+            let fstatus = fstatus.try_borrow().unwrap();
+            assert_eq!(7, mesh.faces().filter(|&f| !fstatus[f].deleted()).count());
+            assert_eq!(7, mesh.num_faces());
+        }
     }
 
     #[test]
@@ -1358,7 +1449,10 @@ mod test {
     fn t_box_insert_collapse() {
         let mut mesh = PolyMeshF32::unit_box().expect("Cannot make a box");
         let h: HH = 6.into();
-        let (hnew, _) = mesh.insert_edge(h.next(&mesh), h).unwrap().halfedges();
+        let (hnew, _) = mesh
+            .insert_edge(h.next(&mesh), h, None)
+            .unwrap()
+            .halfedges();
         mesh.check_topology().unwrap();
         assert!(mesh.try_check_edge_collapse(hnew).unwrap());
         let mut hcache = Vec::new();
