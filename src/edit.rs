@@ -1309,6 +1309,63 @@ mod test {
     }
 
     #[test]
+    fn t_open_box_insert_edge_reuse_face() {
+        let mut mesh = PolyMeshF32::unit_box().unwrap();
+        mesh.delete_face(5.into(), false).unwrap();
+        {
+            let fstatus = mesh.face_status_prop();
+            let fstatus = fstatus.try_borrow().unwrap();
+            assert_eq!(5, mesh.faces().filter(|&f| !fstatus[f].deleted()).count());
+            assert_eq!(6, mesh.num_faces());
+        }
+        let h = mesh.halfedges().find(|h| h.is_boundary(&mesh)).unwrap();
+        let e = mesh.insert_edge(h, h.prev(&mesh), Some(5.into())).unwrap();
+        let (h, oh) = e.halfedges();
+        assert!(!h.is_boundary(&mesh));
+        assert!(oh.is_boundary(&mesh));
+        assert_eq!(3, mesh.loop_ccw_iter(oh).count());
+        assert_eq!(3, mesh.loop_ccw_iter(h).count());
+        {
+            let fstatus = mesh.face_status_prop();
+            let fstatus = fstatus.try_borrow().unwrap();
+            assert_eq!(6, mesh.faces().filter(|&f| !fstatus[f].deleted()).count());
+            assert_eq!(6, mesh.num_faces());
+        }
+    }
+
+    #[test]
+    fn t_box_insert_edge_reuse_face() {
+        let mut mesh = PolyMeshF32::unit_box().unwrap();
+        mesh.delete_face(5.into(), false).unwrap();
+        let fstatus = mesh.face_status_prop();
+        {
+            let fstatus = fstatus.try_borrow().unwrap();
+            assert_eq!(5, mesh.faces().filter(|&f| !fstatus[f].deleted()).count());
+            assert_eq!(6, mesh.num_faces());
+        }
+        mesh.add_quad_face(4.into(), 5.into(), 6.into(), 7.into())
+            .unwrap();
+        {
+            let fstatus = fstatus.try_borrow().unwrap();
+            assert_eq!(6, mesh.faces().filter(|&f| !fstatus[f].deleted()).count());
+        }
+        assert_eq!(7, mesh.num_faces());
+        let h = mesh.find_halfedge(4.into(), 5.into()).unwrap();
+        let e = mesh.insert_edge(h, h.prev(&mesh), Some(5.into())).unwrap();
+        let (h, oh) = e.halfedges();
+        assert!(!h.is_boundary(&mesh));
+        assert!(!oh.is_boundary(&mesh));
+        assert_eq!(3, mesh.loop_ccw_iter(oh).count());
+        assert_eq!(3, mesh.loop_ccw_iter(h).count());
+        {
+            let fstatus = mesh.face_status_prop();
+            let fstatus = fstatus.try_borrow().unwrap();
+            assert_eq!(7, mesh.faces().filter(|&f| !fstatus[f].deleted()).count());
+            assert_eq!(7, mesh.num_faces());
+        }
+    }
+
+    #[test]
     fn t_box_split_face() {
         let mut mesh = quad_box();
         const DEFAULT_PROP: u8 = 42u8;
