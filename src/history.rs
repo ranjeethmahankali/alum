@@ -255,6 +255,9 @@ impl TopolHistory {
         let v0 = prev.head(mesh);
         let v1 = next.tail(mesh);
         let ehnew: EH = (mesh.num_edges() as u32).into();
+        // Pair of faces, one on the left and right. They're optional because
+        // either loop can be a boundary loop. The boolean flag indicateswhether
+        // that face is freshly created, or an existing face that is reused.
         type FacePair = (Option<(FH, bool)>, Option<(FH, bool)>);
         let (fl, fr): FacePair = match (prev.face(mesh), newface) {
             (None, None) => (Some(((mesh.num_faces() as u32).into(), true)), None),
