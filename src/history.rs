@@ -255,7 +255,8 @@ impl TopolHistory {
         let v0 = prev.head(mesh);
         let v1 = next.tail(mesh);
         let ehnew: EH = (mesh.num_edges() as u32).into();
-        let (fl, fr): (Option<(FH, bool)>, Option<(FH, bool)>) = match (prev.face(mesh), newface) {
+        type FacePair = (Option<(FH, bool)>, Option<(FH, bool)>);
+        let (fl, fr): FacePair = match (prev.face(mesh), newface) {
             (None, None) => (Some(((mesh.num_faces() as u32).into(), true)), None),
             (Some(f), None) => (
                 Some((f, false)),
