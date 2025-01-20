@@ -25,7 +25,7 @@ jobs:
         - name: Run tests
           run: cargo test --all-features --verbose
   windows:
-      runs-on: ubuntu-latest
+      runs-on: windows-latest
       steps:
         - name: Update Rust
           run: rustup update stable
