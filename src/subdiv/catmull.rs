@@ -35,6 +35,11 @@ where
         edge_points: &mut Vec<A::Vector>,
         face_points: &mut Vec<A::Vector>,
     ) -> Result<(), Error> {
+        if let Some(vpts) = vertex_points {
+            vpts.clear();
+        }
+        edge_points.clear();
+        face_points.clear();
         debug_assert!(niter > 0);
         let mut nv = mesh.num_vertices();
         let mut ne = mesh.num_edges();
