@@ -34,6 +34,7 @@ Out of the box, this module also provides the following implementations of
 */
 
 pub mod edge_length;
+pub mod hausdorff;
 pub mod quadric;
 
 use crate::Queue;
