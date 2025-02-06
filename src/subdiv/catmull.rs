@@ -35,7 +35,9 @@ where
         edge_points: &mut Vec<A::Vector>,
         face_points: &mut Vec<A::Vector>,
     ) -> Result<(), Error> {
-        vertex_points.as_mut().map(|vpts| vpts.clear());
+        if let Some(vpts) = vertex_points.as_mut() {
+            vpts.clear();
+        }
         edge_points.clear();
         face_points.clear();
         debug_assert!(niter > 0);
@@ -45,7 +47,9 @@ where
         for i in 0..niter {
             if i == niter - 1 {
                 // Reserve the pos arrays.
-                vertex_points.as_mut().map(|vpts| vpts.reserve(nv));
+                if let Some(vpts) = vertex_points.as_mut() {
+                    vpts.reserve(nv);
+                }
                 edge_points.reserve(ne);
                 face_points.reserve(nf);
             }
