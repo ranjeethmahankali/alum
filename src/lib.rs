@@ -152,8 +152,8 @@ mod decimate;
 
 #[cfg(feature = "decimate")]
 pub use decimate::{
-    edge_length::EdgeLengthDecimater, hausdorff::HausdorffDecimater, quadric::Quadric,
-    quadric::QuadricDecimater, quadric::QuadricType, Decimater, HasDecimation,
+    edge_length::EdgeLengthDecimater, quadric::Quadric, quadric::QuadricDecimater,
+    quadric::QuadricType, Decimater, HasDecimation,
 };
 
 pub use edit::EditableTopology;
