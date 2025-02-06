@@ -105,6 +105,8 @@ where
         edge_points: &mut Vec<A::Vector>,
     ) -> Result<(), Error> {
         let (mut nv, mut ne, mut nf) = (mesh.num_vertices(), mesh.num_edges(), mesh.num_faces());
+        vertex_points.clear();
+        edge_points.clear();
         for i in 0..iterations {
             if i == iterations - 1 {
                 vertex_points.reserve(nv);

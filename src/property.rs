@@ -52,6 +52,9 @@ where
         self.props.push(prop);
     }
 
+    /**
+     * Reserve memory to accomodate an additional `n` elements.
+     */
     pub fn reserve(&mut self, n: usize) -> Result<(), Error> {
         for prop in self.props.iter_mut() {
             prop.reserve(n)?;
@@ -486,6 +489,9 @@ where
     T: Clone + Copy,
     H: Handle,
 {
+    /**
+     * Reserve memory for an additional `n` values.
+     */
     fn reserve(&mut self, n: usize) -> Result<(), Error> {
         if let Some(prop) = self.data.upgrade() {
             prop.try_borrow_mut()

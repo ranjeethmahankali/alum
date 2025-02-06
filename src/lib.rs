@@ -148,7 +148,7 @@ pub mod use_glam;
 mod subdiv;
 
 #[cfg(feature = "decimate")]
-pub mod decimate;
+mod decimate;
 
 #[cfg(feature = "decimate")]
 pub use decimate::{

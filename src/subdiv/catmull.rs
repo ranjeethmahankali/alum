@@ -31,10 +31,15 @@ where
     fn reserve(
         niter: usize,
         mesh: &mut Topology,
-        vertex_points: &mut Option<Vec<A::Vector>>,
+        mut vertex_points: Option<&mut Vec<A::Vector>>,
         edge_points: &mut Vec<A::Vector>,
         face_points: &mut Vec<A::Vector>,
     ) -> Result<(), Error> {
+        if let Some(vpts) = vertex_points.as_mut() {
+            vpts.clear();
+        }
+        edge_points.clear();
+        face_points.clear();
         debug_assert!(niter > 0);
         let mut nv = mesh.num_vertices();
         let mut ne = mesh.num_edges();
@@ -42,8 +47,8 @@ where
         for i in 0..niter {
             if i == niter - 1 {
                 // Reserve the pos arrays.
-                if let Some(vpos) = vertex_points {
-                    vpos.reserve(nv);
+                if let Some(vpts) = vertex_points.as_mut() {
+                    vpts.reserve(nv);
                 }
                 edge_points.reserve(ne);
                 face_points.reserve(nf);
@@ -256,7 +261,7 @@ where
         CatmullClark::<DIM, A>::reserve(
             iterations,
             &mut self.topol,
-            &mut vpos,
+            vpos.as_mut(),
             &mut epos,
             &mut fpos,
         )?;

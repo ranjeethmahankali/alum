@@ -197,7 +197,7 @@ pub trait HasTopology: Sized {
         self.topology().fprops.num_properties()
     }
 
-    /// Reserve memory for the given number of elements.
+    /// Reserve memory for the given number of `additional` elements.
     ///
     /// The memory is also reserved for all properties.
     fn reserve(&mut self, nverts: usize, nedges: usize, nfaces: usize) -> Result<(), Error> {
