@@ -1,7 +1,7 @@
 [package]
 name = "alum"
 version = "0.6.1"
-edition = "2021"
+edition = "2024"
 authors = ["Ranjeeth Mahankali <ranjeethmahankali@gmail.com>"]
 description = "Halfedge based polygon mesh library."
 readme = "README.md"
