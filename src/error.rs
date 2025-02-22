@@ -1,8 +1,8 @@
 use std::{fmt::Debug, path::PathBuf};
 
 use crate::{
-    element::{FH, HH, VH},
     EH,
+    element::{FH, HH, VH},
 };
 
 /// Error type for all operations across this crate.

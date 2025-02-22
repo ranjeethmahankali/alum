@@ -3,9 +3,9 @@ use alum::{
     HasTopology, PolyMeshT, VectorLengthAdaptor, VectorNormalizeAdaptor,
 };
 use three_d::{
-    vec3, Camera, CameraAction, CameraControl, Context, CpuMaterial, CpuMesh, Cull, Event, Gm,
-    Indices, InnerSpace, InstancedMesh, Instances, Mat4, Mesh, MetricSpace, PhysicalMaterial,
-    Positions, Quat, Srgba, Vec3,
+    Camera, CameraAction, CameraControl, Context, CpuMaterial, CpuMesh, Cull, Event, Gm, Indices,
+    InnerSpace, InstancedMesh, Instances, Mat4, Mesh, MetricSpace, PhysicalMaterial, Positions,
+    Quat, Srgba, Vec3, vec3,
 };
 
 pub struct MeshAdaptor;

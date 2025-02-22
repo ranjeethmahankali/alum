@@ -6,9 +6,9 @@ use alum::{
 use common::{CameraMouseControl, MeshAdaptor, PolygonMesh};
 use std::{path::PathBuf, time::Instant};
 use three_d::{
-    degrees, vec3, AmbientLight, Camera, ClearState, Context, CpuMaterial, CpuMesh, Cull,
-    DirectionalLight, Event, FrameOutput, Gm, Indices, InnerSpace, InstancedMesh, Instances, Key,
-    Mat4, Mesh, PhysicalMaterial, Positions, Quat, Srgba, Viewport, Window, WindowSettings,
+    AmbientLight, Camera, ClearState, Context, CpuMaterial, CpuMesh, Cull, DirectionalLight, Event,
+    FrameOutput, Gm, Indices, InnerSpace, InstancedMesh, Instances, Key, Mat4, Mesh,
+    PhysicalMaterial, Positions, Quat, Srgba, Viewport, Window, WindowSettings, degrees, vec3,
 };
 
 pub struct RecordingDecimater {

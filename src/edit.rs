@@ -1,10 +1,10 @@
 use crate::{
+    Adaptor, EPropBuf, FPropBuf, HPropBuf, HasTopology, PolyMeshT, VPropBuf,
     element::{EH, FH, HH, VH},
     error::Error,
     iterator::HasIterators,
     status::Status,
     topol::Topology,
-    Adaptor, EPropBuf, FPropBuf, HPropBuf, HasTopology, PolyMeshT, VPropBuf,
 };
 
 /// This trait defines functions to edit the topology of a mesh, with typical
@@ -811,24 +811,25 @@ impl EditableTopology for Topology {}
 #[cfg(test)]
 mod test {
     use crate::{
+        HH,
         edit::EditableTopology,
         element::Handle,
         iterator::HasIterators,
         topol::{
-            test::{loop_mesh, quad_box},
             HasTopology, TopolCache,
+            test::{loop_mesh, quad_box},
         },
         use_glam::PolyMeshF32,
-        HH,
     };
 
     #[test]
     fn t_box_check_edge_collapse() {
         let qbox = quad_box();
         for h in qbox.halfedges() {
-            assert!(qbox
-                .try_check_edge_collapse(h)
-                .expect("Cannot check halfedge collapse"));
+            assert!(
+                qbox.try_check_edge_collapse(h)
+                    .expect("Cannot check halfedge collapse")
+            );
         }
     }
 

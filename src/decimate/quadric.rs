@@ -1,7 +1,7 @@
 use super::Decimater;
 use crate::{
-    Adaptor, CrossProductAdaptor, DotProductAdaptor, Error, FloatScalarAdaptor, Handle,
-    HasIterators, HasTopology, PolyMeshT, VectorLengthAdaptor, VectorNormalizeAdaptor, HH, VH,
+    Adaptor, CrossProductAdaptor, DotProductAdaptor, Error, FloatScalarAdaptor, HH, Handle,
+    HasIterators, HasTopology, PolyMeshT, VH, VectorLengthAdaptor, VectorNormalizeAdaptor,
 };
 use std::ops::{Add, AddAssign, Div, Mul, Neg, Sub};
 
@@ -466,8 +466,8 @@ where
 #[cfg(test)]
 mod test {
     use crate::{
-        decimate::quadric::QuadricType, obj::test::bunny_mesh, HasDecimation, HasIterators,
-        HasTopology, QuadricDecimater,
+        HasDecimation, HasIterators, HasTopology, QuadricDecimater, decimate::quadric::QuadricType,
+        obj::test::bunny_mesh,
     };
 
     #[test]

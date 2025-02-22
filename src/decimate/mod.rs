@@ -38,8 +38,8 @@ pub mod quadric;
 
 use crate::Queue;
 use crate::{
-    topol::Topology, Adaptor, EPropBuf, EditableTopology, Error, HasIterators, PolyMeshT, Status,
-    VPropBuf, HH, VH,
+    Adaptor, EPropBuf, EditableTopology, Error, HH, HasIterators, PolyMeshT, Status, VH, VPropBuf,
+    topol::Topology,
 };
 use std::cmp::Ordering;
 

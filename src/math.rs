@@ -1,4 +1,5 @@
 use crate::{
+    FPropBuf, HasTopology, Status, VPropBuf,
     element::{EH, FH, HH, VH},
     error::Error,
     iterator::HasIterators,
@@ -7,7 +8,6 @@ use crate::{
         VectorAngleAdaptor, VectorLengthAdaptor, VectorNormalizeAdaptor,
     },
     property::{FProperty, VProperty},
-    FPropBuf, HasTopology, Status, VPropBuf,
 };
 use std::ops::{Add, AddAssign, Div, Mul, Neg, Sub};
 
@@ -689,8 +689,8 @@ mod test {
     use core::f32;
 
     use crate::{
-        error::Error, iterator::HasIterators, macros::assert_f32_eq, use_glam::PolyMeshF32,
-        HasTopology,
+        HasTopology, error::Error, iterator::HasIterators, macros::assert_f32_eq,
+        use_glam::PolyMeshF32,
     };
 
     #[test]
@@ -823,7 +823,7 @@ mod test {
             ]
         );
         let qbox = qbox; // Immutable.
-                         // Compute and verify vertex normals.
+        // Compute and verify vertex normals.
         assert_eq!(
             qbox.vertices()
                 .map(|v| qbox.calc_vertex_normal_fast(v, &fnormals))

@@ -1,9 +1,9 @@
 mod common;
 
-use common::{mesh_view, wireframe_view, CameraMouseControl, PolygonMesh};
+use common::{CameraMouseControl, PolygonMesh, mesh_view, wireframe_view};
 use three_d::{
-    degrees, vec3, AmbientLight, Camera, ClearState, DirectionalLight, FrameOutput, InnerSpace,
-    Srgba, Window, WindowSettings,
+    AmbientLight, Camera, ClearState, DirectionalLight, FrameOutput, InnerSpace, Srgba, Window,
+    WindowSettings, degrees, vec3,
 };
 
 fn main() {

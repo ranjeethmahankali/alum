@@ -5,8 +5,8 @@ use std::{
 };
 
 use crate::{
-    topol::Topology, EditableTopology, Error, FloatScalarAdaptor, Handle, HasIterators,
-    HasTopology, PolyMeshT, VPropBuf, EH,
+    EH, EditableTopology, Error, FloatScalarAdaptor, Handle, HasIterators, HasTopology, PolyMeshT,
+    VPropBuf, topol::Topology,
 };
 
 const WEIGHTS: [(f64, f64); 64] = [
@@ -263,7 +263,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::{use_glam::PolyMeshF32, HasTopology};
+    use crate::{HasTopology, use_glam::PolyMeshF32};
 
     #[test]
     fn t_box_sqrt3_subdivision() {

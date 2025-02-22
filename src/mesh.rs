@@ -1,5 +1,5 @@
 use crate::{
-    element::{VRange, EH, FH, VH},
+    element::{EH, FH, VH, VRange},
     error::Error,
     property::{FProperty, VProperty},
     topol::{HasTopology, TopolCache, Topology},
@@ -424,7 +424,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::{use_glam::PolyMeshF32, Handle, HasTopology};
+    use crate::{Handle, HasTopology, use_glam::PolyMeshF32};
 
     #[test]
     fn t_icosahedron_clone() {

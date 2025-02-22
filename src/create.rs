@@ -1,9 +1,9 @@
 use crate::{
+    HasTopology,
     element::{Handle, VH},
     error::Error,
     iterator::HasIterators,
     mesh::{Adaptor, FloatScalarAdaptor, PolyMeshT},
-    HasTopology,
 };
 use std::ops::{Add, Div, Mul, Neg};
 
@@ -432,7 +432,7 @@ mod test {
     use core::f32;
 
     use crate::{
-        iterator::HasIterators, macros::assert_f32_eq, use_glam::PolyMeshF32, HasTopology,
+        HasTopology, iterator::HasIterators, macros::assert_f32_eq, use_glam::PolyMeshF32,
     };
 
     #[test]

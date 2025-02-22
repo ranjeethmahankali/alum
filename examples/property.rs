@@ -1,13 +1,13 @@
 mod common;
 
-use alum::{Handle, HasIterators, HasTopology, VProperty, VH};
+use alum::{Handle, HasIterators, HasTopology, VH, VProperty};
 use common::{CameraMouseControl, PolygonMesh};
 use core::f32;
 use std::{collections::VecDeque, path::PathBuf};
 use three_d::{
-    degrees, vec3, AmbientLight, Camera, ClearState, Context, CpuMaterial, CpuMesh,
-    DirectionalLight, FrameOutput, Gm, Indices, InnerSpace, Mesh, PhysicalMaterial, Positions,
-    Srgba, Vec3, Window, WindowSettings,
+    AmbientLight, Camera, ClearState, Context, CpuMaterial, CpuMesh, DirectionalLight, FrameOutput,
+    Gm, Indices, InnerSpace, Mesh, PhysicalMaterial, Positions, Srgba, Vec3, Window,
+    WindowSettings, degrees, vec3,
 };
 
 fn bounds(mesh: &PolygonMesh) -> (Vec3, Vec3) {

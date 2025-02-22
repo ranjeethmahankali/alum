@@ -5,8 +5,8 @@ use std::{
 };
 
 use crate::{
-    topol::Topology, EditableTopology, Error, FloatScalarAdaptor, Handle, HasIterators,
-    HasTopology, PolyMeshT, VPropBuf,
+    EditableTopology, Error, FloatScalarAdaptor, Handle, HasIterators, HasTopology, PolyMeshT,
+    VPropBuf, topol::Topology,
 };
 
 const WEIGHTS: [(f64, f64); 64] = [
@@ -262,7 +262,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::{obj::test::bunny_mesh, use_glam::PolyMeshF32, HasTopology};
+    use crate::{HasTopology, obj::test::bunny_mesh, use_glam::PolyMeshF32};
 
     #[test]
     fn t_triangle_subdiv_loop() {
