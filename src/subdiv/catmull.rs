@@ -1,6 +1,6 @@
 use crate::{
-    topol::Topology, EditableTopology, Error, FloatScalarAdaptor, Handle, HasIterators,
-    HasTopology, PolyMeshT, EH, FH, HH,
+    EH, EditableTopology, Error, FH, FloatScalarAdaptor, HH, Handle, HasIterators, HasTopology,
+    PolyMeshT, topol::Topology,
 };
 use std::{
     marker::PhantomData,
@@ -306,7 +306,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::{obj::test::bunny_mesh, use_glam::PolyMeshF32, HasTopology};
+    use crate::{HasTopology, obj::test::bunny_mesh, use_glam::PolyMeshF32};
 
     #[test]
     fn t_box_catmull_clark() {

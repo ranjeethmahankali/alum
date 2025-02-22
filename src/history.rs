@@ -11,10 +11,10 @@ mesh to an earlier checkpoint.
 */
 
 use crate::{
+    EH, EPropBuf, EditableTopology, Error, FH, FPropBuf, HH, HPropBuf, Handle, PropBuf, Status, VH,
+    VPropBuf,
     element::{Edge, Face, Halfedge, Vertex},
     topol::Topology,
-    EPropBuf, EditableTopology, Error, FPropBuf, HPropBuf, Handle, PropBuf, Status, VPropBuf, EH,
-    FH, HH, VH,
 };
 
 enum Element {
@@ -510,7 +510,7 @@ pub type FPropHistory<T> = PropHistory<FH, T>;
 #[cfg(test)]
 mod test {
     use super::{TopolHistory, VPropHistory};
-    use crate::{use_glam::PolyMeshF32, EditableTopology, Handle, HasIterators, HasTopology, HH};
+    use crate::{EditableTopology, HH, Handle, HasIterators, HasTopology, use_glam::PolyMeshF32};
     use glam::vec3;
 
     fn compare_meshes(a: &PolyMeshF32, b: &PolyMeshF32) {
@@ -637,9 +637,11 @@ mod test {
                 assert_eq!(nf, mesh.faces().filter(|&f| !fstatus[f].deleted()).count());
             }
             // Revert and check again.
-            assert!(history
-                .try_restore(checkpt, &mut mesh,)
-                .expect("Cannot restore from history"));
+            assert!(
+                history
+                    .try_restore(checkpt, &mut mesh,)
+                    .expect("Cannot restore from history")
+            );
         }
         // Nothing should be deleted.
         mesh.check_for_deleted()
@@ -745,9 +747,11 @@ mod test {
                 volume,
                 mesh.try_calc_volume().expect("Cannot compute volume")
             );
-            assert!(history
-                .try_restore(ckpt, &mut mesh,)
-                .expect("Cannot restore from history"));
+            assert!(
+                history
+                    .try_restore(ckpt, &mut mesh,)
+                    .expect("Cannot restore from history")
+            );
         }
         mesh.check_topology().expect("Topological errors found");
         compare_meshes(&mesh, &copy);

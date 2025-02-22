@@ -1,7 +1,7 @@
 use crate::{
+    Handle, HasIterators, HasTopology, VH, VPropBuf,
     error::Error,
     mesh::{Adaptor, FloatScalarAdaptor, PolyMeshT},
-    Handle, HasIterators, HasTopology, VPropBuf, VH,
 };
 use std::{cell::Ref, fmt::Display, fs::OpenOptions, io, path::Path};
 
@@ -185,7 +185,7 @@ where
 
 #[cfg(all(test, feature = "use_glam"))]
 pub(crate) mod test {
-    use crate::{use_glam::PolyMeshF32, HasTopology};
+    use crate::{HasTopology, use_glam::PolyMeshF32};
     use core::str;
     use std::{io, path::PathBuf};
 

@@ -2,7 +2,7 @@ use crate::iterator::HasIterators;
 use crate::property::EProperty;
 use crate::{
     element::{
-        ERange, Edge, FRange, Face, HRange, Halfedge, Handle, VRange, Vertex, EH, FH, HH, VH,
+        EH, ERange, Edge, FH, FRange, Face, HH, HRange, Halfedge, Handle, VH, VRange, Vertex,
     },
     error::Error,
     property::{FProperty, HProperty, PropertyContainer, VProperty},
@@ -1419,10 +1419,11 @@ pub(crate) mod test {
         let mut cache = TopolCache::default();
         qbox.delete_face(5.into(), true, &mut cache.edges, &mut cache.vertices)
             .expect("Cannot delete face");
-        assert!(qbox
-            .face_status(5.into())
-            .expect("Cannot read face status")
-            .deleted());
+        assert!(
+            qbox.face_status(5.into())
+                .expect("Cannot read face status")
+                .deleted()
+        );
         qbox.garbage_collection(&mut cache)
             .expect("Cannot garbage collect mesh");
         assert_eq!(qbox.num_faces(), 5);

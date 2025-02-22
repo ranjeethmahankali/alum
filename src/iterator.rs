@@ -1,7 +1,7 @@
 use crate::{
+    Adaptor, FPropBuf, HasTopology, PolyMeshT, Status,
     element::{EH, FH, HH, VH},
     topol::Topology,
-    Adaptor, FPropBuf, HasTopology, PolyMeshT, Status,
 };
 use std::{marker::PhantomData, ptr::NonNull};
 
@@ -945,12 +945,14 @@ mod test {
     fn t_box_vih_iter() {
         let qbox = quad_box();
         for v in qbox.vertices() {
-            assert!(qbox
-                .vih_ccw_iter(v)
-                .all(|h| h.head(&qbox) == v && h.tail(&qbox) != v));
-            assert!(qbox
-                .vih_cw_iter(v)
-                .all(|h| h.head(&qbox) == v && h.tail(&qbox) != v));
+            assert!(
+                qbox.vih_ccw_iter(v)
+                    .all(|h| h.head(&qbox) == v && h.tail(&qbox) != v)
+            );
+            assert!(
+                qbox.vih_cw_iter(v)
+                    .all(|h| h.head(&qbox) == v && h.tail(&qbox) != v)
+            );
         }
     }
 
@@ -958,12 +960,14 @@ mod test {
     fn t_box_voh_iter() {
         let qbox = quad_box();
         for v in qbox.vertices() {
-            assert!(qbox
-                .voh_ccw_iter(v)
-                .all(|h| h.tail(&qbox) == v && h.head(&qbox) != v));
-            assert!(qbox
-                .voh_cw_iter(v)
-                .all(|h| h.tail(&qbox) == v && h.head(&qbox) != v));
+            assert!(
+                qbox.voh_ccw_iter(v)
+                    .all(|h| h.tail(&qbox) == v && h.head(&qbox) != v)
+            );
+            assert!(
+                qbox.voh_cw_iter(v)
+                    .all(|h| h.tail(&qbox) == v && h.head(&qbox) != v)
+            );
         }
     }
 

@@ -1,10 +1,10 @@
 use std::path::PathBuf;
 
-use common::{mesh_view, wireframe_view, CameraMouseControl, PolygonMesh};
+use common::{CameraMouseControl, PolygonMesh, mesh_view, wireframe_view};
 use three_d::{
-    degrees, vec3, AmbientLight, Camera, ClearState, Context, DirectionalLight, Event, FrameOutput,
-    Gm, InnerSpace, InstancedMesh, Key, Mesh, Object, PhysicalMaterial, Srgba, Vec3, Viewport,
-    Window, WindowSettings,
+    AmbientLight, Camera, ClearState, Context, DirectionalLight, Event, FrameOutput, Gm,
+    InnerSpace, InstancedMesh, Key, Mesh, Object, PhysicalMaterial, Srgba, Vec3, Viewport, Window,
+    WindowSettings, degrees, vec3,
 };
 
 mod common;

@@ -6,7 +6,7 @@ use std::{
 };
 
 use crate::{
-    element::{Handle, EH, FH, HH, VH},
+    element::{EH, FH, HH, Handle, VH},
     error::Error,
 };
 
@@ -591,8 +591,8 @@ where
 #[cfg(test)]
 mod test {
     use crate::{
-        topol::{test::quad_box, TopolCache},
         HasTopology,
+        topol::{TopolCache, test::quad_box},
     };
 
     use super::{PropertyContainer, VProperty};

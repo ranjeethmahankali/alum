@@ -152,12 +152,12 @@ mod decimate;
 
 #[cfg(feature = "decimate")]
 pub use decimate::{
-    edge_length::EdgeLengthDecimater, quadric::Quadric, quadric::QuadricDecimater,
-    quadric::QuadricType, Decimater, HasDecimation,
+    Decimater, HasDecimation, edge_length::EdgeLengthDecimater, quadric::Quadric,
+    quadric::QuadricDecimater, quadric::QuadricType,
 };
 
 pub use edit::EditableTopology;
-pub use element::{Handle, EH, FH, HH, VH};
+pub use element::{EH, FH, HH, Handle, VH};
 pub use error::Error;
 pub use history::{
     EPropHistory, FPropHistory, HPropHistory, PropHistory, TopolHistory, VPropHistory,

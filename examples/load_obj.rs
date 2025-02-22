@@ -1,11 +1,11 @@
 mod common;
 
-use common::{mesh_view, wireframe_view, CameraMouseControl, PolygonMesh};
+use common::{CameraMouseControl, PolygonMesh, mesh_view, wireframe_view};
 use core::f32;
 use std::path::PathBuf;
 use three_d::{
-    degrees, vec3, AmbientLight, Camera, ClearState, DirectionalLight, FrameOutput, InnerSpace,
-    Srgba, Vec3, Window, WindowSettings,
+    AmbientLight, Camera, ClearState, DirectionalLight, FrameOutput, InnerSpace, Srgba, Vec3,
+    Window, WindowSettings, degrees, vec3,
 };
 
 fn bounds(mesh: &PolygonMesh) -> (Vec3, Vec3) {

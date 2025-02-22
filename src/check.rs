@@ -1,8 +1,8 @@
 use crate::{
+    EPropBuf, Error, FPropBuf, HPropBuf, Status, VPropBuf,
     element::Handle,
     iterator::HasIterators,
     topol::{HasTopology, Topology},
-    EPropBuf, Error, FPropBuf, HPropBuf, Status, VPropBuf,
 };
 
 fn check_vertices(

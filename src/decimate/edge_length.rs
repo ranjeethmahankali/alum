@@ -1,4 +1,4 @@
-use crate::{DotProductAdaptor, Error, PolyMeshT, HH, VH};
+use crate::{DotProductAdaptor, Error, HH, PolyMeshT, VH};
 use std::ops::{Mul, Sub};
 
 use super::Decimater;
@@ -61,7 +61,7 @@ where
 #[cfg(test)]
 mod test {
     use super::EdgeLengthDecimater;
-    use crate::{obj::test::bunny_mesh, HasDecimation, HasIterators, HasTopology};
+    use crate::{HasDecimation, HasIterators, HasTopology, obj::test::bunny_mesh};
 
     #[test]
     fn t_bunny_edge_length_decimate() {
