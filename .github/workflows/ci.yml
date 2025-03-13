@@ -38,3 +38,17 @@ jobs:
           run: cargo clippy --all-targets --all-features -- -D warnings
         - name: Run tests
           run: cargo test --all-features --verbose
+  macos:
+      runs-on: macos-latest
+      steps:
+        - name: Update Rust
+          run: rustup update stable
+        - uses: actions/checkout@v4
+        - name: Build
+          run: cargo build --verbose --all-targets --all-features
+        - name: Check formatting
+          run: cargo fmt -- --check
+        - name: Run Clippy
+          run: cargo clippy --all-targets --all-features -- -D warnings
+        - name: Run tests
+          run: cargo test --all-features --verbose
