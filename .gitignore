@@ -23,4 +23,6 @@ Cargo.lock
 # Added by cargo
 
 /target
+
+# Emacs stuff
 .projectile-cache.eld
