@@ -527,7 +527,7 @@ mod test {
         assert!(a.vertices().skip(nv).all(|v| avs[v].deleted()));
         assert!(b.vertices().skip(nv).all(|v| bvs[v].deleted()));
         for (av, bv) in a.vertices().take(nv).zip(b.vertices().take(nv)) {
-            print!("Checking vertex {}...", av);
+            print!("Checking vertex {av}...");
             assert_eq!(a.topology().vertex(av), b.topology().vertex(bv));
             assert_eq!(avs[av], bvs[bv]);
             assert_eq!(apts[av], bpts[bv]);
@@ -542,7 +542,7 @@ mod test {
         assert!(a.edges().skip(ne).all(|e| aes[e].deleted()));
         assert!(b.edges().skip(ne).all(|e| bes[e].deleted()));
         for (ae, be) in a.edges().take(ne).zip(b.edges().take(ne)) {
-            print!("Checking edge {}...", ae);
+            print!("Checking edge {ae}...");
             assert_eq!(aes[ae], bes[be]);
             println!("✔ Passed");
         }
@@ -555,7 +555,7 @@ mod test {
         assert!(a.halfedges().skip(nh).all(|e| ahs[e].deleted()));
         assert!(b.halfedges().skip(nh).all(|e| bhs[e].deleted()));
         for (ah, bh) in a.halfedges().take(nh).zip(b.halfedges().take(nh)) {
-            print!("Checking halfedge {}...", ah);
+            print!("Checking halfedge {ah}...");
             assert_eq!(a.topology().halfedge(ah), b.topology().halfedge(bh));
             assert_eq!(ahs[ah], bhs[bh]);
             println!("✔ Passed");
@@ -569,7 +569,7 @@ mod test {
         assert!(a.faces().skip(nf).all(|f| afs[f].deleted()));
         assert!(b.faces().skip(nf).all(|f| bfs[f].deleted()));
         for (af, bf) in a.faces().take(nf).zip(b.faces().take(nf)) {
-            print!("Checking face {}...", af);
+            print!("Checking face {af}...");
             assert_eq!(a.topology().face(af), b.topology().face(bf));
             assert_eq!(afs[af], bfs[bf]);
             println!("✔ Passed");
