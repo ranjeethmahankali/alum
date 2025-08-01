@@ -179,8 +179,7 @@ fn main() {
     let mut gui = three_d::GUI::new(&context);
     let mut num_iter = 0usize;
     let note = format!(
-        "Use the Up/Down arrows to control the number of iterations, up to a maximum of {}",
-        NUM_MAX_SUBDIV
+        "Use the Up/Down arrows to control the number of iterations, up to a maximum of {NUM_MAX_SUBDIV}"
     );
     window.render_loop(move |mut frame_input| {
         let mut panel_height = 0.0;

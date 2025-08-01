@@ -80,7 +80,7 @@ where
         }
         let options = tobj::LoadOptions::default();
         let (models, _) =
-            tobj::load_obj(path, &options).map_err(|e| Error::ObjLoadFailed(format!("{}", e)))?;
+            tobj::load_obj(path, &options).map_err(|e| Error::ObjLoadFailed(format!("{e}")))?;
         Self::load_from_models(models)
     }
 
@@ -90,7 +90,7 @@ where
         let (models, _) = tobj::load_obj_buf(reader, &options, |_| {
             tobj::MTLLoadResult::Ok(Default::default())
         })
-        .map_err(|e| Error::ObjLoadFailed(format!("{}", e)))?;
+        .map_err(|e| Error::ObjLoadFailed(format!("{e}")))?;
         Self::load_from_models(models)
     }
 
