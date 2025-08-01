@@ -572,13 +572,11 @@ mod test {
             queue.insert(i.into(), i as f64);
             assert!(
                 verify_heap_property(&queue),
-                "Heap property violated after inserting {}",
-                i
+                "Heap property violated after inserting {i}"
             );
             assert!(
                 verify_position_map(&queue),
-                "Position map inconsistent after inserting {}",
-                i
+                "Position map inconsistent after inserting {i}"
             );
         }
         // Remove some elements
@@ -586,13 +584,11 @@ mod test {
             queue.remove(i.into());
             assert!(
                 verify_heap_property(&queue),
-                "Heap property violated after removing {}",
-                i
+                "Heap property violated after removing {i}"
             );
             assert!(
                 verify_position_map(&queue),
-                "Position map inconsistent after removing {}",
-                i
+                "Position map inconsistent after removing {i}"
             );
         }
         // Update some elements
