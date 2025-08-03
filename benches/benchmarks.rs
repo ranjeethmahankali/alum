@@ -4,9 +4,8 @@ use std::path::PathBuf;
 
 // Define mesh adaptor similar to examples
 use alum::{
-    HasTopology, HasDecimation, 
+    EdgeLengthDecimater, HasDecimation, HasTopology, QuadricDecimater, QuadricType,
     use_glam::PolyMeshF32,
-    EdgeLengthDecimater, QuadricDecimater, QuadricType
 };
 
 type PolygonMesh = PolyMeshF32;
@@ -281,7 +280,8 @@ fn bench_decimation(c: &mut Criterion) {
         b.iter(|| {
             let mut mesh = base_bunny.try_clone().unwrap();
             let mut decimater = EdgeLengthDecimater::new(black_box(1.0));
-            mesh.decimate_to_face_count(&mut decimater, black_box(target_face_count)).unwrap();
+            mesh.decimate_to_face_count(&mut decimater, black_box(target_face_count))
+                .unwrap();
             mesh.garbage_collection().unwrap();
             black_box(mesh);
         });
@@ -292,7 +292,8 @@ fn bench_decimation(c: &mut Criterion) {
         b.iter(|| {
             let mut mesh = base_bunny.try_clone().unwrap();
             let mut decimater = QuadricDecimater::new(&mesh, QuadricType::Triangle).unwrap();
-            mesh.decimate_to_face_count(&mut decimater, black_box(target_face_count)).unwrap();
+            mesh.decimate_to_face_count(&mut decimater, black_box(target_face_count))
+                .unwrap();
             mesh.garbage_collection().unwrap();
             black_box(mesh);
         });
@@ -302,8 +303,10 @@ fn bench_decimation(c: &mut Criterion) {
     group.bench_function("quadric_probabilistic_decimation", |b| {
         b.iter(|| {
             let mut mesh = base_bunny.try_clone().unwrap();
-            let mut decimater = QuadricDecimater::new(&mesh, QuadricType::ProbabilisticTriangle).unwrap();
-            mesh.decimate_to_face_count(&mut decimater, black_box(target_face_count)).unwrap();
+            let mut decimater =
+                QuadricDecimater::new(&mesh, QuadricType::ProbabilisticTriangle).unwrap();
+            mesh.decimate_to_face_count(&mut decimater, black_box(target_face_count))
+                .unwrap();
             mesh.garbage_collection().unwrap();
             black_box(mesh);
         });
