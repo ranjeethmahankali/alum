@@ -68,6 +68,20 @@ where
             None
         }
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let count = self.stop.saturating_sub(self.current) as usize;
+        (count, Some(count))
+    }
+}
+
+impl<H> ExactSizeIterator for HandleRange<H>
+where
+    H: Handle,
+{
+    fn len(&self) -> usize {
+        self.stop.saturating_sub(self.current) as usize
+    }
 }
 
 pub type VRange = HandleRange<VH>;
