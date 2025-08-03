@@ -24,7 +24,12 @@ decimate = []
 [dev-dependencies]
 arrayvec = "0.7.6"
 three-d = {version = "0.17.0", features = ["egui-gui"]}
+criterion = { version = "0.7", features = ["html_reports"] }
 
 [[example]]
 name = "common"
 crate-type = ["staticlib"]
+
+[[bench]]
+name = "benchmarks"
+harness = false
