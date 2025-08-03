@@ -3,7 +3,11 @@ use std::hint::black_box;
 use std::path::PathBuf;
 
 // Define mesh adaptor similar to examples
-use alum::{HasTopology, use_glam::PolyMeshF32};
+use alum::{
+    HasTopology, HasDecimation, 
+    use_glam::PolyMeshF32,
+    EdgeLengthDecimater, QuadricDecimater, QuadricType
+};
 
 type PolygonMesh = PolyMeshF32;
 
@@ -198,7 +202,7 @@ fn bench_subdivision(c: &mut Criterion) {
 fn bench_operations(c: &mut Criterion) {
     let mut group = c.benchmark_group("operations");
 
-    let bunny_path = get_asset_path("bunny.obj");
+    let bunny_path = get_asset_path("bunny_large.obj");
     let bunny = PolygonMesh::load_obj(&bunny_path).unwrap();
 
     // Benchmark normal calculations
@@ -262,11 +266,58 @@ fn bench_operations(c: &mut Criterion) {
     group.finish();
 }
 
+// Decimation Benchmarks
+fn bench_decimation(c: &mut Criterion) {
+    let mut group = c.benchmark_group("decimation");
+    group.sample_size(10); // Fewer samples since decimation is expensive
+
+    // Load large bunny mesh once for all decimation benchmarks
+    let bunny_path = get_asset_path("bunny_large.obj");
+    let base_bunny = PolygonMesh::load_obj(&bunny_path).unwrap();
+    let target_face_count = base_bunny.num_faces() / 4; // Decimate to 1/4 face count
+
+    // Edge Length Decimation
+    group.bench_function("edge_length_decimation", |b| {
+        b.iter(|| {
+            let mut mesh = base_bunny.try_clone().unwrap();
+            let mut decimater = EdgeLengthDecimater::new(black_box(1.0));
+            mesh.decimate_to_face_count(&mut decimater, black_box(target_face_count)).unwrap();
+            mesh.garbage_collection().unwrap();
+            black_box(mesh);
+        });
+    });
+
+    // Quadric Decimation - Triangle
+    group.bench_function("quadric_triangle_decimation", |b| {
+        b.iter(|| {
+            let mut mesh = base_bunny.try_clone().unwrap();
+            let mut decimater = QuadricDecimater::new(&mesh, QuadricType::Triangle).unwrap();
+            mesh.decimate_to_face_count(&mut decimater, black_box(target_face_count)).unwrap();
+            mesh.garbage_collection().unwrap();
+            black_box(mesh);
+        });
+    });
+
+    // Quadric Decimation - Probabilistic Triangle
+    group.bench_function("quadric_probabilistic_decimation", |b| {
+        b.iter(|| {
+            let mut mesh = base_bunny.try_clone().unwrap();
+            let mut decimater = QuadricDecimater::new(&mesh, QuadricType::ProbabilisticTriangle).unwrap();
+            mesh.decimate_to_face_count(&mut decimater, black_box(target_face_count)).unwrap();
+            mesh.garbage_collection().unwrap();
+            black_box(mesh);
+        });
+    });
+
+    group.finish();
+}
+
 criterion_group!(
     benches,
     bench_obj_loading,
     bench_primitive_creation,
     bench_subdivision,
+    bench_decimation,
     bench_operations
 );
 criterion_main!(benches);
