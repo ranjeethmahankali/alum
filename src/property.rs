@@ -316,7 +316,7 @@ where
     /// enforce runtime borrow checking rules. If borrowing fails,
     /// [`Error::BorrowedPropertyAccess`] is returned, otherwise a reference to
     /// the property is returned.
-    pub fn try_borrow(&self) -> Result<Ref<PropBuf<H, T>>, Error> {
+    pub fn try_borrow(&'_ self) -> Result<Ref<'_, PropBuf<H, T>>, Error> {
         self.data
             .try_borrow()
             .map_err(|_| Error::BorrowedPropertyAccess)
@@ -328,7 +328,7 @@ where
     /// enforce runtime borrow checking rules. If borrowing fails,
     /// [`Error::BorrowedPropertyAccess`] is returned, otherwise a mutable
     /// reference to the property is returned.
-    pub fn try_borrow_mut(&mut self) -> Result<RefMut<PropBuf<H, T>>, Error> {
+    pub fn try_borrow_mut(&'_ mut self) -> Result<RefMut<'_, PropBuf<H, T>>, Error> {
         self.data
             .try_borrow_mut()
             .map_err(|_| Error::BorrowedPropertyAccess)
@@ -338,7 +338,7 @@ where
     ///
     /// This function internally tries to borrow the property and returns an
     /// error if borrowing fails.
-    pub fn get(&self, h: H) -> Result<Ref<T>, Error> {
+    pub fn get(&'_ self, h: H) -> Result<Ref<'_, T>, Error> {
         Ok(Ref::map(
             self.data
                 .try_borrow()
@@ -360,7 +360,7 @@ where
     ///
     /// This function internally tries to mutably borrow the property and
     /// returns an error if borrowing fails.
-    pub fn get_mut(&mut self, h: H) -> Result<RefMut<T>, Error> {
+    pub fn get_mut(&'_ mut self, h: H) -> Result<RefMut<'_, T>, Error> {
         Ok(RefMut::map(
             self.data
                 .try_borrow_mut()
