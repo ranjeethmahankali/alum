@@ -63,11 +63,10 @@ pub trait EditableTopology: HasIterators {
         } else {
             None
         };
-        if let (Some(vl), Some(vr)) = (vl, vr) {
-            if vl == vr {
+        if let (Some(vl), Some(vr)) = (vl, vr)
+            && vl == vr {
                 return false;
             }
-        }
         let v0_boundary = v0.is_boundary(self);
         let v1_boundary = v1.is_boundary(self);
         // Check if we're collapsing across two different boundaries.
@@ -114,11 +113,10 @@ pub trait EditableTopology: HasIterators {
             }
         }
         // Check again if left and right are the same vertex.
-        if let Some(h) = v0.halfedge(self) {
-            if vertex_status[h.head(self)].tagged() && vl == vr && htriangle && ohtriangle {
+        if let Some(h) = v0.halfedge(self)
+            && vertex_status[h.head(self)].tagged() && vl == vr && htriangle && ohtriangle {
                 return false;
             }
-        }
         true
     }
 
@@ -171,11 +169,10 @@ pub trait EditableTopology: HasIterators {
         topol.vertex_mut(v1).halfedge = Some(o1);
         topol.adjust_outgoing_halfedge(v1);
         // Rewire face -> halfedge.
-        if let Some(fo) = fo {
-            if fo.halfedge(topol) == o {
+        if let Some(fo) = fo
+            && fo.halfedge(topol) == o {
                 topol.face_mut(fo).halfedge = h1;
             }
-        }
         // Delete stuff.
         if let Some(fh) = fh {
             fstatus[fh].set_deleted(true);
