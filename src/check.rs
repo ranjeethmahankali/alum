@@ -73,10 +73,10 @@ fn check_edges(
         if vstatus[hedge.vertex].deleted() {
             return Err(Error::DeletedVertex(hedge.vertex));
         }
-        if let Some(f) = hedge.face {
-            if fstatus[f].deleted() {
-                return Err(Error::DeletedFace(f));
-            }
+        if let Some(f) = hedge.face
+            && fstatus[f].deleted()
+        {
+            return Err(Error::DeletedFace(f));
         }
         let e = h.edge();
         if estatus[e].deleted() {
