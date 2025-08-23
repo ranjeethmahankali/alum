@@ -424,20 +424,16 @@ where
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub struct Vec3(pub [f32; 3]);
+pub struct Vec3(pub f32, pub f32, pub f32);
 
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub struct DVec3(pub [f64; 3]);
+pub struct DVec3(pub f64, pub f64, pub f64);
 
 impl Add for Vec3 {
     type Output = Vec3;
 
     fn add(self, rhs: Self) -> Self::Output {
-        Vec3([
-            self.0[0] + rhs.0[0],
-            self.0[1] + rhs.0[1],
-            self.0[2] + rhs.0[2],
-        ])
+        Vec3(self.0 + rhs.0, self.1 + rhs.1, self.2 + rhs.2)
     }
 }
 
@@ -445,11 +441,7 @@ impl Sub for Vec3 {
     type Output = Vec3;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        Vec3([
-            self.0[0] - rhs.0[0],
-            self.0[1] - rhs.0[1],
-            self.0[2] - rhs.0[2],
-        ])
+        Vec3(self.0 - rhs.0, self.1 - rhs.1, self.2 - rhs.2)
     }
 }
 
@@ -457,7 +449,7 @@ impl Mul<f32> for Vec3 {
     type Output = Self;
 
     fn mul(self, rhs: f32) -> Self::Output {
-        Vec3(self.0.map(|c| c * rhs))
+        Vec3(self.0 * rhs, self.1 * rhs, self.2 * rhs)
     }
 }
 
@@ -465,39 +457,39 @@ impl Div<f32> for Vec3 {
     type Output = Self;
 
     fn div(self, rhs: f32) -> Self::Output {
-        Vec3(self.0.map(|c| c / rhs))
+        Vec3(self.0 / rhs, self.1 / rhs, self.2 / rhs)
     }
 }
 
 impl AddAssign for Vec3 {
     fn add_assign(&mut self, rhs: Self) {
-        for (l, r) in self.0.iter_mut().zip(rhs.0.iter()) {
-            *l += *r;
-        }
+        self.0 += rhs.0;
+        self.1 += rhs.1;
+        self.2 += rhs.2;
     }
 }
 
 impl SubAssign for Vec3 {
     fn sub_assign(&mut self, rhs: Self) {
-        for (l, r) in self.0.iter_mut().zip(rhs.0.iter()) {
-            *l -= *r;
-        }
+        self.0 -= rhs.0;
+        self.1 -= rhs.1;
+        self.2 -= rhs.2;
     }
 }
 
 impl MulAssign<f32> for Vec3 {
     fn mul_assign(&mut self, rhs: f32) {
-        for c in self.0.iter_mut() {
-            *c *= rhs;
-        }
+        self.0 *= rhs;
+        self.1 *= rhs;
+        self.2 *= rhs;
     }
 }
 
 impl DivAssign<f32> for Vec3 {
     fn div_assign(&mut self, rhs: f32) {
-        for c in self.0.iter_mut() {
-            *c /= rhs;
-        }
+        self.0 /= rhs;
+        self.1 /= rhs;
+        self.2 /= rhs;
     }
 }
 
@@ -505,11 +497,7 @@ impl Add for DVec3 {
     type Output = DVec3;
 
     fn add(self, rhs: Self) -> Self::Output {
-        DVec3([
-            self.0[0] + rhs.0[0],
-            self.0[1] + rhs.0[1],
-            self.0[2] + rhs.0[2],
-        ])
+        DVec3(self.0 + rhs.0, self.1 + rhs.1, self.2 + rhs.2)
     }
 }
 
@@ -517,11 +505,7 @@ impl Sub for DVec3 {
     type Output = DVec3;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        DVec3([
-            self.0[0] - rhs.0[0],
-            self.0[1] - rhs.0[1],
-            self.0[2] - rhs.0[2],
-        ])
+        DVec3(self.0 - rhs.0, self.1 - rhs.1, self.2 - rhs.2)
     }
 }
 
@@ -529,7 +513,7 @@ impl Mul<f64> for DVec3 {
     type Output = Self;
 
     fn mul(self, rhs: f64) -> Self::Output {
-        DVec3(self.0.map(|c| c * rhs))
+        DVec3(self.0 * rhs, self.1 * rhs, self.2 * rhs)
     }
 }
 
@@ -537,39 +521,39 @@ impl Div<f64> for DVec3 {
     type Output = Self;
 
     fn div(self, rhs: f64) -> Self::Output {
-        DVec3(self.0.map(|c| c / rhs))
+        DVec3(self.0 / rhs, self.1 / rhs, self.2 / rhs)
     }
 }
 
 impl AddAssign for DVec3 {
     fn add_assign(&mut self, rhs: Self) {
-        for (l, r) in self.0.iter_mut().zip(rhs.0.iter()) {
-            *l += *r;
-        }
+        self.0 += rhs.0;
+        self.1 += rhs.1;
+        self.2 += rhs.2;
     }
 }
 
 impl SubAssign for DVec3 {
     fn sub_assign(&mut self, rhs: Self) {
-        for (l, r) in self.0.iter_mut().zip(rhs.0.iter()) {
-            *l -= *r;
-        }
+        self.0 -= rhs.0;
+        self.1 -= rhs.1;
+        self.2 -= rhs.2;
     }
 }
 
 impl MulAssign<f64> for DVec3 {
     fn mul_assign(&mut self, rhs: f64) {
-        for c in self.0.iter_mut() {
-            *c *= rhs;
-        }
+        self.0 *= rhs;
+        self.1 *= rhs;
+        self.2 *= rhs;
     }
 }
 
 impl DivAssign<f64> for DVec3 {
     fn div_assign(&mut self, rhs: f64) {
-        for c in self.0.iter_mut() {
-            *c /= rhs;
-        }
+        self.0 /= rhs;
+        self.1 /= rhs;
+        self.2 /= rhs;
     }
 }
 
@@ -582,34 +566,38 @@ impl Adaptor<3> for F32Adaptor {
     type Vector = Vec3;
 
     fn vector(coords: [Self::Scalar; 3]) -> Self::Vector {
-        Vec3(coords)
+        Vec3(coords[0], coords[1], coords[2])
     }
 
     fn zero_vector() -> Self::Vector {
-        Vec3([0., 0., 0.])
+        Vec3(0., 0., 0.)
     }
 
     fn vector_coord(v: &Self::Vector, i: usize) -> Self::Scalar {
-        v.0[i]
+        match i {
+            0 => v.0,
+            1 => v.1,
+            2 => v.2,
+            _ => panic!("Vector index out of bounds!"),
+        }
     }
 }
 
 impl VectorLengthAdaptor<3> for F32Adaptor {
     fn vector_length(v: Self::Vector) -> Self::Scalar {
-        (v.0[0] * v.0[0] + v.0[1] * v.0[1] + v.0[2] * v.0[2]).sqrt()
+        (v.0 * v.0 + v.1 * v.1 + v.2 * v.2).sqrt()
     }
 }
 
 impl VectorNormalizeAdaptor<3> for F32Adaptor {
     fn normalized_vec(v: Self::Vector) -> Self::Vector {
-        let len = Self::vector_length(v);
-        Vec3(v.0.map(|c| c / len))
+        v / Self::vector_length(v)
     }
 }
 
 impl DotProductAdaptor<3> for F32Adaptor {
     fn dot_product(a: Self::Vector, b: Self::Vector) -> Self::Scalar {
-        a.0[0] * b.0[0] + a.0[1] * b.0[1] + a.0[2] * b.0[2]
+        a.0 * b.0 + a.1 * b.1 + a.2 * b.2
     }
 }
 
@@ -621,11 +609,11 @@ impl VectorAngleAdaptor for F32Adaptor {
 
 impl CrossProductAdaptor for F32Adaptor {
     fn cross_product(a: Self::Vector, b: Self::Vector) -> Self::Vector {
-        Vec3([
-            a.0[1] * b.0[2] - a.0[2] * b.0[1],
-            a.0[2] * b.0[0] - a.0[0] * b.0[2],
-            a.0[0] * b.0[1] - a.0[1] * b.0[0],
-        ])
+        Vec3(
+            a.1 * b.2 - a.2 * b.1,
+            a.2 * b.0 - a.0 * b.2,
+            a.0 * b.1 - a.1 * b.0,
+        )
     }
 }
 

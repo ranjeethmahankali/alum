@@ -271,11 +271,11 @@ mod test {
     #[test]
     fn t_triangle_subdiv_loop() {
         let mut mesh = PolyMeshF32::new();
-        mesh.add_vertex(Vec3([0.0, 0.0, 0.0]))
+        mesh.add_vertex(Vec3(0.0, 0.0, 0.0))
             .expect("Cannot add vertex");
-        mesh.add_vertex(Vec3([1.0, 0.0, 0.0]))
+        mesh.add_vertex(Vec3(1.0, 0.0, 0.0))
             .expect("Cannot add vertex");
-        mesh.add_vertex(Vec3([1.0, 1.0, 0.0]))
+        mesh.add_vertex(Vec3(1.0, 1.0, 0.0))
             .expect("Cannot add vertex");
         mesh.add_tri_face(0.into(), 1.into(), 2.into())
             .expect("Cannot add face");
