@@ -248,7 +248,7 @@ pub trait HasIterators: HasTopology {
     face with index 2, and modifies their positions.
 
     ```rust
-    use alum::{use_glam::PolyMeshF32, FH, HasIterators, HasTopology};
+    use alum::{PolyMeshF32, FH, HasIterators, HasTopology};
 
     let mut boxmesh = PolyMeshF32::unit_box().expect("Cannot create a box");
     assert_eq!(1.0, boxmesh.try_calc_volume().expect("Cannot compute volume"));
@@ -771,11 +771,11 @@ pub trait HasIterators: HasTopology {
     /// The triangulation does not take the shape of the face into account. It
     /// only accounts for the topology of the face.
     /// ```rust
-    /// use alum::{use_glam::PolyMeshF32, Handle, HasTopology, HasIterators};
+    /// use alum::{PolyMeshF32, Handle, HasTopology, HasIterators, Vec3};
     ///
     /// let mut mesh = PolyMeshF32::new();
-    /// let verts = [glam::vec3(0.0, 0.0, 0.0), glam::vec3(1.0, 0.0, 0.0),
-    ///              glam::vec3(1.0, 1.0, 0.0), glam::vec3(0.0, 1.0, 0.0)];
+    /// let verts = [Vec3([0.0, 0.0, 0.0]), Vec3([1.0, 0.0, 0.0]),
+    ///              Vec3([1.0, 1.0, 0.0]), Vec3([0.0, 1.0, 0.0])];
     /// mesh.add_vertices(&verts).expect("Cannot add vertices");
     /// mesh.add_quad_face(0.into(), 1.into(), 2.into(), 3.into());
     /// assert_eq!(mesh.triangulated_face_vertices(0.into())
@@ -796,11 +796,11 @@ pub trait HasIterators: HasTopology {
     /// account. It only accounts for the topology.
     ///
     /// ```rust
-    /// use alum::{use_glam::PolyMeshF32, Handle, HasTopology, HasIterators};
+    /// use alum::{PolyMeshF32, Handle, HasTopology, HasIterators, Vec3};
     ///
     /// let mut mesh = PolyMeshF32::new();
-    /// let verts = [glam::vec3(0.0, 0.0, 0.0), glam::vec3(1.0, 0.0, 0.0),
-    ///              glam::vec3(1.0, 1.0, 0.0), glam::vec3(0.0, 1.0, 0.0)];
+    /// let verts = [Vec3([0.0, 0.0, 0.0]), Vec3([1.0, 0.0, 0.0]),
+    ///              Vec3([1.0, 1.0, 0.0]), Vec3([0.0, 1.0, 0.0])];
     /// mesh.add_vertices(&verts).expect("Cannot add vertices");
     /// mesh.add_quad_face(0.into(), 1.into(), 2.into(), 3.into());
     /// let fstatus = mesh.face_status_prop();
@@ -843,8 +843,8 @@ mod test {
     use crate::{
         element::{Handle, VH},
         iterator::HasIterators,
+        mesh::PolyMeshF32,
         topol::{HasTopology, TopolCache, Topology},
-        use_glam::PolyMeshF32,
     };
     use arrayvec::ArrayVec;
 

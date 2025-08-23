@@ -12,12 +12,10 @@ categories = ["mathematics", "graphics", "rendering"]
 exclude = ["assets/", "examples/"]
 
 [dependencies]
-glam = { version = "0.29.2", optional = true }
 tobj = { version = "4.0.2", features = ["use_f64"] }
 
 [features]
-default = ["use_glam", "subdiv", "decimate"]
-use_glam = ["dep:glam"]
+default = ["subdiv", "decimate"]
 subdiv = []
 decimate = []
 

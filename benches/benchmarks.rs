@@ -4,8 +4,7 @@ use std::path::PathBuf;
 
 // Define mesh adaptor similar to examples
 use alum::{
-    EdgeLengthDecimater, HasDecimation, HasTopology, QuadricDecimater, QuadricType,
-    use_glam::PolyMeshF32,
+    EdgeLengthDecimater, HasDecimation, HasTopology, PolyMeshF32, QuadricDecimater, QuadricType,
 };
 
 type PolygonMesh = PolyMeshF32;

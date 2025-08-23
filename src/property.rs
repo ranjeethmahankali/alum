@@ -386,7 +386,7 @@ where
 /// properties work.
 ///
 /// ```rust
-/// use alum::{use_glam::PolyMeshF32, HasTopology};
+/// use alum::{PolyMeshF32, HasTopology};
 ///
 /// let mut mesh = PolyMeshF32::icosahedron(1.0).expect("Cannot create an icosahedron");
 /// // Crate a vertex property of type u32, with a default value of 42.
@@ -403,7 +403,7 @@ pub type VProperty<T> = Property<VH, T>;
 /// properties work.
 ///
 /// ```rust
-/// use alum::{use_glam::PolyMeshF32, HasTopology};
+/// use alum::{PolyMeshF32, HasTopology};
 ///
 /// let mut mesh = PolyMeshF32::tetrahedron(1.0).expect("Cannot create an icosahedron");
 /// // Crate a halfedge property of type u32, with a default value of 42.
@@ -420,7 +420,7 @@ pub type HProperty<T> = Property<HH, T>;
 /// properties work.
 ///
 /// ```rust
-/// use alum::{use_glam::PolyMeshF32, HasTopology};
+/// use alum::{PolyMeshF32, HasTopology};
 ///
 /// let mut mesh = PolyMeshF32::octahedron(1.0).expect("Cannot create an icosahedron");
 /// // Crate a edge property of type u32, with a default value of 42.
@@ -437,7 +437,7 @@ pub type EProperty<T> = Property<EH, T>;
 /// properties work.
 ///
 /// ```rust
-/// use alum::{use_glam::PolyMeshF32, HasTopology};
+/// use alum::{PolyMeshF32, HasTopology};
 ///
 /// let mut mesh = PolyMeshF32::dodecahedron(1.0).expect("Cannot create an icosahedron");
 /// // Crate a face property of type u32, with a default value of 42.

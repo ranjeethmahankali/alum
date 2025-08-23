@@ -33,12 +33,12 @@ crate has an API that is very similar to OpenMesh.
   be found in the [`use_glam`] module. `use_glam` feature is required by
   these. These builtin types include:
 
-  + [`PolyMeshF32`](use_glam::PolyMeshF32) using the
-    [`BuiltInAdaptorF32`](use_glam::BuiltInAdaptorF32). This mesh uses 32 bit
+  + [`PolyMeshF32`](PolyMeshF32) using the
+    [`BuiltInAdaptorF32`](BuiltInAdaptorF32). This mesh uses 32 bit
     floating point types to represent the geometry.
 
-  + [`PolyMeshF64`](use_glam::PolyMeshF64) using the
-    [`BuiltInAdaptorF64`](use_glam::BuiltInAdaptorF64). This mesh uses 64 bit
+  + [`PolyMeshF64`](PolyMeshF64) using the
+    [`BuiltInAdaptorF64`](BuiltInAdaptorF64). This mesh uses 64 bit
     floating point types to represent the geometry.
 
 # Halfedge Mesh Representation
@@ -105,7 +105,7 @@ example, the [opposite](HH::opposite) of a halfedge, and the
 indices. This is a consequence of how the halfedges and edges are stored.
 
 ```rust
-use alum::{use_glam::PolyMeshF32, HasTopology, HasIterators, Handle};
+use alum::{PolyMeshF32, HasTopology, HasIterators, Handle};
 
 let mesh = PolyMeshF32::unit_box().expect("Cannot create a box");
 
@@ -141,9 +141,6 @@ mod queue;
 mod status;
 mod topol;
 
-#[cfg(feature = "use_glam")]
-pub mod use_glam;
-
 #[cfg(feature = "subdiv")]
 mod subdiv;
 
@@ -164,8 +161,8 @@ pub use history::{
 };
 pub use iterator::HasIterators;
 pub use mesh::{
-    Adaptor, CrossProductAdaptor, DotProductAdaptor, FloatScalarAdaptor, PolyMeshT,
-    VectorAngleAdaptor, VectorLengthAdaptor, VectorNormalizeAdaptor,
+    Adaptor, CrossProductAdaptor, DVec3, DotProductAdaptor, FloatScalarAdaptor, PolyMeshF32,
+    PolyMeshF64, PolyMeshT, Vec3, VectorAngleAdaptor, VectorLengthAdaptor, VectorNormalizeAdaptor,
 };
 pub use property::{
     EPropBuf, EProperty, FPropBuf, FProperty, HPropBuf, HProperty, PropBuf, Property, VPropBuf,

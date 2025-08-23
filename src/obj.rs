@@ -183,9 +183,9 @@ where
     }
 }
 
-#[cfg(all(test, feature = "use_glam"))]
+#[cfg(test)]
 pub(crate) mod test {
-    use crate::{HasTopology, use_glam::PolyMeshF32};
+    use crate::{HasTopology, mesh::PolyMeshF32};
     use core::str;
     use std::{io, path::PathBuf};
 

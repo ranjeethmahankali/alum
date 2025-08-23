@@ -4,6 +4,7 @@ use crate::{
     property::{FProperty, VProperty},
     topol::{HasTopology, TopolCache, Topology},
 };
+use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
 
 /// Trait for an adaptor that tells this crate how to work with user specified
 /// geometric types.
@@ -199,13 +200,13 @@ where
     /// normals is created and returned. The vertex normals are not
     /// computed. The values are default initialized to zero vectors.
     /// ```rust
-    /// use alum::use_glam::PolyMeshF32;
+    /// use alum::{PolyMeshF32, Vec3};
     ///
     /// let mut mesh = PolyMeshF32::tetrahedron(1.0).expect("Cannot create a tetrahedron");
     /// let vnormals = mesh.request_vertex_normals();
     /// let vnormals = vnormals.try_borrow().expect("Cannot borrow property");
     /// for v in vnormals.iter() {
-    ///     assert_eq!(glam::vec3(0.0, 0.0, 0.0), *v);
+    ///     assert_eq!(Vec3([0.0, 0.0, 0.0]), *v);
     /// }
     /// ```
     pub fn request_vertex_normals(&mut self) -> VProperty<A::Vector> {
@@ -230,13 +231,13 @@ where
     /// normals is created and returned. The face normals are not computed. The
     /// values in the property are default initialized to zero vectors.
     /// ```rust
-    /// use alum::use_glam::PolyMeshF32;
+    /// use alum::{PolyMeshF32, Vec3};
     ///
     /// let mut mesh = PolyMeshF32::tetrahedron(1.0).expect("Cannot create a tetrahedron");
     /// let fnormals = mesh.request_face_normals();
     /// let fnormals = fnormals.try_borrow().expect("Cannot borrow property");
     /// for v in fnormals.iter() {
-    ///     assert_eq!(glam::vec3(0.0, 0.0, 0.0), *v);
+    ///     assert_eq!(Vec3([0.0, 0.0, 0.0]), *v);
     /// }
     /// ```
     pub fn request_face_normals(&mut self) -> FProperty<A::Vector> {
@@ -257,15 +258,15 @@ where
     /// If successful, the range of indices of the newly added vertices is
     /// returned.
     /// ```rust
-    /// use alum::use_glam::PolyMeshF32;
+    /// use alum::{PolyMeshF32, Vec3};
     ///
     /// let mut mesh = PolyMeshF32::new();
-    /// let verts = [glam::vec3(0.0, 0.0, 0.0), glam::vec3(1.0, 0.0, 0.0),
-    ///              glam::vec3(1.0, 1.0, 0.0), glam::vec3(0.0, 1.0, 0.0)];
+    /// let verts = [Vec3([0.0, 0.0, 0.0]), Vec3([1.0, 0.0, 0.0]),
+    ///              Vec3([1.0, 1.0, 0.0]), Vec3([0.0, 1.0, 0.0])];
     /// let verts = mesh.add_vertices(&verts).expect("Cannot add vertices");
     /// assert_eq!(verts, (0..4).into());
-    /// let verts = [glam::vec3(0.0, 0.0, 1.0), glam::vec3(1.0, 0.0, 1.0),
-    ///              glam::vec3(1.0, 1.0, 1.0), glam::vec3(0.0, 1.0, 1.0),];
+    /// let verts = [Vec3([0.0, 0.0, 1.0]), Vec3([1.0, 0.0, 1.0]),
+    ///              Vec3([1.0, 1.0, 1.0]), Vec3([0.0, 1.0, 1.0]),];
     /// let verts = mesh.add_vertices(&verts).expect("Cannot add vertices");
     /// assert_eq!(verts, (4..8).into());
     /// ```
@@ -358,7 +359,7 @@ where
     /// immutably. If the borrowing fails, an error is returned.
     ///
     /// ```rust
-    /// use alum::use_glam::PolyMeshF32;
+    /// use alum::{PolyMeshF32, Vec3};
     ///
     /// let mut mesh = PolyMeshF32::unit_box().expect("Cannot make a box");
     /// {
@@ -422,9 +423,302 @@ where
     }
 }
 
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct Vec3(pub [f32; 3]);
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct DVec3(pub [f64; 3]);
+
+impl Add for Vec3 {
+    type Output = Vec3;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Vec3([
+            self.0[0] + rhs.0[0],
+            self.0[1] + rhs.0[1],
+            self.0[2] + rhs.0[2],
+        ])
+    }
+}
+
+impl Sub for Vec3 {
+    type Output = Vec3;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Vec3([
+            self.0[0] - rhs.0[0],
+            self.0[1] - rhs.0[1],
+            self.0[2] - rhs.0[2],
+        ])
+    }
+}
+
+impl Mul<f32> for Vec3 {
+    type Output = Self;
+
+    fn mul(self, rhs: f32) -> Self::Output {
+        Vec3(self.0.map(|c| c * rhs))
+    }
+}
+
+impl Div<f32> for Vec3 {
+    type Output = Self;
+
+    fn div(self, rhs: f32) -> Self::Output {
+        Vec3(self.0.map(|c| c / rhs))
+    }
+}
+
+impl AddAssign for Vec3 {
+    fn add_assign(&mut self, rhs: Self) {
+        for (l, r) in self.0.iter_mut().zip(rhs.0.iter()) {
+            *l += *r;
+        }
+    }
+}
+
+impl SubAssign for Vec3 {
+    fn sub_assign(&mut self, rhs: Self) {
+        for (l, r) in self.0.iter_mut().zip(rhs.0.iter()) {
+            *l -= *r;
+        }
+    }
+}
+
+impl MulAssign<f32> for Vec3 {
+    fn mul_assign(&mut self, rhs: f32) {
+        for c in self.0.iter_mut() {
+            *c *= rhs;
+        }
+    }
+}
+
+impl DivAssign<f32> for Vec3 {
+    fn div_assign(&mut self, rhs: f32) {
+        for c in self.0.iter_mut() {
+            *c /= rhs;
+        }
+    }
+}
+
+impl Add for DVec3 {
+    type Output = DVec3;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        DVec3([
+            self.0[0] + rhs.0[0],
+            self.0[1] + rhs.0[1],
+            self.0[2] + rhs.0[2],
+        ])
+    }
+}
+
+impl Sub for DVec3 {
+    type Output = DVec3;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        DVec3([
+            self.0[0] - rhs.0[0],
+            self.0[1] - rhs.0[1],
+            self.0[2] - rhs.0[2],
+        ])
+    }
+}
+
+impl Mul<f64> for DVec3 {
+    type Output = Self;
+
+    fn mul(self, rhs: f64) -> Self::Output {
+        DVec3(self.0.map(|c| c * rhs))
+    }
+}
+
+impl Div<f64> for DVec3 {
+    type Output = Self;
+
+    fn div(self, rhs: f64) -> Self::Output {
+        DVec3(self.0.map(|c| c / rhs))
+    }
+}
+
+impl AddAssign for DVec3 {
+    fn add_assign(&mut self, rhs: Self) {
+        for (l, r) in self.0.iter_mut().zip(rhs.0.iter()) {
+            *l += *r;
+        }
+    }
+}
+
+impl SubAssign for DVec3 {
+    fn sub_assign(&mut self, rhs: Self) {
+        for (l, r) in self.0.iter_mut().zip(rhs.0.iter()) {
+            *l -= *r;
+        }
+    }
+}
+
+impl MulAssign<f64> for DVec3 {
+    fn mul_assign(&mut self, rhs: f64) {
+        for c in self.0.iter_mut() {
+            *c *= rhs;
+        }
+    }
+}
+
+impl DivAssign<f64> for DVec3 {
+    fn div_assign(&mut self, rhs: f64) {
+        for c in self.0.iter_mut() {
+            *c /= rhs;
+        }
+    }
+}
+
+/// Default adaptor implementation for meshes with 32-bit floating point numbers
+/// to represent the geometry of the mesh.
+pub struct F32Adaptor;
+
+impl Adaptor<3> for F32Adaptor {
+    type Scalar = f32;
+    type Vector = Vec3;
+
+    fn vector(coords: [Self::Scalar; 3]) -> Self::Vector {
+        Vec3(coords)
+    }
+
+    fn zero_vector() -> Self::Vector {
+        Vec3([0., 0., 0.])
+    }
+
+    fn vector_coord(v: &Self::Vector, i: usize) -> Self::Scalar {
+        v.0[i]
+    }
+}
+
+impl VectorLengthAdaptor<3> for F32Adaptor {
+    fn vector_length(v: Self::Vector) -> Self::Scalar {
+        (v.0[0] * v.0[0] + v.0[1] * v.0[1] + v.0[2] * v.0[2]).sqrt()
+    }
+}
+
+impl VectorNormalizeAdaptor<3> for F32Adaptor {
+    fn normalized_vec(v: Self::Vector) -> Self::Vector {
+        let len = Self::vector_length(v);
+        Vec3(v.0.map(|c| c / len))
+    }
+}
+
+impl DotProductAdaptor<3> for F32Adaptor {
+    fn dot_product(a: Self::Vector, b: Self::Vector) -> Self::Scalar {
+        a.0[0] * b.0[0] + a.0[1] * b.0[1] + a.0[2] * b.0[2]
+    }
+}
+
+impl VectorAngleAdaptor for F32Adaptor {
+    fn vector_angle(a: Self::Vector, b: Self::Vector) -> Self::Scalar {
+        (Self::dot_product(a, b) / (Self::vector_length(a) * Self::vector_length(b))).acos()
+    }
+}
+
+impl CrossProductAdaptor for F32Adaptor {
+    fn cross_product(a: Self::Vector, b: Self::Vector) -> Self::Vector {
+        Vec3([
+            a.0[1] * b.0[2] - a.0[2] * b.0[1],
+            a.0[2] * b.0[0] - a.0[0] * b.0[2],
+            a.0[0] * b.0[1] - a.0[1] * b.0[0],
+        ])
+    }
+}
+
+impl FloatScalarAdaptor<3> for F32Adaptor {
+    fn scalarf32(val: f32) -> Self::Scalar {
+        val
+    }
+
+    fn scalarf64(val: f64) -> Self::Scalar {
+        val as f32
+    }
+}
+
+/// Default adaptor implementation for meshes with 64-bit floating point numbers
+/// to represent the geometry of the mesh.
+pub struct F64Adaptor;
+
+impl Adaptor<3> for F64Adaptor {
+    type Scalar = f64;
+    type Vector = [Self::Scalar; 3];
+
+    fn vector(coords: [Self::Scalar; 3]) -> Self::Vector {
+        [coords[0], coords[1], coords[2]]
+    }
+
+    fn zero_vector() -> Self::Vector {
+        [0., 0., 0.]
+    }
+
+    fn vector_coord(v: &Self::Vector, i: usize) -> Self::Scalar {
+        v[i]
+    }
+}
+
+impl VectorLengthAdaptor<3> for F64Adaptor {
+    fn vector_length(v: Self::Vector) -> Self::Scalar {
+        (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]).sqrt()
+    }
+}
+
+impl VectorNormalizeAdaptor<3> for F64Adaptor {
+    fn normalized_vec(v: Self::Vector) -> Self::Vector {
+        let len = Self::vector_length(v);
+        v.map(|c| c / len)
+    }
+}
+
+impl DotProductAdaptor<3> for F64Adaptor {
+    fn dot_product(a: Self::Vector, b: Self::Vector) -> Self::Scalar {
+        a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+    }
+}
+
+impl VectorAngleAdaptor for F64Adaptor {
+    fn vector_angle(a: Self::Vector, b: Self::Vector) -> Self::Scalar {
+        (Self::dot_product(a, b) / (Self::vector_length(a) * Self::vector_length(b))).acos()
+    }
+}
+
+impl CrossProductAdaptor for F64Adaptor {
+    fn cross_product(a: Self::Vector, b: Self::Vector) -> Self::Vector {
+        [
+            a[1] * b[2] - a[2] * b[1],
+            a[2] * b[0] - a[0] * b[2],
+            a[0] * b[1] - a[1] * b[0],
+        ]
+    }
+}
+
+impl FloatScalarAdaptor<3> for F64Adaptor {
+    fn scalarf32(val: f32) -> Self::Scalar {
+        val as f64
+    }
+
+    fn scalarf64(val: f64) -> Self::Scalar {
+        val
+    }
+}
+
+/// Mesh type that uses 32 bit floating point numbers to represent the
+/// geometry. This mesh implements all adaptors and inherits all features of
+/// this crates.
+pub type PolyMeshF32 = PolyMeshT<3, F32Adaptor>;
+
+/// Mesh type that uses 64 bit floating point numbers to represent the
+/// geometry. This mesh implements all adaptors and inherits all features of
+/// this crates.
+pub type PolyMeshF64 = PolyMeshT<3, F64Adaptor>;
+
 #[cfg(test)]
 mod test {
-    use crate::{Handle, HasTopology, use_glam::PolyMeshF32};
+    use super::Vec3;
+    use crate::{Handle, HasTopology, PolyMeshF32};
 
     #[test]
     fn t_icosahedron_clone() {
@@ -458,8 +752,8 @@ mod test {
         let copy = mesh.try_clone().unwrap();
         let src = mesh.points.try_borrow().expect("Cannot borrow points");
         let dst = copy.points.try_borrow().expect("Cannot borrow points");
-        let src: &[glam::Vec3] = &src;
-        let dst: &[glam::Vec3] = &dst;
+        let src: &[Vec3] = &src;
+        let dst: &[Vec3] = &dst;
         assert_eq!(src, dst);
         for v in copy.vertices() {
             assert_eq!(
