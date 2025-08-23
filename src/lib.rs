@@ -31,13 +31,9 @@ crate has an API that is very similar to OpenMesh.
   types that can be used without any boilerplate. These use trivial vector and
   implementation.
 
-  + [`PolyMeshF32`](PolyMeshF32) using the
-    [`BuiltInAdaptorF32`](BuiltInAdaptorF32). This mesh uses 32 bit
-    floating point types to represent the geometry.
+  + [`PolyMeshF32`] uses 32 bit floating point types to represent the geometry.
 
-  + [`PolyMeshF64`](PolyMeshF64) using the
-    [`BuiltInAdaptorF64`](BuiltInAdaptorF64). This mesh uses 64 bit
-    floating point types to represent the geometry.
+  + [`PolyMeshF64`] uses 64 bit floating point types to represent the geometry.
 
 # Halfedge Mesh Representation
 
@@ -140,10 +136,10 @@ mod status;
 mod topol;
 
 #[cfg(feature = "subdiv")]
-mod subdiv;
+pub mod subdiv;
 
 #[cfg(feature = "decimate")]
-mod decimate;
+pub mod decimate;
 
 #[cfg(feature = "decimate")]
 pub use decimate::{
