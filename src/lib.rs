@@ -27,11 +27,9 @@ crate has an API that is very similar to OpenMesh.
   [`PolyMeshT<DIM, A>`] such as computing areas of faces, normals of faces,
   normals of vertices, dihedral angles etc.
 
-+ Optionally, this crate provides some builtin adaptor implementations, and
-  concrete mesh types that can be used without any boilerplate. These builtin
-  geometric types use the [`glam`](https://crates.io/crates/glam) crate and can
-  be found in the [`use_glam`] module. `use_glam` feature is required by
-  these. These builtin types include:
++ This crate provides some default adaptor implementations, and concrete mesh
+  types that can be used without any boilerplate. These use trivial vector and
+  implementation.
 
   + [`PolyMeshF32`](PolyMeshF32) using the
     [`BuiltInAdaptorF32`](BuiltInAdaptorF32). This mesh uses 32 bit
