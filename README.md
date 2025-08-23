@@ -36,14 +36,12 @@ alum = "0.6.1"
 
 ## Usage and Features
 
-This library uses [`glam`](https://github.com/bitshifter/glam-rs) out of the box
-for geometric types such as points, normals etc. These are enabled by the
-`use_glam` feature and can be disabled if you don't want to use `glam`.
-
-You can use this library with your own geometric types for points and normals
-etc. by implementing an adaptor that tells this library how to work with your
-geometric types. Read the [documentation](https://docs.rs/alum/latest/alum/) to
-learn more about this. These
+The library includes default implementations of mesh adaptors, and corresponding
+mesh types with single and double floating point precision. If you're not happy
+with these default adaptors, you can write your own adaptor that tells the
+library how to work with the vector and scalar types of your choice. Read the
+[documentation](https://docs.rs/alum/latest/alum/) to learn more about
+this. These
 [examples](https://github.com/ranjeethmahankali/alum/tree/main/examples)
 demonstrate writing custom adaptors and rendering and using various features of
 this crate together with [`three_d`](https://github.com/asny/three-d)

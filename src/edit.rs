@@ -440,11 +440,11 @@ pub trait EditableTopology: HasIterators {
     /// Swap an edge counter-clockwise.
     ///
     /// ```rust
-    /// use alum::{use_glam::PolyMeshF32, HasTopology, Handle, HasIterators, EditableTopology};
+    /// use alum::{PolyMeshF32, HasTopology, Handle, HasIterators, EditableTopology, Vec3};
     ///
     /// let mut mesh = PolyMeshF32::new();
-    /// let verts = [glam::vec3(0.0, 0.0, 0.0), glam::vec3(1.0, 0.0, 0.0),
-    ///              glam::vec3(1.0, 1.0, 0.0), glam::vec3(0.0, 1.0, 0.0)];
+    /// let verts = [Vec3([0.0, 0.0, 0.0]), Vec3([1.0, 0.0, 0.0]),
+    ///              Vec3([1.0, 1.0, 0.0]), Vec3([0.0, 1.0, 0.0])];
     /// mesh.add_vertices(&verts).expect("Cannot add vertices");
     /// mesh.add_tri_face(0.into(), 1.into(), 2.into()).expect("Cannot add face");
     /// mesh.add_tri_face(0.into(), 2.into(), 3.into()).expect("Cannot add face");
@@ -516,10 +516,11 @@ pub trait EditableTopology: HasIterators {
     /// encountered, then mesh is unmodified and a `false` is
     /// returned. Otherwise a `true` is returned.
     /// ```rust
-    /// use alum::{use_glam::PolyMeshF32, HasTopology, Handle, HasIterators, EditableTopology};
+    /// use alum::{PolyMeshF32, HasTopology, Handle, HasIterators, EditableTopology, Vec3};
+    ///
     /// let mut mesh = PolyMeshF32::new();
-    /// let verts = [glam::vec3(0.0, 0.0, 0.0), glam::vec3(1.0, 0.0, 0.0),
-    ///              glam::vec3(1.0, 1.0, 0.0), glam::vec3(0.0, 1.0, 0.0)];
+    /// let verts = [Vec3([0.0, 0.0, 0.0]), Vec3([1.0, 0.0, 0.0]),
+    ///              Vec3([1.0, 1.0, 0.0]), Vec3([0.0, 1.0, 0.0])];
     /// mesh.add_vertices(&verts).expect("Cannot add vertices");
     /// mesh.add_tri_face(0.into(), 1.into(), 2.into()).expect("Cannot add face");
     /// mesh.add_tri_face(0.into(), 2.into(), 3.into()).expect("Cannot add face");
@@ -818,11 +819,11 @@ mod test {
         edit::EditableTopology,
         element::Handle,
         iterator::HasIterators,
+        mesh::PolyMeshF32,
         topol::{
             HasTopology, TopolCache,
             test::{loop_mesh, quad_box},
         },
-        use_glam::PolyMeshF32,
     };
 
     #[test]

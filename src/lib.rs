@@ -27,19 +27,13 @@ crate has an API that is very similar to OpenMesh.
   [`PolyMeshT<DIM, A>`] such as computing areas of faces, normals of faces,
   normals of vertices, dihedral angles etc.
 
-+ Optionally, this crate provides some builtin adaptor implementations, and
-  concrete mesh types that can be used without any boilerplate. These builtin
-  geometric types use the [`glam`](https://crates.io/crates/glam) crate and can
-  be found in the [`use_glam`] module. `use_glam` feature is required by
-  these. These builtin types include:
++ This crate provides some default adaptor implementations, and concrete mesh
+  types that can be used without any boilerplate. These use trivial vector and
+  implementation.
 
-  + [`PolyMeshF32`](use_glam::PolyMeshF32) using the
-    [`BuiltInAdaptorF32`](use_glam::BuiltInAdaptorF32). This mesh uses 32 bit
-    floating point types to represent the geometry.
+  + [`PolyMeshF32`] uses 32 bit floating point types to represent the geometry.
 
-  + [`PolyMeshF64`](use_glam::PolyMeshF64) using the
-    [`BuiltInAdaptorF64`](use_glam::BuiltInAdaptorF64). This mesh uses 64 bit
-    floating point types to represent the geometry.
+  + [`PolyMeshF64`] uses 64 bit floating point types to represent the geometry.
 
 # Halfedge Mesh Representation
 
@@ -105,7 +99,7 @@ example, the [opposite](HH::opposite) of a halfedge, and the
 indices. This is a consequence of how the halfedges and edges are stored.
 
 ```rust
-use alum::{use_glam::PolyMeshF32, HasTopology, HasIterators, Handle};
+use alum::{PolyMeshF32, HasTopology, HasIterators, Handle};
 
 let mesh = PolyMeshF32::unit_box().expect("Cannot create a box");
 
@@ -141,14 +135,11 @@ mod queue;
 mod status;
 mod topol;
 
-#[cfg(feature = "use_glam")]
-pub mod use_glam;
-
 #[cfg(feature = "subdiv")]
-mod subdiv;
+pub mod subdiv;
 
 #[cfg(feature = "decimate")]
-mod decimate;
+pub mod decimate;
 
 #[cfg(feature = "decimate")]
 pub use decimate::{
@@ -164,8 +155,8 @@ pub use history::{
 };
 pub use iterator::HasIterators;
 pub use mesh::{
-    Adaptor, CrossProductAdaptor, DotProductAdaptor, FloatScalarAdaptor, PolyMeshT,
-    VectorAngleAdaptor, VectorLengthAdaptor, VectorNormalizeAdaptor,
+    Adaptor, CrossProductAdaptor, DVec3, DotProductAdaptor, FloatScalarAdaptor, PolyMeshF32,
+    PolyMeshF64, PolyMeshT, Vec3, VectorAngleAdaptor, VectorLengthAdaptor, VectorNormalizeAdaptor,
 };
 pub use property::{
     EPropBuf, EProperty, FPropBuf, FProperty, HPropBuf, HProperty, PropBuf, Property, VPropBuf,

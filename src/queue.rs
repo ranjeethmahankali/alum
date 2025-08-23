@@ -83,6 +83,8 @@ where
         if vi >= self.map.len() {
             self.map.resize(vi + 1, None);
         }
+        // SAFETY: We just resized the vector to the correct size, so the index
+        // MUST be within bounds.
         unsafe {
             *self.map.get_unchecked_mut(vi) = Some(index);
         }

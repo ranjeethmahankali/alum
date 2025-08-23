@@ -24,16 +24,6 @@ struct RadialHalfedgeIter<'a, const CCW: bool> {
     hcurrent: Option<HH>,
 }
 
-impl<'a, const CCW: bool> RadialHalfedgeIter<'a, CCW> {
-    fn new(topol: &'a Topology, h: Option<HH>) -> Self {
-        RadialHalfedgeIter {
-            topol,
-            hstart: h,
-            hcurrent: h,
-        }
-    }
-}
-
 impl Iterator for RadialHalfedgeIter<'_, true> {
     type Item = HH;
 
@@ -75,16 +65,6 @@ struct LoopHalfedgeIter<'a, const CCW: bool> {
     topol: &'a Topology,
     hstart: HH,
     hcurrent: Option<HH>,
-}
-
-impl<'a, const CCW: bool> LoopHalfedgeIter<'a, CCW> {
-    fn new(topol: &'a Topology, h: HH) -> Self {
-        LoopHalfedgeIter {
-            topol,
-            hstart: h,
-            hcurrent: Some(h),
-        }
-    }
 }
 
 impl Iterator for LoopHalfedgeIter<'_, true> {
@@ -144,6 +124,12 @@ impl<'a, T> Iterator for RadialHalfedgeIterMut<'a, true, T> {
                     Some(start) if start != next => Some(next),
                     _ => None,
                 };
+                /* SAFETY: This is just a to get around the the fact that Rust
+                doesn't allow lending iterators. The output type of the iterator
+                cannot have a lifetime, and cannot borrow from the iterator
+                itself. `self.reference` points to `self.topol` and that
+                reference cannot be modified by anyone else.
+                 */
                 Some((unsafe { self.reference.as_mut() }, current))
             }
             None => None,
@@ -162,6 +148,12 @@ impl<'a, T> Iterator for RadialHalfedgeIterMut<'a, false, T> {
                     Some(start) if start != next => Some(next),
                     _ => None,
                 };
+                /* SAFETY: This is just a to get around the the fact that Rust
+                doesn't allow lending iterators. The output type of the iterator
+                cannot have a lifetime, and cannot borrow from the iterator
+                itself. `self.reference` points to `self.topol` and that
+                reference cannot be modified by anyone else.
+                 */
                 Some((unsafe { self.reference.as_mut() }, current))
             }
             None => None,
@@ -189,6 +181,12 @@ impl<'a, T> Iterator for LoopHalfedgeIterMut<'a, true, T> {
                 } else {
                     Some(next)
                 };
+                /* SAFETY: This is just a to get around the the fact that Rust
+                doesn't allow lending iterators. The output type of the iterator
+                cannot have a lifetime, and cannot borrow from the iterator
+                itself. `self.reference` points to `self.topol` and that
+                reference cannot be modified by anyone else.
+                 */
                 Some((unsafe { self.reference.as_mut() }, current))
             }
             None => None,
@@ -208,6 +206,12 @@ impl<'a, T> Iterator for LoopHalfedgeIterMut<'a, false, T> {
                 } else {
                     Some(next)
                 };
+                /* SAFETY: This is just a to get around the the fact that Rust
+                doesn't allow lending iterators. The output type of the iterator
+                cannot have a lifetime, and cannot borrow from the iterator
+                itself. `self.reference` points to `self.topol` and that
+                reference cannot be modified by anyone else.
+                 */
                 Some((unsafe { self.reference.as_mut() }, current))
             }
             None => None,
@@ -244,7 +248,7 @@ pub trait HasIterators: HasTopology {
     face with index 2, and modifies their positions.
 
     ```rust
-    use alum::{use_glam::PolyMeshF32, FH, HasIterators, HasTopology};
+    use alum::{PolyMeshF32, FH, HasIterators, HasTopology};
 
     let mut boxmesh = PolyMeshF32::unit_box().expect("Cannot create a box");
     assert_eq!(1.0, boxmesh.try_calc_volume().expect("Cannot compute volume"));
@@ -275,12 +279,22 @@ pub trait HasIterators: HasTopology {
 
     /// Iterator over the outgoing halfedges around a vertex, going counter-clockwise.
     fn voh_ccw_iter(&self, v: VH) -> impl Iterator<Item = HH> {
-        RadialHalfedgeIter::<true>::new(self.topology(), v.halfedge(self.topology()))
+        let h = v.halfedge(self.topology());
+        RadialHalfedgeIter::<true> {
+            topol: self.topology(),
+            hstart: h,
+            hcurrent: h,
+        }
     }
 
     /// Iterator over the outgoing halfedges around a vertex, going clockwise
     fn voh_cw_iter(&self, v: VH) -> impl Iterator<Item = HH> {
-        RadialHalfedgeIter::<false>::new(self.topology(), v.halfedge(self.topology()))
+        let h = v.halfedge(self.topology());
+        RadialHalfedgeIter::<false> {
+            topol: self.topology(),
+            hstart: h,
+            hcurrent: h,
+        }
     }
 
     /// Iterator over the incoming halfedges around a vertex, going
@@ -343,12 +357,22 @@ pub trait HasIterators: HasTopology {
 
     /// Iterator over the halfedges of a face loop, going counter-clockwise.
     fn fh_ccw_iter(&self, f: FH) -> impl Iterator<Item = HH> {
-        LoopHalfedgeIter::<true>::new(self.topology(), f.halfedge(self.topology()))
+        let h = f.halfedge(self.topology());
+        LoopHalfedgeIter::<true> {
+            topol: self.topology(),
+            hstart: h,
+            hcurrent: Some(h),
+        }
     }
 
     /// Iterator over the halfedges of a face loop, going clockwise.
     fn fh_cw_iter(&self, f: FH) -> impl Iterator<Item = HH> {
-        LoopHalfedgeIter::<false>::new(self.topology(), f.halfedge(self.topology()))
+        let h = f.halfedge(self.topology());
+        LoopHalfedgeIter::<false> {
+            topol: self.topology(),
+            hstart: h,
+            hcurrent: Some(h),
+        }
     }
 
     /// Iterator over the vertices incident on a face, going counter-clockwise.
@@ -397,7 +421,11 @@ pub trait HasIterators: HasTopology {
     /// This is equivalent to a circular shifted [`Self::voh_ccw_iter`] of the
     /// vertex at the tail of this halfedge.
     fn ccw_rotate_iter(&self, h: HH) -> impl Iterator<Item = HH> {
-        RadialHalfedgeIter::<true>::new(self.topology(), Some(h))
+        RadialHalfedgeIter::<true> {
+            topol: self.topology(),
+            hstart: Some(h),
+            hcurrent: Some(h),
+        }
     }
 
     /// This is similar to [`Self::voh_cw_iter`] around the tail of the given
@@ -406,7 +434,11 @@ pub trait HasIterators: HasTopology {
     /// This is equivalent to a circular shifted [`Self::voh_cw_iter`] of the
     /// vertex at the tail of this halfedge.
     fn cw_rotate_iter(&self, h: HH) -> impl Iterator<Item = HH> {
-        RadialHalfedgeIter::<false>::new(self.topology(), Some(h))
+        RadialHalfedgeIter::<false> {
+            topol: self.topology(),
+            hstart: Some(h),
+            hcurrent: Some(h),
+        }
     }
 
     /// Counter-clockwise iterator over the halfedges in a loop.
@@ -416,7 +448,11 @@ pub trait HasIterators: HasTopology {
     /// [`Self::fh_ccw_iter`] of the incident face. If the halfedge is on the
     /// boundary, this iterator goes over the boundary loop counter-clockwise.
     fn loop_ccw_iter(&self, h: HH) -> impl Iterator<Item = HH> {
-        LoopHalfedgeIter::<true>::new(self.topology(), h)
+        LoopHalfedgeIter::<true> {
+            topol: self.topology(),
+            hstart: h,
+            hcurrent: Some(h),
+        }
     }
 
     /// Counter-clockwise iterator over the halfedges in a loop.
@@ -426,7 +462,11 @@ pub trait HasIterators: HasTopology {
     /// [`Self::fh_cw_iter`] of the incident face. If the halfedge is on the
     /// boundary, this iterator goes over the boundary loop clockwise.
     fn loop_cw_iter(&self, h: HH) -> impl Iterator<Item = HH> {
-        LoopHalfedgeIter::<false>::new(self.topology(), h)
+        LoopHalfedgeIter::<false> {
+            topol: self.topology(),
+            hstart: h,
+            hcurrent: Some(h),
+        }
     }
 
     /// Iterator over the outgoing halfedges around a vertex, going
@@ -731,11 +771,11 @@ pub trait HasIterators: HasTopology {
     /// The triangulation does not take the shape of the face into account. It
     /// only accounts for the topology of the face.
     /// ```rust
-    /// use alum::{use_glam::PolyMeshF32, Handle, HasTopology, HasIterators};
+    /// use alum::{PolyMeshF32, Handle, HasTopology, HasIterators, Vec3};
     ///
     /// let mut mesh = PolyMeshF32::new();
-    /// let verts = [glam::vec3(0.0, 0.0, 0.0), glam::vec3(1.0, 0.0, 0.0),
-    ///              glam::vec3(1.0, 1.0, 0.0), glam::vec3(0.0, 1.0, 0.0)];
+    /// let verts = [Vec3([0.0, 0.0, 0.0]), Vec3([1.0, 0.0, 0.0]),
+    ///              Vec3([1.0, 1.0, 0.0]), Vec3([0.0, 1.0, 0.0])];
     /// mesh.add_vertices(&verts).expect("Cannot add vertices");
     /// mesh.add_quad_face(0.into(), 1.into(), 2.into(), 3.into());
     /// assert_eq!(mesh.triangulated_face_vertices(0.into())
@@ -756,11 +796,11 @@ pub trait HasIterators: HasTopology {
     /// account. It only accounts for the topology.
     ///
     /// ```rust
-    /// use alum::{use_glam::PolyMeshF32, Handle, HasTopology, HasIterators};
+    /// use alum::{PolyMeshF32, Handle, HasTopology, HasIterators, Vec3};
     ///
     /// let mut mesh = PolyMeshF32::new();
-    /// let verts = [glam::vec3(0.0, 0.0, 0.0), glam::vec3(1.0, 0.0, 0.0),
-    ///              glam::vec3(1.0, 1.0, 0.0), glam::vec3(0.0, 1.0, 0.0)];
+    /// let verts = [Vec3([0.0, 0.0, 0.0]), Vec3([1.0, 0.0, 0.0]),
+    ///              Vec3([1.0, 1.0, 0.0]), Vec3([0.0, 1.0, 0.0])];
     /// mesh.add_vertices(&verts).expect("Cannot add vertices");
     /// mesh.add_quad_face(0.into(), 1.into(), 2.into(), 3.into());
     /// let fstatus = mesh.face_status_prop();
@@ -803,8 +843,8 @@ mod test {
     use crate::{
         element::{Handle, VH},
         iterator::HasIterators,
+        mesh::PolyMeshF32,
         topol::{HasTopology, TopolCache, Topology},
-        use_glam::PolyMeshF32,
     };
     use arrayvec::ArrayVec;
 
