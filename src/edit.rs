@@ -443,8 +443,8 @@ pub trait EditableTopology: HasIterators {
     /// use alum::{PolyMeshF32, HasTopology, Handle, HasIterators, EditableTopology, Vec3};
     ///
     /// let mut mesh = PolyMeshF32::new();
-    /// let verts = [Vec3([0.0, 0.0, 0.0]), Vec3([1.0, 0.0, 0.0]),
-    ///              Vec3([1.0, 1.0, 0.0]), Vec3([0.0, 1.0, 0.0])];
+    /// let verts = [Vec3(0.0, 0.0, 0.0), Vec3(1.0, 0.0, 0.0),
+    ///              Vec3(1.0, 1.0, 0.0), Vec3(0.0, 1.0, 0.0)];
     /// mesh.add_vertices(&verts).expect("Cannot add vertices");
     /// mesh.add_tri_face(0.into(), 1.into(), 2.into()).expect("Cannot add face");
     /// mesh.add_tri_face(0.into(), 2.into(), 3.into()).expect("Cannot add face");
@@ -519,8 +519,8 @@ pub trait EditableTopology: HasIterators {
     /// use alum::{PolyMeshF32, HasTopology, Handle, HasIterators, EditableTopology, Vec3};
     ///
     /// let mut mesh = PolyMeshF32::new();
-    /// let verts = [Vec3([0.0, 0.0, 0.0]), Vec3([1.0, 0.0, 0.0]),
-    ///              Vec3([1.0, 1.0, 0.0]), Vec3([0.0, 1.0, 0.0])];
+    /// let verts = [Vec3(0.0, 0.0, 0.0), Vec3(1.0, 0.0, 0.0),
+    ///              Vec3(1.0, 1.0, 0.0), Vec3(0.0, 1.0, 0.0)];
     /// mesh.add_vertices(&verts).expect("Cannot add vertices");
     /// mesh.add_tri_face(0.into(), 1.into(), 2.into()).expect("Cannot add face");
     /// mesh.add_tri_face(0.into(), 2.into(), 3.into()).expect("Cannot add face");

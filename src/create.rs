@@ -439,7 +439,7 @@ mod test {
 
     #[test]
     fn t_quad_box() {
-        let qbox = PolyMeshF32::quad_box(Vec3([0., 0., 0.]), Vec3([1., 1., 1.]))
+        let qbox = PolyMeshF32::quad_box(Vec3(0., 0., 0.), Vec3(1., 1., 1.))
             .expect("Cannot create a quad box mesh");
         assert_eq!(qbox.num_vertices(), 8);
         assert_eq!(qbox.num_halfedges(), 24);

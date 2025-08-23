@@ -369,7 +369,7 @@ where
     /// ```rust
     /// use alum::{PolyMeshF32, HasTopology, Vec3};
     ///
-    /// let qbox = PolyMeshF32::quad_box(Vec3([0.0, 0.0, 0.0]), Vec3([1.0, 1.0, 1.0]))
+    /// let qbox = PolyMeshF32::quad_box(Vec3(0.0, 0.0, 0.0), Vec3(1.0, 1.0, 1.0))
     ///     .expect("Cannot create a box primitive");
     /// // All edges of a unit cube must be of length 1.
     /// for e in qbox.edges() {
@@ -406,7 +406,7 @@ where
     /// ```rust
     /// use alum::{PolyMeshF32, HasTopology, Vec3};
     ///
-    /// let qbox = PolyMeshF32::quad_box(Vec3([0.0, 0.0, 0.0]), Vec3([1.0, 1.0, 1.0]))
+    /// let qbox = PolyMeshF32::quad_box(Vec3(0.0, 0.0, 0.0), Vec3(1.0, 1.0, 1.0))
     ///     .expect("Cannot create a box primitive");
     /// // All edges of a unit cube must be of squared length 1.
     /// for e in qbox.edges() {
@@ -696,7 +696,7 @@ mod test {
 
     #[test]
     fn t_box_face_normals() {
-        let qbox = PolyMeshF32::quad_box(Vec3([0.0, 0.0, 0.0]), Vec3([1.0, 1.0, 1.0]))
+        let qbox = PolyMeshF32::quad_box(Vec3(0.0, 0.0, 0.0), Vec3(1.0, 1.0, 1.0))
             .expect("Cannot create a box primitive");
         assert_eq!(
             qbox.faces()
@@ -706,19 +706,19 @@ mod test {
                 })
                 .collect::<Vec<_>>(),
             &[
-                Vec3([0.0, 0.0, -1.0]),
-                Vec3([0.0, -1.0, 0.0]),
-                Vec3([1.0, 0.0, 0.0]),
-                Vec3([0.0, 1.0, 0.0]),
-                Vec3([-1.0, 0.0, 0.0]),
-                Vec3([0.0, 0.0, 1.0]),
+                Vec3(0.0, 0.0, -1.0),
+                Vec3(0.0, -1.0, 0.0),
+                Vec3(1.0, 0.0, 0.0),
+                Vec3(0.0, 1.0, 0.0),
+                Vec3(-1.0, 0.0, 0.0),
+                Vec3(0.0, 0.0, 1.0),
             ]
         );
     }
 
     #[test]
     fn t_box_face_centroids() {
-        let qbox = PolyMeshF32::quad_box(Vec3([0.0, 0.0, 0.0]), Vec3([1.0, 1.0, 1.0]))
+        let qbox = PolyMeshF32::quad_box(Vec3(0.0, 0.0, 0.0), Vec3(1.0, 1.0, 1.0))
             .expect("Cannot create a box primitive");
         assert_eq!(
             qbox.faces()
@@ -728,19 +728,19 @@ mod test {
                 })
                 .collect::<Vec<_>>(),
             &[
-                Vec3([0.5, 0.5, 0.0]),
-                Vec3([0.5, 0.0, 0.5]),
-                Vec3([1.0, 0.5, 0.5]),
-                Vec3([0.5, 1.0, 0.5]),
-                Vec3([0.0, 0.5, 0.5]),
-                Vec3([0.5, 0.5, 1.0]),
+                Vec3(0.5, 0.5, 0.0),
+                Vec3(0.5, 0.0, 0.5),
+                Vec3(1.0, 0.5, 0.5),
+                Vec3(0.5, 1.0, 0.5),
+                Vec3(0.0, 0.5, 0.5),
+                Vec3(0.5, 0.5, 1.0),
             ]
         );
     }
 
     #[test]
     fn t_box_edge_vectors() {
-        let qbox = PolyMeshF32::quad_box(Vec3([0.0, 0.0, 0.0]), Vec3([1.0, 1.0, 1.0]))
+        let qbox = PolyMeshF32::quad_box(Vec3(0.0, 0.0, 0.0), Vec3(1.0, 1.0, 1.0))
             .expect("Cannot create a box primitive");
         assert_eq!(
             qbox.halfedges()
@@ -750,37 +750,37 @@ mod test {
                 })
                 .collect::<Vec<_>>(),
             &[
-                Vec3([0.0, 1.0, 0.0]),
-                Vec3([0.0, -1.0, 0.0]),
-                Vec3([1.0, 0.0, 0.0]),
-                Vec3([-1.0, 0.0, 0.0]),
-                Vec3([0.0, -1.0, 0.0]),
-                Vec3([0.0, 1.0, 0.0]),
-                Vec3([-1.0, 0.0, 0.0]),
-                Vec3([1.0, 0.0, 0.0]),
-                Vec3([0.0, 0.0, 1.0]),
-                Vec3([0.0, 0.0, -1.0]),
-                Vec3([-1.0, 0.0, 0.0]),
-                Vec3([1.0, 0.0, 0.0]),
-                Vec3([0.0, 0.0, -1.0]),
-                Vec3([0.0, 0.0, 1.0]),
-                Vec3([0.0, 0.0, 1.0]),
-                Vec3([0.0, 0.0, -1.0]),
-                Vec3([0.0, -1.0, 0.0]),
-                Vec3([0.0, 1.0, 0.0]),
-                Vec3([0.0, 0.0, 1.0]),
-                Vec3([0.0, 0.0, -1.0]),
-                Vec3([1.0, 0.0, 0.0]),
-                Vec3([-1.0, 0.0, 0.0]),
-                Vec3([0.0, 1.0, 0.0]),
-                Vec3([0.0, -1.0, 0.0])
+                Vec3(0.0, 1.0, 0.0),
+                Vec3(0.0, -1.0, 0.0),
+                Vec3(1.0, 0.0, 0.0),
+                Vec3(-1.0, 0.0, 0.0),
+                Vec3(0.0, -1.0, 0.0),
+                Vec3(0.0, 1.0, 0.0),
+                Vec3(-1.0, 0.0, 0.0),
+                Vec3(1.0, 0.0, 0.0),
+                Vec3(0.0, 0.0, 1.0),
+                Vec3(0.0, 0.0, -1.0),
+                Vec3(-1.0, 0.0, 0.0),
+                Vec3(1.0, 0.0, 0.0),
+                Vec3(0.0, 0.0, -1.0),
+                Vec3(0.0, 0.0, 1.0),
+                Vec3(0.0, 0.0, 1.0),
+                Vec3(0.0, 0.0, -1.0),
+                Vec3(0.0, -1.0, 0.0),
+                Vec3(0.0, 1.0, 0.0),
+                Vec3(0.0, 0.0, 1.0),
+                Vec3(0.0, 0.0, -1.0),
+                Vec3(1.0, 0.0, 0.0),
+                Vec3(-1.0, 0.0, 0.0),
+                Vec3(0.0, 1.0, 0.0),
+                Vec3(0.0, -1.0, 0.0)
             ]
         );
     }
 
     #[test]
     fn t_box_accurate_vertex_normals() {
-        let qbox = PolyMeshF32::quad_box(Vec3([0.0, 0.0, 0.0]), Vec3([1.0, 1.0, 1.0]))
+        let qbox = PolyMeshF32::quad_box(Vec3(0.0, 0.0, 0.0), Vec3(1.0, 1.0, 1.0))
             .expect("Cannot create a box primitive");
         assert_eq!(
             qbox.vertices()
@@ -789,21 +789,21 @@ mod test {
                     .expect("Cannot compute the correct vertex normal"))
                 .collect::<Vec<_>>(),
             &[
-                Vec3([-0.57735026, -0.57735026, -0.57735026]),
-                Vec3([0.57735026, -0.57735026, -0.57735026]),
-                Vec3([0.57735026, 0.57735026, -0.57735026]),
-                Vec3([-0.57735026, 0.57735026, -0.57735026]),
-                Vec3([-0.57735026, -0.57735026, 0.57735026]),
-                Vec3([0.57735026, -0.57735026, 0.57735026]),
-                Vec3([0.57735026, 0.57735026, 0.57735026]),
-                Vec3([-0.57735026, 0.57735026, 0.57735026]),
+                Vec3(-0.57735026, -0.57735026, -0.57735026),
+                Vec3(0.57735026, -0.57735026, -0.57735026),
+                Vec3(0.57735026, 0.57735026, -0.57735026),
+                Vec3(-0.57735026, 0.57735026, -0.57735026),
+                Vec3(-0.57735026, -0.57735026, 0.57735026),
+                Vec3(0.57735026, -0.57735026, 0.57735026),
+                Vec3(0.57735026, 0.57735026, 0.57735026),
+                Vec3(-0.57735026, 0.57735026, 0.57735026),
             ]
         );
     }
 
     #[test]
     fn t_box_fast_vertex_normals() {
-        let mut qbox = PolyMeshF32::quad_box(Vec3([0.0, 0.0, 0.0]), Vec3([1.0, 1.0, 1.0]))
+        let mut qbox = PolyMeshF32::quad_box(Vec3(0.0, 0.0, 0.0), Vec3(1.0, 1.0, 1.0))
             .expect("Cannot create a box primitive");
         assert!(!qbox.has_face_normals());
         // Update and verify face normals.
@@ -815,12 +815,12 @@ mod test {
         assert_eq!(
             fnormals.as_ref(),
             &[
-                Vec3([0.0, 0.0, -1.0]),
-                Vec3([0.0, -1.0, 0.0]),
-                Vec3([1.0, 0.0, 0.0]),
-                Vec3([0.0, 1.0, 0.0]),
-                Vec3([-1.0, 0.0, 0.0]),
-                Vec3([0.0, 0.0, 1.0]),
+                Vec3(0.0, 0.0, -1.0),
+                Vec3(0.0, -1.0, 0.0),
+                Vec3(1.0, 0.0, 0.0),
+                Vec3(0.0, 1.0, 0.0),
+                Vec3(-1.0, 0.0, 0.0),
+                Vec3(0.0, 0.0, 1.0),
             ]
         );
         let qbox = qbox; // Immutable.
@@ -830,21 +830,21 @@ mod test {
                 .map(|v| qbox.calc_vertex_normal_fast(v, &fnormals))
                 .collect::<Vec<_>>(),
             &[
-                Vec3([-0.57735026, -0.57735026, -0.57735026]),
-                Vec3([0.57735026, -0.57735026, -0.57735026]),
-                Vec3([0.57735026, 0.57735026, -0.57735026]),
-                Vec3([-0.57735026, 0.57735026, -0.57735026]),
-                Vec3([-0.57735026, -0.57735026, 0.57735026]),
-                Vec3([0.57735026, -0.57735026, 0.57735026]),
-                Vec3([0.57735026, 0.57735026, 0.57735026]),
-                Vec3([-0.57735026, 0.57735026, 0.57735026]),
+                Vec3(-0.57735026, -0.57735026, -0.57735026),
+                Vec3(0.57735026, -0.57735026, -0.57735026),
+                Vec3(0.57735026, 0.57735026, -0.57735026),
+                Vec3(-0.57735026, 0.57735026, -0.57735026),
+                Vec3(-0.57735026, -0.57735026, 0.57735026),
+                Vec3(0.57735026, -0.57735026, 0.57735026),
+                Vec3(0.57735026, 0.57735026, 0.57735026),
+                Vec3(-0.57735026, 0.57735026, 0.57735026),
             ]
         );
     }
 
     #[test]
     fn t_box_sector_area() {
-        let qbox = PolyMeshF32::quad_box(Vec3([0.0, 0.0, 0.0]), Vec3([1.0, 1.0, 1.0]))
+        let qbox = PolyMeshF32::quad_box(Vec3(0.0, 0.0, 0.0), Vec3(1.0, 1.0, 1.0))
             .expect("Cannot create a box primitive");
         let points = qbox.points();
         let points = points
@@ -857,7 +857,7 @@ mod test {
 
     #[test]
     fn t_box_face_areas() {
-        let qbox = PolyMeshF32::quad_box(Vec3([0.0, 0.0, 0.0]), Vec3([1.0, 1.0, 1.0]))
+        let qbox = PolyMeshF32::quad_box(Vec3(0.0, 0.0, 0.0), Vec3(1.0, 1.0, 1.0))
             .expect("Cannot create a box primitive");
         let points = qbox.points();
         let points = points.try_borrow().expect("Cannot borrow points");
@@ -868,21 +868,21 @@ mod test {
 
     #[test]
     fn t_box_total_area() {
-        let qbox = PolyMeshF32::quad_box(Vec3([0.0, 0.0, 0.0]), Vec3([1.0, 1.0, 1.0]))
+        let qbox = PolyMeshF32::quad_box(Vec3(0.0, 0.0, 0.0), Vec3(1.0, 1.0, 1.0))
             .expect("Cannot create a box primitive");
         assert_eq!(qbox.try_calc_area().expect("Unable to calculate area"), 6.0);
     }
 
     #[test]
     fn t_box_volume() {
-        let qbox = PolyMeshF32::quad_box(Vec3([0.0, 0.0, 0.0]), Vec3([1.0, 1.0, 1.0]))
+        let qbox = PolyMeshF32::quad_box(Vec3(0.0, 0.0, 0.0), Vec3(1.0, 1.0, 1.0))
             .expect("Cannot create a box primitive");
         assert_eq!(qbox.try_calc_volume().expect("Cannot compute volume"), 1.0);
     }
 
     #[test]
     fn t_box_update_vertex_normals_fast() {
-        let mut qbox = PolyMeshF32::quad_box(Vec3([0.0, 0.0, 0.0]), Vec3([1.0, 1.0, 1.0]))
+        let mut qbox = PolyMeshF32::quad_box(Vec3(0.0, 0.0, 0.0), Vec3(1.0, 1.0, 1.0))
             .expect("Cannot create a box primitive");
         assert!(!qbox.has_vertex_normals());
         qbox.update_face_normals()
@@ -896,21 +896,21 @@ mod test {
         assert_eq!(
             vnormals,
             &[
-                Vec3([-0.57735026, -0.57735026, -0.57735026]),
-                Vec3([0.57735026, -0.57735026, -0.57735026]),
-                Vec3([0.57735026, 0.57735026, -0.57735026]),
-                Vec3([-0.57735026, 0.57735026, -0.57735026]),
-                Vec3([-0.57735026, -0.57735026, 0.57735026]),
-                Vec3([0.57735026, -0.57735026, 0.57735026]),
-                Vec3([0.57735026, 0.57735026, 0.57735026]),
-                Vec3([-0.57735026, 0.57735026, 0.57735026]),
+                Vec3(-0.57735026, -0.57735026, -0.57735026),
+                Vec3(0.57735026, -0.57735026, -0.57735026),
+                Vec3(0.57735026, 0.57735026, -0.57735026),
+                Vec3(-0.57735026, 0.57735026, -0.57735026),
+                Vec3(-0.57735026, -0.57735026, 0.57735026),
+                Vec3(0.57735026, -0.57735026, 0.57735026),
+                Vec3(0.57735026, 0.57735026, 0.57735026),
+                Vec3(-0.57735026, 0.57735026, 0.57735026),
             ]
         );
     }
 
     #[test]
     fn t_box_update_vertex_normals_accurate() {
-        let mut qbox = PolyMeshF32::quad_box(Vec3([0.0, 0.0, 0.0]), Vec3([1.0, 1.0, 1.0]))
+        let mut qbox = PolyMeshF32::quad_box(Vec3(0.0, 0.0, 0.0), Vec3(1.0, 1.0, 1.0))
             .expect("Cannot create a box primitive");
         assert!(!qbox.has_vertex_normals());
         let vnormals = qbox
@@ -922,21 +922,21 @@ mod test {
         assert_eq!(
             vnormals,
             &[
-                Vec3([-0.57735026, -0.57735026, -0.57735026]),
-                Vec3([0.57735026, -0.57735026, -0.57735026]),
-                Vec3([0.57735026, 0.57735026, -0.57735026]),
-                Vec3([-0.57735026, 0.57735026, -0.57735026]),
-                Vec3([-0.57735026, -0.57735026, 0.57735026]),
-                Vec3([0.57735026, -0.57735026, 0.57735026]),
-                Vec3([0.57735026, 0.57735026, 0.57735026]),
-                Vec3([-0.57735026, 0.57735026, 0.57735026]),
+                Vec3(-0.57735026, -0.57735026, -0.57735026),
+                Vec3(0.57735026, -0.57735026, -0.57735026),
+                Vec3(0.57735026, 0.57735026, -0.57735026),
+                Vec3(-0.57735026, 0.57735026, -0.57735026),
+                Vec3(-0.57735026, -0.57735026, 0.57735026),
+                Vec3(0.57735026, -0.57735026, 0.57735026),
+                Vec3(0.57735026, 0.57735026, 0.57735026),
+                Vec3(-0.57735026, 0.57735026, 0.57735026),
             ]
         );
     }
 
     #[test]
     fn t_box_sector_normals() {
-        let qbox = PolyMeshF32::quad_box(Vec3([0.0, 0.0, 0.0]), Vec3([1.0, 1.0, 1.0]))
+        let qbox = PolyMeshF32::quad_box(Vec3(0.0, 0.0, 0.0), Vec3(1.0, 1.0, 1.0))
             .expect("Cannot create a box primitive");
         let points = qbox.points();
         let points = points.try_borrow().expect("Cannot borrow points");
@@ -950,7 +950,7 @@ mod test {
 
     #[test]
     fn t_box_fast_dihedral_angles() {
-        let mut qbox = PolyMeshF32::quad_box(Vec3([0.0, 0.0, 0.0]), Vec3([1.0, 1.0, 1.0]))
+        let mut qbox = PolyMeshF32::quad_box(Vec3(0.0, 0.0, 0.0), Vec3(1.0, 1.0, 1.0))
             .expect("Cannot create a box primitive");
         for e in qbox.edges() {
             let out = qbox.try_calc_dihedral_angle_fast(e);
@@ -970,7 +970,7 @@ mod test {
 
     #[test]
     fn t_box_dihedral_angles() {
-        let qbox = PolyMeshF32::quad_box(Vec3([0.0, 0.0, 0.0]), Vec3([1.0, 1.0, 1.0]))
+        let qbox = PolyMeshF32::quad_box(Vec3(0.0, 0.0, 0.0), Vec3(1.0, 1.0, 1.0))
             .expect("Cannot create a box primitive");
         for e in qbox.edges() {
             assert_f32_eq!(
@@ -983,7 +983,7 @@ mod test {
 
     #[test]
     fn t_box_sector_angles() {
-        let mut qbox = PolyMeshF32::quad_box(Vec3([0.0, 0.0, 0.0]), Vec3([1.0, 1.0, 1.0]))
+        let mut qbox = PolyMeshF32::quad_box(Vec3(0.0, 0.0, 0.0), Vec3(1.0, 1.0, 1.0))
             .expect("Cannot create a box primitive");
         assert!(matches!(
             qbox.try_calc_sector_angle(0.into()),
@@ -1025,7 +1025,7 @@ mod test {
 
     #[test]
     fn t_box_edge_lengths() {
-        let qbox = PolyMeshF32::quad_box(Vec3([0.0, 0.0, 0.0]), Vec3([1.0, 1.0, 1.0]))
+        let qbox = PolyMeshF32::quad_box(Vec3(0.0, 0.0, 0.0), Vec3(1.0, 1.0, 1.0))
             .expect("Cannot create a box primitive");
         for e in qbox.edges() {
             assert_eq!(
