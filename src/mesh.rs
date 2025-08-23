@@ -206,7 +206,7 @@ where
     /// let vnormals = mesh.request_vertex_normals();
     /// let vnormals = vnormals.try_borrow().expect("Cannot borrow property");
     /// for v in vnormals.iter() {
-    ///     assert_eq!(Vec3([0.0, 0.0, 0.0]), *v);
+    ///     assert_eq!(Vec3(0.0, 0.0, 0.0), *v);
     /// }
     /// ```
     pub fn request_vertex_normals(&mut self) -> VProperty<A::Vector> {
@@ -237,7 +237,7 @@ where
     /// let fnormals = mesh.request_face_normals();
     /// let fnormals = fnormals.try_borrow().expect("Cannot borrow property");
     /// for v in fnormals.iter() {
-    ///     assert_eq!(Vec3([0.0, 0.0, 0.0]), *v);
+    ///     assert_eq!(Vec3(0.0, 0.0, 0.0), *v);
     /// }
     /// ```
     pub fn request_face_normals(&mut self) -> FProperty<A::Vector> {
@@ -261,12 +261,12 @@ where
     /// use alum::{PolyMeshF32, Vec3};
     ///
     /// let mut mesh = PolyMeshF32::new();
-    /// let verts = [Vec3([0.0, 0.0, 0.0]), Vec3([1.0, 0.0, 0.0]),
-    ///              Vec3([1.0, 1.0, 0.0]), Vec3([0.0, 1.0, 0.0])];
+    /// let verts = [Vec3(0.0, 0.0, 0.0), Vec3(1.0, 0.0, 0.0),
+    ///              Vec3(1.0, 1.0, 0.0), Vec3(0.0, 1.0, 0.0)];
     /// let verts = mesh.add_vertices(&verts).expect("Cannot add vertices");
     /// assert_eq!(verts, (0..4).into());
-    /// let verts = [Vec3([0.0, 0.0, 1.0]), Vec3([1.0, 0.0, 1.0]),
-    ///              Vec3([1.0, 1.0, 1.0]), Vec3([0.0, 1.0, 1.0]),];
+    /// let verts = [Vec3(0.0, 0.0, 1.0), Vec3(1.0, 0.0, 1.0),
+    ///              Vec3(1.0, 1.0, 1.0), Vec3(0.0, 1.0, 1.0),];
     /// let verts = mesh.add_vertices(&verts).expect("Cannot add vertices");
     /// assert_eq!(verts, (4..8).into());
     /// ```

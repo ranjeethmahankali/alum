@@ -774,8 +774,8 @@ pub trait HasIterators: HasTopology {
     /// use alum::{PolyMeshF32, Handle, HasTopology, HasIterators, Vec3};
     ///
     /// let mut mesh = PolyMeshF32::new();
-    /// let verts = [Vec3([0.0, 0.0, 0.0]), Vec3([1.0, 0.0, 0.0]),
-    ///              Vec3([1.0, 1.0, 0.0]), Vec3([0.0, 1.0, 0.0])];
+    /// let verts = [Vec3(0.0, 0.0, 0.0), Vec3(1.0, 0.0, 0.0),
+    ///              Vec3(1.0, 1.0, 0.0), Vec3(0.0, 1.0, 0.0)];
     /// mesh.add_vertices(&verts).expect("Cannot add vertices");
     /// mesh.add_quad_face(0.into(), 1.into(), 2.into(), 3.into());
     /// assert_eq!(mesh.triangulated_face_vertices(0.into())
@@ -799,8 +799,8 @@ pub trait HasIterators: HasTopology {
     /// use alum::{PolyMeshF32, Handle, HasTopology, HasIterators, Vec3};
     ///
     /// let mut mesh = PolyMeshF32::new();
-    /// let verts = [Vec3([0.0, 0.0, 0.0]), Vec3([1.0, 0.0, 0.0]),
-    ///              Vec3([1.0, 1.0, 0.0]), Vec3([0.0, 1.0, 0.0])];
+    /// let verts = [Vec3(0.0, 0.0, 0.0), Vec3(1.0, 0.0, 0.0),
+    ///              Vec3(1.0, 1.0, 0.0), Vec3(0.0, 1.0, 0.0)];
     /// mesh.add_vertices(&verts).expect("Cannot add vertices");
     /// mesh.add_quad_face(0.into(), 1.into(), 2.into(), 3.into());
     /// let fstatus = mesh.face_status_prop();

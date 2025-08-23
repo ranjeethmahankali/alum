@@ -369,7 +369,7 @@ where
     /// ```rust
     /// use alum::{PolyMeshF32, HasTopology, Vec3};
     ///
-    /// let qbox = PolyMeshF32::quad_box(Vec3([0.0, 0.0, 0.0]), Vec3([1.0, 1.0, 1.0]))
+    /// let qbox = PolyMeshF32::quad_box(Vec3(0.0, 0.0, 0.0), Vec3(1.0, 1.0, 1.0))
     ///     .expect("Cannot create a box primitive");
     /// // All edges of a unit cube must be of length 1.
     /// for e in qbox.edges() {
@@ -406,7 +406,7 @@ where
     /// ```rust
     /// use alum::{PolyMeshF32, HasTopology, Vec3};
     ///
-    /// let qbox = PolyMeshF32::quad_box(Vec3([0.0, 0.0, 0.0]), Vec3([1.0, 1.0, 1.0]))
+    /// let qbox = PolyMeshF32::quad_box(Vec3(0.0, 0.0, 0.0), Vec3(1.0, 1.0, 1.0))
     ///     .expect("Cannot create a box primitive");
     /// // All edges of a unit cube must be of squared length 1.
     /// for e in qbox.edges() {
