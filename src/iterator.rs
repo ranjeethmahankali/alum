@@ -124,6 +124,12 @@ impl<'a, T> Iterator for RadialHalfedgeIterMut<'a, true, T> {
                     Some(start) if start != next => Some(next),
                     _ => None,
                 };
+                /* SAFETY: This is just a to get around the the fact that Rust
+                doesn't allow lending iterators. The output type of the iterator
+                cannot have a lifetime, and cannot borrow from the iterator
+                itself. `self.reference` points to `self.topol` and that
+                reference cannot be modified by anyone else.
+                 */
                 Some((unsafe { self.reference.as_mut() }, current))
             }
             None => None,
@@ -142,6 +148,12 @@ impl<'a, T> Iterator for RadialHalfedgeIterMut<'a, false, T> {
                     Some(start) if start != next => Some(next),
                     _ => None,
                 };
+                /* SAFETY: This is just a to get around the the fact that Rust
+                doesn't allow lending iterators. The output type of the iterator
+                cannot have a lifetime, and cannot borrow from the iterator
+                itself. `self.reference` points to `self.topol` and that
+                reference cannot be modified by anyone else.
+                 */
                 Some((unsafe { self.reference.as_mut() }, current))
             }
             None => None,
@@ -169,6 +181,12 @@ impl<'a, T> Iterator for LoopHalfedgeIterMut<'a, true, T> {
                 } else {
                     Some(next)
                 };
+                /* SAFETY: This is just a to get around the the fact that Rust
+                doesn't allow lending iterators. The output type of the iterator
+                cannot have a lifetime, and cannot borrow from the iterator
+                itself. `self.reference` points to `self.topol` and that
+                reference cannot be modified by anyone else.
+                 */
                 Some((unsafe { self.reference.as_mut() }, current))
             }
             None => None,
@@ -188,6 +206,12 @@ impl<'a, T> Iterator for LoopHalfedgeIterMut<'a, false, T> {
                 } else {
                     Some(next)
                 };
+                /* SAFETY: This is just a to get around the the fact that Rust
+                doesn't allow lending iterators. The output type of the iterator
+                cannot have a lifetime, and cannot borrow from the iterator
+                itself. `self.reference` points to `self.topol` and that
+                reference cannot be modified by anyone else.
+                 */
                 Some((unsafe { self.reference.as_mut() }, current))
             }
             None => None,
