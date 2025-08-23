@@ -53,8 +53,7 @@ impl Decimater<PolygonMesh> for RecordingDecimater {
 }
 
 fn bunny_mesh() -> PolygonMesh {
-    let mesh = PolygonMesh::load_obj(PathBuf::from("/home/rnjth94/dev/alum/assets/bunny.obj"))
-        .expect("Cannot load obj");
+    let mesh = PolygonMesh::load_obj(PathBuf::from("assets/bunny.obj")).expect("Cannot load obj");
     {
         let mut points = mesh.points();
         let mut points = points.try_borrow_mut().expect("Cannot borrow points");
