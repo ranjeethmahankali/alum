@@ -1238,11 +1238,10 @@ mod test {
             // loop to `mesh`, the borrow checker should complain and the code
             // should not compile.
             for (m, h) in mesh.voh_ccw_iter_mut(v) {
-                if let Some(f) = h.face(m) {
-                    if (f.index() + h.index()) % 2 != 0 {
+                if let Some(f) = h.face(m)
+                    && (f.index() + h.index()) % 2 != 0 {
                         m.delete_face(f, true).expect("Cannot delete face");
                     }
-                }
             }
         }
         mesh.garbage_collection()

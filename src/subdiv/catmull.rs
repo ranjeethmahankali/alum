@@ -158,7 +158,7 @@ where
         hloop.clear();
         hloop.extend(mesh.loop_ccw_iter(hstart));
         let hloop: &[HH] = hloop; // Immutable.
-        debug_assert!(hloop.len() % 2 == 0);
+        debug_assert!(hloop.len().is_multiple_of(2));
         let valence = mesh.loop_ccw_iter(hstart).count() / 2;
         debug_assert_eq!(valence * 2, hloop.len());
         let ne = mesh.num_edges();

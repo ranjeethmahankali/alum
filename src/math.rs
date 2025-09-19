@@ -587,13 +587,12 @@ where
         let h2 = h.prev(self).opposite();
         let n1 = self.calc_halfedge_vector(h2, points);
         let angle = A::vector_angle(n0, n1);
-        if let Some(f) = h.opposite().face(self) {
-            if h.is_boundary(self)
+        if let Some(f) = h.opposite().face(self)
+            && h.is_boundary(self)
                 && A::dot_product(A::cross_product(n0, n1), face_normals[f]) < A::scalarf64(0.0)
             {
                 return -angle;
             }
-        }
         angle
     }
 

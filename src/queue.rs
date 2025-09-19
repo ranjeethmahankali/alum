@@ -540,11 +540,10 @@ mod test {
     // Heap property verification helper
     fn verify_heap_property<H: Handle, Cost: PartialOrd>(queue: &Queue<H, Cost>) -> bool {
         for i in 0..queue.len() {
-            if let Some(parent_idx) = heap_parent(i) {
-                if let Some(std::cmp::Ordering::Greater) = queue.compare(parent_idx, i) {
+            if let Some(parent_idx) = heap_parent(i)
+                && let Some(std::cmp::Ordering::Greater) = queue.compare(parent_idx, i) {
                     return false; // Parent is greater than child - heap property violated
                 }
-            }
         }
         true
     }
