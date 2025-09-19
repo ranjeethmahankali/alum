@@ -83,6 +83,8 @@ where
         if vi >= self.map.len() {
             self.map.resize(vi + 1, None);
         }
+        // SAFETY: We just resized the vector to the correct size, so the index
+        // MUST be within bounds.
         unsafe {
             *self.map.get_unchecked_mut(vi) = Some(index);
         }
@@ -541,9 +543,10 @@ mod test {
     fn verify_heap_property<H: Handle, Cost: PartialOrd>(queue: &Queue<H, Cost>) -> bool {
         for i in 0..queue.len() {
             if let Some(parent_idx) = heap_parent(i)
-                && let Some(std::cmp::Ordering::Greater) = queue.compare(parent_idx, i) {
-                    return false; // Parent is greater than child - heap property violated
-                }
+                && let Some(std::cmp::Ordering::Greater) = queue.compare(parent_idx, i)
+            {
+                return false; // Parent is greater than child - heap property violated
+            }
         }
         true
     }

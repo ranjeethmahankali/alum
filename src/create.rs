@@ -427,17 +427,19 @@ where
     }
 }
 
-#[cfg(all(test, feature = "use_glam"))]
+#[cfg(test)]
 mod test {
-    use core::f32;
-
     use crate::{
-        HasTopology, iterator::HasIterators, macros::assert_f32_eq, use_glam::PolyMeshF32,
+        HasTopology,
+        iterator::HasIterators,
+        macros::assert_f32_eq,
+        mesh::{PolyMeshF32, Vec3},
     };
+    use core::f32;
 
     #[test]
     fn t_quad_box() {
-        let qbox = PolyMeshF32::quad_box(glam::vec3(0., 0., 0.), glam::vec3(1., 1., 1.))
+        let qbox = PolyMeshF32::quad_box(Vec3(0., 0., 0.), Vec3(1., 1., 1.))
             .expect("Cannot create a quad box mesh");
         assert_eq!(qbox.num_vertices(), 8);
         assert_eq!(qbox.num_halfedges(), 24);

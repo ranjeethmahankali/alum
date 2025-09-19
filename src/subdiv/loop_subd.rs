@@ -195,7 +195,7 @@ where
     /// performed.
     ///
     /// ```rust
-    /// use alum::{use_glam::PolyMeshF32, HasTopology};
+    /// use alum::{PolyMeshF32, HasTopology, Vec3};
     ///
     /// let mut mesh = PolyMeshF32::unit_box().expect("Cannot create box");
     /// assert_eq!((8, 12, 6), (mesh.num_vertices(), mesh.num_edges(), mesh.num_faces()));
@@ -262,16 +262,20 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::{HasTopology, obj::test::bunny_mesh, use_glam::PolyMeshF32};
+    use crate::{
+        HasTopology,
+        mesh::{PolyMeshF32, Vec3},
+        obj::test::bunny_mesh,
+    };
 
     #[test]
     fn t_triangle_subdiv_loop() {
         let mut mesh = PolyMeshF32::new();
-        mesh.add_vertex(glam::vec3(0.0, 0.0, 0.0))
+        mesh.add_vertex(Vec3(0.0, 0.0, 0.0))
             .expect("Cannot add vertex");
-        mesh.add_vertex(glam::vec3(1.0, 0.0, 0.0))
+        mesh.add_vertex(Vec3(1.0, 0.0, 0.0))
             .expect("Cannot add vertex");
-        mesh.add_vertex(glam::vec3(1.0, 1.0, 0.0))
+        mesh.add_vertex(Vec3(1.0, 1.0, 0.0))
             .expect("Cannot add vertex");
         mesh.add_tri_face(0.into(), 1.into(), 2.into())
             .expect("Cannot add face");

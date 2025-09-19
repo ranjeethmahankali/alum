@@ -82,7 +82,7 @@ pub trait HasTopology: Sized {
     /// The default value will be used when new elements are added to the mesh.
     ///
     /// ```rust
-    /// use alum::{use_glam::PolyMeshF32, HasTopology};
+    /// use alum::{PolyMeshF32, HasTopology};
     ///
     /// let mut mesh = PolyMeshF32::tetrahedron(1.0).expect("Cannot crate tetrahedron");
     /// let prop = mesh.create_vertex_prop(42usize);
@@ -103,7 +103,7 @@ pub trait HasTopology: Sized {
     /// The default value will be used when new elements are added to the mesh.
     ///
     /// ```rust
-    /// use alum::{use_glam::PolyMeshF32, HasTopology};
+    /// use alum::{PolyMeshF32, HasTopology};
     ///
     /// let mut mesh = PolyMeshF32::tetrahedron(1.0).expect("Cannot crate tetrahedron");
     /// let prop = mesh.create_halfedge_prop(42usize);
@@ -124,7 +124,7 @@ pub trait HasTopology: Sized {
     /// The default value will be used when new elements are added to the mesh.
     ///
     /// ```rust
-    /// use alum::{use_glam::PolyMeshF32, HasTopology};
+    /// use alum::{PolyMeshF32, HasTopology};
     ///
     /// let mut mesh = PolyMeshF32::tetrahedron(1.0).expect("Cannot crate tetrahedron");
     /// let prop = mesh.create_edge_prop(42usize);
@@ -145,7 +145,7 @@ pub trait HasTopology: Sized {
     /// The default value will be used when new elements are added to the mesh.
     ///
     /// ```rust
-    /// use alum::{use_glam::PolyMeshF32, HasTopology};
+    /// use alum::{PolyMeshF32, HasTopology};
     ///
     /// let mut mesh = PolyMeshF32::tetrahedron(1.0).expect("Cannot crate tetrahedron");
     /// let prop = mesh.create_face_prop(42usize);
@@ -1076,8 +1076,8 @@ pub(crate) mod test {
     use crate::{
         iterator::HasIterators,
         macros::assert_f32_eq,
+        mesh::PolyMeshF32,
         topol::{Handle, HasTopology, VH},
-        use_glam::PolyMeshF32,
     };
 
     use super::{TopolCache, Topology};
@@ -1555,9 +1555,10 @@ pub(crate) mod test {
             // should not compile.
             for (m, h) in mesh.voh_ccw_iter_mut(v) {
                 if let Some(f) = h.face(m)
-                    && (f.index() + h.index()) % 2 != 0 {
-                        m.delete_face(f, true).expect("Cannot delete face");
-                    }
+                    && (f.index() + h.index()) % 2 != 0
+                {
+                    m.delete_face(f, true).expect("Cannot delete face");
+                }
             }
         }
         mesh.garbage_collection()

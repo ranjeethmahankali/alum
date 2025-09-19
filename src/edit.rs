@@ -64,9 +64,10 @@ pub trait EditableTopology: HasIterators {
             None
         };
         if let (Some(vl), Some(vr)) = (vl, vr)
-            && vl == vr {
-                return false;
-            }
+            && vl == vr
+        {
+            return false;
+        }
         let v0_boundary = v0.is_boundary(self);
         let v1_boundary = v1.is_boundary(self);
         // Check if we're collapsing across two different boundaries.
@@ -114,9 +115,13 @@ pub trait EditableTopology: HasIterators {
         }
         // Check again if left and right are the same vertex.
         if let Some(h) = v0.halfedge(self)
-            && vertex_status[h.head(self)].tagged() && vl == vr && htriangle && ohtriangle {
-                return false;
-            }
+            && vertex_status[h.head(self)].tagged()
+            && vl == vr
+            && htriangle
+            && ohtriangle
+        {
+            return false;
+        }
         true
     }
 
@@ -170,9 +175,10 @@ pub trait EditableTopology: HasIterators {
         topol.adjust_outgoing_halfedge(v1);
         // Rewire face -> halfedge.
         if let Some(fo) = fo
-            && fo.halfedge(topol) == o {
-                topol.face_mut(fo).halfedge = h1;
-            }
+            && fo.halfedge(topol) == o
+        {
+            topol.face_mut(fo).halfedge = h1;
+        }
         // Delete stuff.
         if let Some(fh) = fh {
             fstatus[fh].set_deleted(true);
@@ -434,11 +440,11 @@ pub trait EditableTopology: HasIterators {
     /// Swap an edge counter-clockwise.
     ///
     /// ```rust
-    /// use alum::{use_glam::PolyMeshF32, HasTopology, Handle, HasIterators, EditableTopology};
+    /// use alum::{PolyMeshF32, HasTopology, Handle, HasIterators, EditableTopology, Vec3};
     ///
     /// let mut mesh = PolyMeshF32::new();
-    /// let verts = [glam::vec3(0.0, 0.0, 0.0), glam::vec3(1.0, 0.0, 0.0),
-    ///              glam::vec3(1.0, 1.0, 0.0), glam::vec3(0.0, 1.0, 0.0)];
+    /// let verts = [Vec3(0.0, 0.0, 0.0), Vec3(1.0, 0.0, 0.0),
+    ///              Vec3(1.0, 1.0, 0.0), Vec3(0.0, 1.0, 0.0)];
     /// mesh.add_vertices(&verts).expect("Cannot add vertices");
     /// mesh.add_tri_face(0.into(), 1.into(), 2.into()).expect("Cannot add face");
     /// mesh.add_tri_face(0.into(), 2.into(), 3.into()).expect("Cannot add face");
@@ -510,10 +516,11 @@ pub trait EditableTopology: HasIterators {
     /// encountered, then mesh is unmodified and a `false` is
     /// returned. Otherwise a `true` is returned.
     /// ```rust
-    /// use alum::{use_glam::PolyMeshF32, HasTopology, Handle, HasIterators, EditableTopology};
+    /// use alum::{PolyMeshF32, HasTopology, Handle, HasIterators, EditableTopology, Vec3};
+    ///
     /// let mut mesh = PolyMeshF32::new();
-    /// let verts = [glam::vec3(0.0, 0.0, 0.0), glam::vec3(1.0, 0.0, 0.0),
-    ///              glam::vec3(1.0, 1.0, 0.0), glam::vec3(0.0, 1.0, 0.0)];
+    /// let verts = [Vec3(0.0, 0.0, 0.0), Vec3(1.0, 0.0, 0.0),
+    ///              Vec3(1.0, 1.0, 0.0), Vec3(0.0, 1.0, 0.0)];
     /// mesh.add_vertices(&verts).expect("Cannot add vertices");
     /// mesh.add_tri_face(0.into(), 1.into(), 2.into()).expect("Cannot add face");
     /// mesh.add_tri_face(0.into(), 2.into(), 3.into()).expect("Cannot add face");
@@ -812,11 +819,11 @@ mod test {
         edit::EditableTopology,
         element::Handle,
         iterator::HasIterators,
+        mesh::PolyMeshF32,
         topol::{
             HasTopology, TopolCache,
             test::{loop_mesh, quad_box},
         },
-        use_glam::PolyMeshF32,
     };
 
     #[test]

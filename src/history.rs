@@ -28,7 +28,7 @@ enum Element {
 /// a mesh.
 ///
 /// ```rust
-/// use alum::{use_glam::PolyMeshF32, TopolHistory, HasTopology, EditableTopology, HH};
+/// use alum::{PolyMeshF32, TopolHistory, HasTopology, EditableTopology, HH};
 ///
 /// let mut mesh = PolyMeshF32::unit_box().unwrap();
 /// let mut history = TopolHistory::default();
@@ -408,7 +408,7 @@ impl TopolHistory {
 /// needed.
 ///
 /// ```rust
-/// use alum::{use_glam::PolyMeshF32, VPropHistory, Handle, HasTopology};
+/// use alum::{PolyMeshF32, VPropHistory, Handle, HasTopology};
 ///
 /// let mut mesh = PolyMeshF32::unit_box().expect("Cannot make a box");
 /// let mut prop = mesh.create_vertex_prop(42u32);
@@ -510,8 +510,10 @@ pub type FPropHistory<T> = PropHistory<FH, T>;
 #[cfg(test)]
 mod test {
     use super::{TopolHistory, VPropHistory};
-    use crate::{EditableTopology, HH, Handle, HasIterators, HasTopology, use_glam::PolyMeshF32};
-    use glam::vec3;
+    use crate::{
+        EditableTopology, HH, Handle, HasIterators, HasTopology,
+        mesh::{PolyMeshF32, Vec3},
+    };
 
     fn compare_meshes(a: &PolyMeshF32, b: &PolyMeshF32) {
         // Compare vertices.
@@ -687,16 +689,16 @@ mod test {
         let mesh = {
             let mut mesh = PolyMeshF32::default();
             mesh.add_vertices(&[
-                vec3(2.0, 2.0, 0.0),
-                vec3(4.0, 2.0, 0.0),
-                vec3(1.0, 0.0, 0.0),
-                vec3(3.0, 0.0, 0.0),
-                vec3(5.0, 0.0, 0.0),
-                vec3(0.0, 2.0, 0.0),
-                vec3(6.0, 2.0, 0.0),
-                vec3(1.0, 4.0, 0.0),
-                vec3(3.0, 4.0, 0.0),
-                vec3(5.0, 4.0, 0.0),
+                Vec3(2.0, 2.0, 0.0),
+                Vec3(4.0, 2.0, 0.0),
+                Vec3(1.0, 0.0, 0.0),
+                Vec3(3.0, 0.0, 0.0),
+                Vec3(5.0, 0.0, 0.0),
+                Vec3(0.0, 2.0, 0.0),
+                Vec3(6.0, 2.0, 0.0),
+                Vec3(1.0, 4.0, 0.0),
+                Vec3(3.0, 4.0, 0.0),
+                Vec3(5.0, 4.0, 0.0),
             ])
             .expect("Cannot add vertices");
             for (a, b, c) in [
