@@ -1279,7 +1279,7 @@ mod test {
             // should not compile.
             for (m, h) in mesh.voh_ccw_iter_mut(v) {
                 if let Some(f) = h.face(m)
-                    && (f.index() + h.index()) % 2 != 0
+                    && !(f.index() + h.index()).is_multiple_of(2)
                 {
                     m.delete_face(f, true).expect("Cannot delete face");
                 }
