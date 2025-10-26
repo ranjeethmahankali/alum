@@ -148,7 +148,7 @@ pub use decimate::{
 };
 
 pub use edit::EditableTopology;
-pub use element::{EH, FH, HH, Handle, HandleRange, VH};
+pub use element::{EH, FH, HH, Handle, VH};
 pub use error::Error;
 pub use history::{
     EPropHistory, FPropHistory, HPropHistory, PropHistory, TopolHistory, VPropHistory,
