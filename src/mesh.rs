@@ -633,37 +633,41 @@ pub struct F64Adaptor;
 
 impl Adaptor<3> for F64Adaptor {
     type Scalar = f64;
-    type Vector = [Self::Scalar; 3];
+    type Vector = DVec3;
 
     fn vector(coords: [Self::Scalar; 3]) -> Self::Vector {
-        [coords[0], coords[1], coords[2]]
+        DVec3(coords[0], coords[1], coords[2])
     }
 
     fn zero_vector() -> Self::Vector {
-        [0., 0., 0.]
+        DVec3(0., 0., 0.)
     }
 
     fn vector_coord(v: &Self::Vector, i: usize) -> Self::Scalar {
-        v[i]
+        match i {
+            0 => v.0,
+            1 => v.1,
+            2 => v.2,
+            _ => panic!("Vector index out of bounds!"),
+        }
     }
 }
 
 impl VectorLengthAdaptor<3> for F64Adaptor {
     fn vector_length(v: Self::Vector) -> Self::Scalar {
-        (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]).sqrt()
+        (v.0 * v.0 + v.1 * v.1 + v.2 * v.2).sqrt()
     }
 }
 
 impl VectorNormalizeAdaptor<3> for F64Adaptor {
     fn normalized_vec(v: Self::Vector) -> Self::Vector {
-        let len = Self::vector_length(v);
-        v.map(|c| c / len)
+        v / Self::vector_length(v)
     }
 }
 
 impl DotProductAdaptor<3> for F64Adaptor {
     fn dot_product(a: Self::Vector, b: Self::Vector) -> Self::Scalar {
-        a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+        a.0 * b.0 + a.1 * b.1 + a.2 * b.2
     }
 }
 
@@ -675,11 +679,11 @@ impl VectorAngleAdaptor for F64Adaptor {
 
 impl CrossProductAdaptor for F64Adaptor {
     fn cross_product(a: Self::Vector, b: Self::Vector) -> Self::Vector {
-        [
-            a[1] * b[2] - a[2] * b[1],
-            a[2] * b[0] - a[0] * b[2],
-            a[0] * b[1] - a[1] * b[0],
-        ]
+        DVec3(
+            a.1 * b.2 - a.2 * b.1,
+            a.2 * b.0 - a.0 * b.2,
+            a.0 * b.1 - a.1 * b.0,
+        )
     }
 }
 
