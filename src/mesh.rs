@@ -423,10 +423,10 @@ where
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Default, Copy, Clone, Debug, PartialEq)]
 pub struct Vec3(pub f32, pub f32, pub f32);
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Default, Copy, Clone, Debug, PartialEq)]
 pub struct DVec3(pub f64, pub f64, pub f64);
 
 impl Add for Vec3 {
