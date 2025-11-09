@@ -1,9 +1,9 @@
 mod common;
 
-use common::{CameraMouseControl, PolygonMesh, mesh_view, wireframe_view};
+use common::{PolygonMesh, mesh_view, wireframe_view};
 use three_d::{
-    AmbientLight, Camera, ClearState, DirectionalLight, FrameOutput, InnerSpace, Srgba, Window,
-    WindowSettings, degrees, vec3,
+    AmbientLight, Camera, ClearState, DirectionalLight, FrameOutput, InnerSpace, OrbitControl,
+    Srgba, Window, WindowSettings, degrees, vec3,
 };
 
 fn main() {
@@ -27,11 +27,10 @@ fn main() {
         0.1,
         1000.0,
     );
-    let mut control =
-        CameraMouseControl::new(*camera.target(), 0.1 * scene_radius, 100.0 * scene_radius);
+    let mut control = OrbitControl::new(camera.target(), 0.1 * scene_radius, 100.0 * scene_radius);
     let ambient = AmbientLight::new(&context, 0.7, Srgba::WHITE);
-    let directional0 = DirectionalLight::new(&context, 2.0, Srgba::WHITE, &vec3(-1.0, -1.0, -1.0));
-    let directional1 = DirectionalLight::new(&context, 2.0, Srgba::WHITE, &vec3(1.0, 1.0, 1.0));
+    let directional0 = DirectionalLight::new(&context, 2.0, Srgba::WHITE, vec3(-1.0, -1.0, -1.0));
+    let directional1 = DirectionalLight::new(&context, 2.0, Srgba::WHITE, vec3(1.0, 1.0, 1.0));
     // Create the meshes.
     let mut tet = PolygonMesh::tetrahedron(1.0).unwrap();
     tet.translate(vec3(-4.0, 0.0, 0.0)).unwrap();
