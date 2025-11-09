@@ -21,7 +21,7 @@ decimate = []
 
 [dev-dependencies]
 arrayvec = "0.7.6"
-three-d = {version = "0.17.0", features = ["egui-gui"]}
+three-d = {version = "0.18.0", features = ["egui-gui"]}
 criterion = { version = "0.7", features = ["html_reports"] }
 
 [[example]]

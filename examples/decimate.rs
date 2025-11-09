@@ -3,11 +3,11 @@ mod common;
 use alum::{
     Decimater, Handle, HasDecimation, HasIterators, HasTopology, QuadricDecimater, QuadricType,
 };
-use common::{CameraMouseControl, MeshAdaptor, PolygonMesh};
+use common::{MeshAdaptor, PolygonMesh};
 use std::{path::PathBuf, time::Instant};
 use three_d::{
     AmbientLight, Camera, ClearState, Context, CpuMaterial, CpuMesh, Cull, DirectionalLight, Event,
-    FrameOutput, Gm, Indices, InnerSpace, InstancedMesh, Instances, Key, Mat4, Mesh,
+    FrameOutput, Gm, Indices, InnerSpace, InstancedMesh, Instances, Key, Mat4, Mesh, OrbitControl,
     PhysicalMaterial, Positions, Quat, Srgba, Viewport, Window, WindowSettings, degrees, vec3,
 };
 
@@ -135,14 +135,14 @@ fn visualize_mesh(mesh: &PolygonMesh, context: &Context) -> MeshViews {
     );
     wireframe_material.render_states.cull = Cull::Back;
     let mut sphere = CpuMesh::sphere(8);
-    sphere.transform(&Mat4::from_scale(SPH_RADIUS)).unwrap();
+    sphere.transform(Mat4::from_scale(SPH_RADIUS)).unwrap();
     let vertices = Gm::new(
         InstancedMesh::new(context, &vtransforms, &sphere),
         wireframe_material.clone(),
     );
     let mut cylinder = CpuMesh::cylinder(10);
     cylinder
-        .transform(&Mat4::from_nonuniform_scale(1.0, CYL_RADIUS, CYL_RADIUS))
+        .transform(Mat4::from_nonuniform_scale(1.0, CYL_RADIUS, CYL_RADIUS))
         .unwrap();
     let edges = Gm::new(
         InstancedMesh::new(context, &etransforms, &cylinder),
@@ -195,16 +195,15 @@ pub fn main() {
         0.1,
         1000.0,
     );
-    let mut control =
-        CameraMouseControl::new(*camera.target(), 0.1 * scene_radius, 100.0 * scene_radius);
+    let mut control = OrbitControl::new(camera.target(), 0.1 * scene_radius, 100.0 * scene_radius);
     let views: Vec<MeshViews> = history
         .iter()
         .map(|mesh| visualize_mesh(mesh, &context))
         .collect();
     // let (_, rvs, res) = visualize_mesh(&refbox, &context);
     let ambient = AmbientLight::new(&context, 0.7, Srgba::WHITE);
-    let directional0 = DirectionalLight::new(&context, 2.0, Srgba::WHITE, &vec3(-1.0, -1.0, -1.0));
-    let directional1 = DirectionalLight::new(&context, 2.0, Srgba::WHITE, &vec3(1.0, 1.0, 1.0));
+    let directional0 = DirectionalLight::new(&context, 2.0, Srgba::WHITE, vec3(-1.0, -1.0, -1.0));
+    let directional1 = DirectionalLight::new(&context, 2.0, Srgba::WHITE, vec3(1.0, 1.0, 1.0));
     let mut index = 0usize;
     let mut gui = three_d::GUI::new(&context);
     // render loop

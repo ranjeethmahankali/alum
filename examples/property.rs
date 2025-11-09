@@ -1,12 +1,12 @@
 mod common;
 
 use alum::{Handle, HasIterators, HasTopology, VH, VProperty};
-use common::{CameraMouseControl, PolygonMesh};
+use common::PolygonMesh;
 use core::f32;
 use std::{collections::VecDeque, path::PathBuf};
 use three_d::{
     AmbientLight, Camera, ClearState, Context, CpuMaterial, CpuMesh, DirectionalLight, FrameOutput,
-    Gm, Indices, InnerSpace, Mesh, PhysicalMaterial, Positions, Srgba, Vec3, Window,
+    Gm, Indices, InnerSpace, Mesh, OrbitControl, PhysicalMaterial, Positions, Srgba, Vec3, Window,
     WindowSettings, degrees, vec3,
 };
 
@@ -180,11 +180,10 @@ fn main() {
         0.1,
         1000.0,
     );
-    let mut control =
-        CameraMouseControl::new(*camera.target(), 0.1 * scene_radius, 100.0 * scene_radius);
+    let mut control = OrbitControl::new(camera.target(), 0.1 * scene_radius, 100.0 * scene_radius);
     let ambient = AmbientLight::new(&context, 0.7, Srgba::WHITE);
-    let directional0 = DirectionalLight::new(&context, 2.0, Srgba::WHITE, &vec3(-1.0, -1.0, -1.0));
-    let directional1 = DirectionalLight::new(&context, 2.0, Srgba::WHITE, &vec3(1.0, 1.0, 1.0));
+    let directional0 = DirectionalLight::new(&context, 2.0, Srgba::WHITE, vec3(-1.0, -1.0, -1.0));
+    let directional1 = DirectionalLight::new(&context, 2.0, Srgba::WHITE, vec3(1.0, 1.0, 1.0));
     // Render the mesh.
     let colors = classify_vertices(&mut mesh);
     let mview = mesh_view_with_colors(&mesh, &context, &colors);

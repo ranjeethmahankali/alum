@@ -1,11 +1,11 @@
 mod common;
 
-use common::{CameraMouseControl, PolygonMesh, mesh_view, wireframe_view};
+use common::{PolygonMesh, mesh_view, wireframe_view};
 use core::f32;
 use std::path::PathBuf;
 use three_d::{
-    AmbientLight, Camera, ClearState, DirectionalLight, FrameOutput, InnerSpace, Srgba, Vec3,
-    Window, WindowSettings, degrees, vec3,
+    AmbientLight, Camera, ClearState, DirectionalLight, FrameOutput, InnerSpace, OrbitControl,
+    Srgba, Vec3, Window, WindowSettings, degrees, vec3,
 };
 
 fn bounds(mesh: &PolygonMesh) -> (Vec3, Vec3) {
@@ -66,11 +66,10 @@ fn main() {
         0.1,
         1000.0,
     );
-    let mut control =
-        CameraMouseControl::new(*camera.target(), 0.1 * scene_radius, 100.0 * scene_radius);
+    let mut control = OrbitControl::new(camera.target(), 0.1 * scene_radius, 100.0 * scene_radius);
     let ambient = AmbientLight::new(&context, 0.7, Srgba::WHITE);
-    let directional0 = DirectionalLight::new(&context, 2.0, Srgba::WHITE, &vec3(-1.0, -1.0, -1.0));
-    let directional1 = DirectionalLight::new(&context, 2.0, Srgba::WHITE, &vec3(1.0, 1.0, 1.0));
+    let directional0 = DirectionalLight::new(&context, 2.0, Srgba::WHITE, vec3(-1.0, -1.0, -1.0));
+    let directional1 = DirectionalLight::new(&context, 2.0, Srgba::WHITE, vec3(1.0, 1.0, 1.0));
     // Import and render the mesh.
     let mview = mesh_view(&mesh, &context);
     let (vertices, edges) = wireframe_view(&mesh, &context, 0.001, 0.0005);
