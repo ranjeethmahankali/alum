@@ -765,6 +765,7 @@ pub trait HasIterators: HasTopology {
             _phantom: PhantomData,
         }
     }
+
     /// Iterator over the vertex triplets that represent a triangulation of the
     /// given face.
     ///
@@ -785,6 +786,20 @@ pub trait HasIterators: HasTopology {
     /// ```
     fn triangulated_face_vertices(&self, f: FH) -> impl Iterator<Item = [VH; 3]> {
         let hstart = f.halfedge(self);
+        let vstart = hstart.tail(self);
+        self.loop_ccw_iter(hstart.next(self))
+            .take_while(move |h| h.head(self) != vstart)
+            .map(move |h| [vstart, h.tail(self), h.head(self)])
+    }
+
+    /// Iterator over the vertex triplets that represent a triangulation of the
+    /// given loop. Unlike [`Self::triangulated_face_vertices`], this can be
+    /// used on face loops as well as boundary loops. For example, this can be
+    /// used to fill a boundary loop with triangles.
+    ///
+    /// The triangulation does not take the shape of the loop into account. It
+    /// only accounts for the topology of the face.
+    fn triangulated_loop_vertices(&self, hstart: HH) -> impl Iterator<Item = [VH; 3]> {
         let vstart = hstart.tail(self);
         self.loop_ccw_iter(hstart.next(self))
             .take_while(move |h| h.head(self) != vstart)

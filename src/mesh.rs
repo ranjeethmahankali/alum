@@ -4,7 +4,7 @@ use crate::{
     property::{FProperty, VProperty},
     topol::{HasTopology, TopolCache, Topology},
 };
-use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
+use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 /// Trait for an adaptor that tells this crate how to work with user specified
 /// geometric types.
@@ -42,6 +42,9 @@ where
 pub trait VectorLengthAdaptor<const DIM: usize>: Adaptor<DIM> {
     /// Compute the length (i.e. magnitude) of a vector.
     fn vector_length(v: Self::Vector) -> Self::Scalar;
+
+    /// Compute the squared length of the vector.
+    fn vector_length_squared(v: Self::Vector) -> Self::Scalar;
 }
 
 /// An adaptor can optionally implement this trait to tell this crate how to
@@ -423,10 +426,10 @@ where
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Default, Copy, Clone, Debug, PartialEq)]
 pub struct Vec3(pub f32, pub f32, pub f32);
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Default, Copy, Clone, Debug, PartialEq)]
 pub struct DVec3(pub f64, pub f64, pub f64);
 
 impl Add for Vec3 {
@@ -434,6 +437,14 @@ impl Add for Vec3 {
 
     fn add(self, rhs: Self) -> Self::Output {
         Vec3(self.0 + rhs.0, self.1 + rhs.1, self.2 + rhs.2)
+    }
+}
+
+impl Neg for Vec3 {
+    type Output = Vec3;
+
+    fn neg(self) -> Self::Output {
+        Vec3(-self.0, -self.1, -self.2)
     }
 }
 
@@ -490,6 +501,14 @@ impl DivAssign<f32> for Vec3 {
         self.0 /= rhs;
         self.1 /= rhs;
         self.2 /= rhs;
+    }
+}
+
+impl Neg for DVec3 {
+    type Output = DVec3;
+
+    fn neg(self) -> Self::Output {
+        DVec3(-self.0, -self.1, -self.2)
     }
 }
 
@@ -585,7 +604,11 @@ impl Adaptor<3> for F32Adaptor {
 
 impl VectorLengthAdaptor<3> for F32Adaptor {
     fn vector_length(v: Self::Vector) -> Self::Scalar {
-        (v.0 * v.0 + v.1 * v.1 + v.2 * v.2).sqrt()
+        Self::vector_length_squared(v).sqrt()
+    }
+
+    fn vector_length_squared(v: Self::Vector) -> Self::Scalar {
+        v.0 * v.0 + v.1 * v.1 + v.2 * v.2
     }
 }
 
@@ -633,37 +656,45 @@ pub struct F64Adaptor;
 
 impl Adaptor<3> for F64Adaptor {
     type Scalar = f64;
-    type Vector = [Self::Scalar; 3];
+    type Vector = DVec3;
 
     fn vector(coords: [Self::Scalar; 3]) -> Self::Vector {
-        [coords[0], coords[1], coords[2]]
+        DVec3(coords[0], coords[1], coords[2])
     }
 
     fn zero_vector() -> Self::Vector {
-        [0., 0., 0.]
+        DVec3(0., 0., 0.)
     }
 
     fn vector_coord(v: &Self::Vector, i: usize) -> Self::Scalar {
-        v[i]
+        match i {
+            0 => v.0,
+            1 => v.1,
+            2 => v.2,
+            _ => panic!("Vector index out of bounds!"),
+        }
     }
 }
 
 impl VectorLengthAdaptor<3> for F64Adaptor {
     fn vector_length(v: Self::Vector) -> Self::Scalar {
-        (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]).sqrt()
+        Self::vector_length_squared(v).sqrt()
+    }
+
+    fn vector_length_squared(v: Self::Vector) -> Self::Scalar {
+        v.0 * v.0 + v.1 * v.1 + v.2 * v.2
     }
 }
 
 impl VectorNormalizeAdaptor<3> for F64Adaptor {
     fn normalized_vec(v: Self::Vector) -> Self::Vector {
-        let len = Self::vector_length(v);
-        v.map(|c| c / len)
+        v / Self::vector_length(v)
     }
 }
 
 impl DotProductAdaptor<3> for F64Adaptor {
     fn dot_product(a: Self::Vector, b: Self::Vector) -> Self::Scalar {
-        a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+        a.0 * b.0 + a.1 * b.1 + a.2 * b.2
     }
 }
 
@@ -675,11 +706,11 @@ impl VectorAngleAdaptor for F64Adaptor {
 
 impl CrossProductAdaptor for F64Adaptor {
     fn cross_product(a: Self::Vector, b: Self::Vector) -> Self::Vector {
-        [
-            a[1] * b[2] - a[2] * b[1],
-            a[2] * b[0] - a[0] * b[2],
-            a[0] * b[1] - a[1] * b[0],
-        ]
+        DVec3(
+            a.1 * b.2 - a.2 * b.1,
+            a.2 * b.0 - a.0 * b.2,
+            a.0 * b.1 - a.1 * b.0,
+        )
     }
 }
 

@@ -155,8 +155,9 @@ pub use history::{
 };
 pub use iterator::HasIterators;
 pub use mesh::{
-    Adaptor, CrossProductAdaptor, DVec3, DotProductAdaptor, FloatScalarAdaptor, PolyMeshF32,
-    PolyMeshF64, PolyMeshT, Vec3, VectorAngleAdaptor, VectorLengthAdaptor, VectorNormalizeAdaptor,
+    Adaptor, CrossProductAdaptor, DVec3, DotProductAdaptor, F32Adaptor, F64Adaptor,
+    FloatScalarAdaptor, PolyMeshF32, PolyMeshF64, PolyMeshT, Vec3, VectorAngleAdaptor,
+    VectorLengthAdaptor, VectorNormalizeAdaptor,
 };
 pub use property::{
     EPropBuf, EProperty, FPropBuf, FProperty, HPropBuf, HProperty, PropBuf, Property, VPropBuf,

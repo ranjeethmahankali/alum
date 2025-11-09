@@ -54,7 +54,7 @@ where
             ]);
         }
         let verts = qbox.add_vertices(&pos)?;
-        assert_eq!(
+        debug_assert_eq!(
             verts,
             (0..8).into(),
             "Vertices are expected to be in one contiguous range"
