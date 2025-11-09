@@ -4,7 +4,7 @@ use crate::{
     property::{FProperty, VProperty},
     topol::{HasTopology, TopolCache, Topology},
 };
-use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
+use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 /// Trait for an adaptor that tells this crate how to work with user specified
 /// geometric types.
@@ -440,6 +440,14 @@ impl Add for Vec3 {
     }
 }
 
+impl Neg for Vec3 {
+    type Output = Vec3;
+
+    fn neg(self) -> Self::Output {
+        Vec3(-self.0, -self.1, -self.2)
+    }
+}
+
 impl Sub for Vec3 {
     type Output = Vec3;
 
@@ -493,6 +501,14 @@ impl DivAssign<f32> for Vec3 {
         self.0 /= rhs;
         self.1 /= rhs;
         self.2 /= rhs;
+    }
+}
+
+impl Neg for DVec3 {
+    type Output = DVec3;
+
+    fn neg(self) -> Self::Output {
+        DVec3(-self.0, -self.1, -self.2)
     }
 }
 
