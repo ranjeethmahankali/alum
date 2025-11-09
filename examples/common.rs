@@ -54,6 +54,10 @@ impl VectorLengthAdaptor<3> for MeshAdaptor {
     fn vector_length(v: Self::Vector) -> Self::Scalar {
         v.magnitude()
     }
+
+    fn vector_length_squared(v: Self::Vector) -> Self::Scalar {
+        v.magnitude2()
+    }
 }
 
 impl DotProductAdaptor<3> for MeshAdaptor {
