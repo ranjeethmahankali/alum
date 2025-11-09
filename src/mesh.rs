@@ -42,6 +42,9 @@ where
 pub trait VectorLengthAdaptor<const DIM: usize>: Adaptor<DIM> {
     /// Compute the length (i.e. magnitude) of a vector.
     fn vector_length(v: Self::Vector) -> Self::Scalar;
+
+    /// Compute the squared length of the vector.
+    fn vector_length_squared(v: Self::Vector) -> Self::Scalar;
 }
 
 /// An adaptor can optionally implement this trait to tell this crate how to
@@ -585,7 +588,11 @@ impl Adaptor<3> for F32Adaptor {
 
 impl VectorLengthAdaptor<3> for F32Adaptor {
     fn vector_length(v: Self::Vector) -> Self::Scalar {
-        (v.0 * v.0 + v.1 * v.1 + v.2 * v.2).sqrt()
+        Self::vector_length_squared(v).sqrt()
+    }
+
+    fn vector_length_squared(v: Self::Vector) -> Self::Scalar {
+        v.0 * v.0 + v.1 * v.1 + v.2 * v.2
     }
 }
 
@@ -655,7 +662,11 @@ impl Adaptor<3> for F64Adaptor {
 
 impl VectorLengthAdaptor<3> for F64Adaptor {
     fn vector_length(v: Self::Vector) -> Self::Scalar {
-        (v.0 * v.0 + v.1 * v.1 + v.2 * v.2).sqrt()
+        Self::vector_length_squared(v).sqrt()
+    }
+
+    fn vector_length_squared(v: Self::Vector) -> Self::Scalar {
+        v.0 * v.0 + v.1 * v.1 + v.2 * v.2
     }
 }
 
