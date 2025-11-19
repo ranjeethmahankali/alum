@@ -1071,16 +1071,14 @@ impl Default for Topology {
 
 #[cfg(test)]
 pub(crate) mod test {
-    use arrayvec::ArrayVec;
-
+    use super::{Error, TopolCache, Topology};
     use crate::{
         iterator::HasIterators,
         macros::assert_f32_eq,
         mesh::PolyMeshF32,
         topol::{Handle, HasTopology, VH},
     };
-
-    use super::{TopolCache, Topology};
+    use arrayvec::ArrayVec;
 
     /**
      * Makes a box with the following topology.
@@ -1652,5 +1650,20 @@ pub(crate) mod test {
         }
         // Caller owned properties are not cloned. There is exactly one caller owned property.
         assert_eq!(1 + copy.num_halfedge_props(), mesh.num_halfedge_props());
+    }
+
+    #[test]
+    fn t_check_complex_halfedge() {
+        let mut mesh = Topology::new();
+        let mut cache = TopolCache::default();
+        mesh.add_vertices(5).expect("Cannot add vertices to mesh");
+        for &(a, b, c) in &[(0u32, 1, 2), (0, 2, 3)] {
+            mesh.add_face(&[a.into(), b.into(), c.into()], &mut cache)
+                .expect("Cannot add triangle");
+        }
+        matches!(
+            mesh.add_face(&[0.into(), 2.into(), 4.into()], &mut cache),
+            Err(Error::ComplexHalfedge(_))
+        );
     }
 }
