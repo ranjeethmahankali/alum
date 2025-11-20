@@ -562,7 +562,9 @@ impl Topology {
             let boundnext = boundprev.next(self);
             // Ok ?
             if boundprev == prev {
-                return Err(Error::PatchRelinkingFailed);
+                return Err(Error::PatchRelinkingFailed(
+                    (self.num_faces() as u32).into(),
+                ));
             }
             debug_assert!(boundprev.is_boundary(self) && boundnext.is_boundary(self));
             // other halfedges.

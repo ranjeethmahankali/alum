@@ -32,7 +32,8 @@ fn main() {
     let directional0 = DirectionalLight::new(&context, 2.0, Srgba::WHITE, vec3(-1.0, -1.0, -1.0));
     let directional1 = DirectionalLight::new(&context, 2.0, Srgba::WHITE, vec3(1.0, 1.0, 1.0));
     // Create the mesh.
-    let mut mesh = PolygonMesh::unit_box().unwrap();
+    let mut mesh = PolygonMesh::load_obj("G:/My Drive/tasks/16846/mesh.obj")
+        .expect("Cannot load mesh from disk");
     mesh.update_vertex_normals_accurate().unwrap();
     let view = mesh_view(&mesh, &context);
     let (vertices, edges) = wireframe_view(&mesh, &context, 0.01, 0.005);
