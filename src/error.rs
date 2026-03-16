@@ -35,7 +35,7 @@ pub enum Error {
     /// Non manifold topology at a halfedge.
     ComplexHalfedge(HH),
     /// Failed to create valid topology when adding a face.
-    PatchRelinkingFailed,
+    PatchRelinkingFailed(FH),
     /// Encountered a face that has been deleted.
     DeletedFace(FH),
     /// Encountered an edge that has been deleted.
