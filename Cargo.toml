@@ -12,7 +12,7 @@ categories = ["mathematics", "graphics", "rendering"]
 exclude = ["assets/", "examples/"]
 
 [dependencies]
-tobj = { version = "4.0.2", features = ["use_f64"] }
+tobj = { version = "4.0", features = ["use_f64"] }
 
 [features]
 default = ["subdiv", "decimate"]
