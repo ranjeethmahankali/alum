@@ -17,8 +17,8 @@ use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssi
 /// to work with `Vector` instances.
 pub trait Adaptor<const DIM: usize>
 where
-    Self::Vector: Clone + Copy,
-    Self::Scalar: Clone + Copy,
+    Self::Vector: Clone + Copy + 'static,
+    Self::Scalar: Clone + Copy + 'static,
 {
     type Vector;
     type Scalar;
@@ -118,8 +118,6 @@ pub trait FloatScalarAdaptor<const DIM: usize>: Adaptor<DIM> {
 pub struct PolyMeshT<const DIM: usize, A>
 where
     A: Adaptor<DIM>,
-    A::Vector: 'static,
-    A::Scalar: 'static,
 {
     pub(crate) topol: Topology,
     pub(crate) cache: TopolCache,
