@@ -1,0 +1,18 @@
+* TODO tgaiul - Reserve memory upfront during sqrt3 subdivision
+  :PROPERTIES:
+  :CREATED:  2026-06-07 Sun 21:59
+  :END:
+
+  [[file:src/subdiv/sqrt3.rs::// TODO: Reserve all memory required at once.][Change here]]
+
+  I am doing this in other subdiv methods. Might as well do the same here.
+
+* TODO tgaiwx - Volume meshes
+  :PROPERTIES:
+  :CREATED:  2026-06-07 Sun 22:00
+  :END:
+
+  It is unclear how to integrate volume meshes into this library. I think
+  integrating it into this library instead of writing a new library will have a
+  synergy effect, specially for writing algorithms that use both volume and
+  polygon meshes.
