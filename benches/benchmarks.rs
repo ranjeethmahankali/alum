@@ -202,7 +202,6 @@ fn bench_operations(c: &mut Criterion) {
 
     let bunny_path = get_asset_path("bunny_large.obj");
     let bunny = PolygonMesh::load_obj(&bunny_path).unwrap();
-
     // Benchmark normal calculations
     group.bench_function("update_vertex_normals_accurate", |b| {
         b.iter(|| {
@@ -212,7 +211,6 @@ fn bench_operations(c: &mut Criterion) {
             black_box(mesh);
         });
     });
-
     group.bench_function("update_vertex_normals_fast", |b| {
         b.iter(|| {
             let mut mesh = bunny.try_clone().unwrap();
@@ -221,7 +219,6 @@ fn bench_operations(c: &mut Criterion) {
             black_box(mesh);
         });
     });
-
     // Benchmark cloning
     group.bench_function("clone", |b| {
         b.iter(|| {
@@ -229,7 +226,6 @@ fn bench_operations(c: &mut Criterion) {
             black_box(mesh_clone);
         });
     });
-
     {
         // Delete a third of the vertices to benchmark garbage collection later.
         let mut mesh = bunny.try_clone().unwrap();
@@ -253,14 +249,12 @@ fn bench_operations(c: &mut Criterion) {
             black_box(count);
         });
     });
-
     group.bench_function("face_iteration", |b| {
         b.iter(|| {
             let count = bunny.faces().count();
             black_box(count);
         });
     });
-
     group.bench_function("edge_iteration", |b| {
         b.iter(|| {
             let count = bunny.edges().count();
