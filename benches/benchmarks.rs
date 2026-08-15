@@ -230,15 +230,22 @@ fn bench_operations(c: &mut Criterion) {
         });
     });
 
-    // Benchmark garbage collection
-    group.bench_function("garbage_collection", |b| {
-        b.iter(|| {
-            let mut mesh = bunny.try_clone().unwrap();
-            mesh.garbage_collection().unwrap();
-            black_box(mesh);
+    {
+        // Delete a third of the vertices to benchmark garbage collection later.
+        let mut mesh = bunny.try_clone().unwrap();
+        for v in mesh.vertices().step_by(3) {
+            mesh.delete_vertex(true, v).unwrap();
+        }
+        let mesh = mesh;
+        // Benchmark garbage collection
+        group.bench_function("garbage_collection", |b| {
+            b.iter(|| {
+                let mut mesh = mesh.try_clone().unwrap();
+                mesh.garbage_collection().unwrap();
+                black_box(mesh);
+            });
         });
-    });
-
+    }
     // Benchmark topology iteration
     group.bench_function("vertex_iteration", |b| {
         b.iter(|| {
