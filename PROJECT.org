@@ -7,6 +7,13 @@
 
   I am doing this in other subdiv methods. Might as well do the same here.
 
+* TODO Remove parking_lot dependency after MappedRwLockReadGuard is stable
+  :PROPERTIES:
+  :CREATED:  2026-09-18 Fri 16:10
+  :END:
+
+  The docs are [[https://doc.rust-lang.org/std/sync/struct.RwLockReadGuard.html#method.map][here]].
+
 * NEXT tlksxa - Threadsafe Property System
   :PROPERTIES:
   :CREATED:  2026-09-18 Fri 16:00
@@ -15,4 +22,5 @@
   - State "NEXT"       from "TODO"       [2026-09-18 Fri 16:00]
   :END:
 
-  Currently the property system is neither ~Send~ nor ~Sync~.
+  Currently the property system is neither ~Send~ nor ~Sync~. We need to use Arc<RwLock<>> instead
+  of Rc<RefCell<>> to make it both Send and Sync.
