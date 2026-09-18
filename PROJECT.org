@@ -14,6 +14,16 @@
 
   The docs are [[https://doc.rust-lang.org/std/sync/struct.RwLockReadGuard.html#method.map][here]].
 
+* NEXT tlkwik - Implement Default and Clone
+  :PROPERTIES:
+  :CREATED:  2026-09-18 Fri 17:18
+  :END:
+  :LOGBOOK:
+  - State "NEXT"       from "TODO"       [2026-09-18 Fri 17:18]
+  :END:
+
+  Implement Default and Clone traits for the main mesh type.
+
 * DONE tlksxa - Threadsafe Property System
   CLOSED: [2026-09-18 Fri 16:17]
   :PROPERTIES:
