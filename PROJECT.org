@@ -23,4 +23,4 @@
   :END:
 
   Currently the property system is neither ~Send~ nor ~Sync~. We need to use Arc<RwLock<>> instead
-  of Rc<RefCell<>> to make it both Send and Sync.
+  of ~Rc<RefCell<>>~ to make it both ~Send~ and ~Sync~.
