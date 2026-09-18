@@ -3,7 +3,8 @@ use crate::{
     error::Error,
     mesh::{Adaptor, FloatScalarAdaptor, PolyMeshT},
 };
-use std::{cell::Ref, fmt::Display, fs::OpenOptions, io, path::Path};
+use parking_lot::RwLockReadGuard;
+use std::{fmt::Display, fs::OpenOptions, io, path::Path};
 
 impl<A> PolyMeshT<3, A>
 where
@@ -96,8 +97,8 @@ where
 
     fn write_obj_impl(
         &self,
-        points: Ref<VPropBuf<A::Vector>>,
-        vnormals: Option<Ref<VPropBuf<A::Vector>>>,
+        points: RwLockReadGuard<VPropBuf<A::Vector>>,
+        vnormals: Option<RwLockReadGuard<VPropBuf<A::Vector>>>,
         mut w: impl io::Write,
     ) -> Result<(), io::Error>
     where

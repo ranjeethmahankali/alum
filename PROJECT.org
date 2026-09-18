@@ -14,13 +14,20 @@
 
   The docs are [[https://doc.rust-lang.org/std/sync/struct.RwLockReadGuard.html#method.map][here]].
 
-* NEXT tlksxa - Threadsafe Property System
+* DONE tlksxa - Threadsafe Property System
+  CLOSED: [2026-09-18 Fri 16:17]
   :PROPERTIES:
   :CREATED:  2026-09-18 Fri 16:00
   :END:
   :LOGBOOK:
+  - State "DONE"       from "NEXT"       [2026-09-18 Fri 16:17]
   - State "NEXT"       from "TODO"       [2026-09-18 Fri 16:00]
   :END:
 
   Currently the property system is neither ~Send~ nor ~Sync~. We need to use Arc<RwLock<>> instead
   of ~Rc<RefCell<>>~ to make it both ~Send~ and ~Sync~.
+
+  <2026-09-18 Fri 16:17> Switched ~Property<H, T>~'s storage from ~Rc<RefCell<>>~ to ~Arc<RwLock<>>~
+  (using [[https://crates.io/crates/parking_lot][parking_lot]] for mapped guards), and added ~Send + Sync~ bounds to ~Handle~ and
+  ~Adaptor::Vector/Scalar~. See the new TODO above to drop the ~parking_lot~ dependency once std's
+  mapped ~RwLock~ guards stabilize.

@@ -1,8 +1,11 @@
 use std::{
-    cell::{Ref, RefCell, RefMut},
     marker::PhantomData,
     ops::{Deref, DerefMut, Index, IndexMut},
-    rc::{Rc, Weak},
+    sync::{Arc, Weak},
+};
+
+use parking_lot::{
+    MappedRwLockReadGuard, MappedRwLockWriteGuard, RwLock, RwLockReadGuard, RwLockWriteGuard,
 };
 
 use crate::{
@@ -14,7 +17,7 @@ pub(crate) struct PropertyContainer<H>
 where
     H: Handle,
 {
-    props: Vec<Box<dyn GenericProperty<H>>>,
+    props: Vec<Box<dyn GenericProperty<H> + Send + Sync>>,
     length: usize,
     _phantom: PhantomData<H>,
 }
@@ -48,7 +51,7 @@ where
         }
     }
 
-    fn push_property(&mut self, prop: Box<dyn GenericProperty<H>>) {
+    fn push_property(&mut self, prop: Box<dyn GenericProperty<H> + Send + Sync>) {
         self.props.push(prop);
     }
 
@@ -186,7 +189,8 @@ where
 /// can always convert the property buffer into a `&[T]` at zero cost.
 ///
 /// To access this buffer from the property that owns it, you have it borrow it
-/// as either [`Ref`](std::cell::Ref) or [`RefMut`](std::cell::RefMut)
+/// as either [`RwLockReadGuard`](parking_lot::RwLockReadGuard) or
+/// [`RwLockWriteGuard`](parking_lot::RwLockWriteGuard)
 pub struct PropBuf<H, T>
 where
     H: Handle,
@@ -264,18 +268,18 @@ where
     H: Handle,
     T: Clone + Copy,
 {
-    data: Rc<RefCell<PropBuf<H, T>>>,
+    data: Arc<RwLock<PropBuf<H, T>>>,
     default: T,
 }
 
 impl<H, T> Property<H, T>
 where
     H: Handle,
-    T: Clone + Copy + 'static,
+    T: Clone + Copy + Send + Sync + 'static,
 {
     pub(crate) fn new(container: &mut PropertyContainer<H>, default: T) -> Self {
         let prop = Property {
-            data: Rc::new(RefCell::new(PropBuf {
+            data: Arc::new(RwLock::new(PropBuf {
                 buf: vec![default; container.len()],
                 _phantom: PhantomData,
             })),
@@ -293,7 +297,7 @@ where
         let mut buf = Vec::with_capacity(n);
         buf.resize(container.len(), default);
         let prop = Property {
-            data: Rc::new(RefCell::new(PropBuf {
+            data: Arc::new(RwLock::new(PropBuf {
                 buf,
                 _phantom: PhantomData,
             })),
@@ -303,9 +307,9 @@ where
         prop
     }
 
-    fn generic_ref(&self) -> Box<dyn GenericProperty<H>> {
+    fn generic_ref(&self) -> Box<dyn GenericProperty<H> + Send + Sync> {
         Box::new(WeakProperty::<H, T> {
-            data: Rc::downgrade(&self.data),
+            data: Arc::downgrade(&self.data),
             default: self.default,
         })
     }
@@ -316,10 +320,8 @@ where
     /// enforce runtime borrow checking rules. If borrowing fails,
     /// [`Error::BorrowedPropertyAccess`] is returned, otherwise a reference to
     /// the property is returned.
-    pub fn try_borrow(&'_ self) -> Result<Ref<'_, PropBuf<H, T>>, Error> {
-        self.data
-            .try_borrow()
-            .map_err(|_| Error::BorrowedPropertyAccess)
+    pub fn try_borrow(&'_ self) -> Result<RwLockReadGuard<'_, PropBuf<H, T>>, Error> {
+        self.data.try_read().ok_or(Error::BorrowedPropertyAccess)
     }
 
     /// Try to borrow the property with mutable access.
@@ -328,21 +330,17 @@ where
     /// enforce runtime borrow checking rules. If borrowing fails,
     /// [`Error::BorrowedPropertyAccess`] is returned, otherwise a mutable
     /// reference to the property is returned.
-    pub fn try_borrow_mut(&'_ mut self) -> Result<RefMut<'_, PropBuf<H, T>>, Error> {
-        self.data
-            .try_borrow_mut()
-            .map_err(|_| Error::BorrowedPropertyAccess)
+    pub fn try_borrow_mut(&'_ mut self) -> Result<RwLockWriteGuard<'_, PropBuf<H, T>>, Error> {
+        self.data.try_write().ok_or(Error::BorrowedPropertyAccess)
     }
 
     /// Get a reference to the property value of the mesh element `h`.
     ///
     /// This function internally tries to borrow the property and returns an
     /// error if borrowing fails.
-    pub fn get(&'_ self, h: H) -> Result<Ref<'_, T>, Error> {
-        Ok(Ref::map(
-            self.data
-                .try_borrow()
-                .map_err(|_| Error::BorrowedPropertyAccess)?,
+    pub fn get(&'_ self, h: H) -> Result<MappedRwLockReadGuard<'_, T>, Error> {
+        Ok(RwLockReadGuard::map(
+            self.data.try_read().ok_or(Error::BorrowedPropertyAccess)?,
             |v| &v.buf[h.index() as usize],
         ))
     }
@@ -360,11 +358,9 @@ where
     ///
     /// This function internally tries to mutably borrow the property and
     /// returns an error if borrowing fails.
-    pub fn get_mut(&'_ mut self, h: H) -> Result<RefMut<'_, T>, Error> {
-        Ok(RefMut::map(
-            self.data
-                .try_borrow_mut()
-                .map_err(|_| Error::BorrowedPropertyAccess)?,
+    pub fn get_mut(&'_ mut self, h: H) -> Result<MappedRwLockWriteGuard<'_, T>, Error> {
+        Ok(RwLockWriteGuard::map(
+            self.data.try_write().ok_or(Error::BorrowedPropertyAccess)?,
             |v| &mut v.buf[h.index() as usize],
         ))
     }
@@ -450,25 +446,29 @@ pub type FProperty<T> = Property<FH, T>;
 /// Buffer containing the values of a vertex property.
 ///
 /// To access this buffer from a property, you have to borrow it from the
-/// property as either [`Ref`](std::cell::Ref) or [`RefMut`](std::cell::RefMut).
+/// property as either [`RwLockReadGuard`](parking_lot::RwLockReadGuard) or
+/// [`RwLockWriteGuard`](parking_lot::RwLockWriteGuard).
 pub type VPropBuf<T> = PropBuf<VH, T>;
 
 /// Buffer containing the values of a halfedge property.
 ///
 /// To access this buffer from a property, you have to borrow it from the
-/// property as either [`Ref`](std::cell::Ref) or [`RefMut`](std::cell::RefMut).
+/// property as either [`RwLockReadGuard`](parking_lot::RwLockReadGuard) or
+/// [`RwLockWriteGuard`](parking_lot::RwLockWriteGuard).
 pub type HPropBuf<T> = PropBuf<HH, T>;
 
 /// Buffer containing the values of a edge property.
 ///
 /// To access this buffer from a property, you have to borrow it from the
-/// property as either [`Ref`](std::cell::Ref) or [`RefMut`](std::cell::RefMut).
+/// property as either [`RwLockReadGuard`](parking_lot::RwLockReadGuard) or
+/// [`RwLockWriteGuard`](parking_lot::RwLockWriteGuard).
 pub type EPropBuf<T> = PropBuf<EH, T>;
 
 /// Buffer containing the values of a face property.
 ///
 /// To access this buffer from a property, you have to borrow it from the
-/// property as either [`Ref`](std::cell::Ref) or [`RefMut`](std::cell::RefMut).
+/// property as either [`RwLockReadGuard`](parking_lot::RwLockReadGuard) or
+/// [`RwLockWriteGuard`](parking_lot::RwLockWriteGuard).
 pub type FPropBuf<T> = PropBuf<FH, T>;
 
 /// This is what lives inside the property container. It doesn't control the
@@ -480,7 +480,7 @@ where
     H: Handle,
     T: Clone + Copy,
 {
-    data: Weak<RefCell<PropBuf<H, T>>>,
+    data: Weak<RwLock<PropBuf<H, T>>>,
     default: T,
 }
 
@@ -494,8 +494,8 @@ where
      */
     fn reserve(&mut self, n: usize) -> Result<(), Error> {
         if let Some(prop) = self.data.upgrade() {
-            prop.try_borrow_mut()
-                .map_err(|_| Error::BorrowedPropertyAccess)?
+            prop.try_write()
+                .ok_or(Error::BorrowedPropertyAccess)?
                 .buf
                 .reserve(n);
         }
@@ -504,8 +504,8 @@ where
 
     fn resize(&mut self, n: usize) -> Result<(), Error> {
         if let Some(prop) = self.data.upgrade() {
-            prop.try_borrow_mut()
-                .map_err(|_| Error::BorrowedPropertyAccess)?
+            prop.try_write()
+                .ok_or(Error::BorrowedPropertyAccess)?
                 .buf
                 .resize(n, self.default);
         }
@@ -514,8 +514,8 @@ where
 
     fn clear(&mut self) -> Result<(), Error> {
         if let Some(prop) = self.data.upgrade() {
-            prop.try_borrow_mut()
-                .map_err(|_| Error::BorrowedPropertyAccess)?
+            prop.try_write()
+                .ok_or(Error::BorrowedPropertyAccess)?
                 .buf
                 .clear();
         }
@@ -524,8 +524,8 @@ where
 
     fn push(&mut self) -> Result<(), Error> {
         if let Some(prop) = self.data.upgrade() {
-            prop.try_borrow_mut()
-                .map_err(|_| Error::BorrowedPropertyAccess)?
+            prop.try_write()
+                .ok_or(Error::BorrowedPropertyAccess)?
                 .buf
                 .push(self.default);
         }
@@ -534,9 +534,7 @@ where
 
     fn push_many(&mut self, num: usize) -> Result<(), Error> {
         if let Some(prop) = self.data.upgrade() {
-            let mut prop = prop
-                .try_borrow_mut()
-                .map_err(|_| Error::BorrowedPropertyAccess)?;
+            let mut prop = prop.try_write().ok_or(Error::BorrowedPropertyAccess)?;
             let prop: &mut Vec<T> = &mut prop.buf;
             prop.resize(prop.len() + num, self.default);
         }
@@ -545,8 +543,8 @@ where
 
     fn swap(&mut self, i: usize, j: usize) -> Result<(), Error> {
         if let Some(prop) = self.data.upgrade() {
-            prop.try_borrow_mut()
-                .map_err(|_| Error::BorrowedPropertyAccess)?
+            prop.try_write()
+                .ok_or(Error::BorrowedPropertyAccess)?
                 .swap(i, j);
         }
         Ok(())
@@ -554,9 +552,7 @@ where
 
     fn copy(&mut self, src: usize, dst: usize) -> Result<(), Error> {
         if let Some(prop) = self.data.upgrade() {
-            let mut buf = prop
-                .try_borrow_mut()
-                .map_err(|_| Error::BorrowedPropertyAccess)?;
+            let mut buf = prop.try_write().ok_or(Error::BorrowedPropertyAccess)?;
             let buf: &mut [T] = &mut buf;
             buf[dst] = buf[src];
         }
@@ -568,9 +564,7 @@ where
             if src.len() != dst.len() {
                 return Err(Error::MismatchedArrayLengths(src.len(), dst.len()));
             }
-            let mut buf = prop
-                .try_borrow_mut()
-                .map_err(|_| Error::BorrowedPropertyAccess)?;
+            let mut buf = prop.try_write().ok_or(Error::BorrowedPropertyAccess)?;
             let buf: &mut [T] = &mut buf;
             for (src, dst) in src
                 .iter()

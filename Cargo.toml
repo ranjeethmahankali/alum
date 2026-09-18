@@ -13,6 +13,10 @@ exclude = ["assets/", "examples/"]
 
 [dependencies]
 tobj = { version = "4.0", features = ["use_f64"] }
+# Used for mapped RwLock read/write guards, so properties can be Send + Sync.
+# Remove this once the std equivalent (`std::sync::MappedRwLockReadGuard` /
+# `MappedRwLockWriteGuard`) is stable; currently it's nightly-only.
+parking_lot = "0.12"
 
 [features]
 default = ["subdiv", "decimate"]

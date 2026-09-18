@@ -17,8 +17,8 @@ use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssi
 /// to work with `Vector` instances.
 pub trait Adaptor<const DIM: usize>
 where
-    Self::Vector: Clone + Copy + 'static,
-    Self::Scalar: Clone + Copy + 'static,
+    Self::Vector: Clone + Copy + Send + Sync + 'static,
+    Self::Scalar: Clone + Copy + Send + Sync + 'static,
 {
     type Vector;
     type Scalar;
@@ -735,7 +735,14 @@ pub type PolyMeshF64 = PolyMeshT<3, F64Adaptor>;
 #[cfg(test)]
 mod test {
     use super::Vec3;
-    use crate::{Handle, HasTopology, PolyMeshF32};
+    use crate::{Handle, HasTopology, PolyMeshF32, PolyMeshF64};
+
+    #[test]
+    fn t_mesh_is_send_sync() {
+        fn assert_send_sync<T: Send + Sync>() {}
+        assert_send_sync::<PolyMeshF32>();
+        assert_send_sync::<PolyMeshF64>();
+    }
 
     #[test]
     fn t_icosahedron_clone() {
