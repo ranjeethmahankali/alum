@@ -411,6 +411,34 @@ where
     }
 }
 
+impl<const DIM: usize, A> Clone for PolyMeshT<DIM, A>
+where
+    A: Adaptor<DIM>,
+{
+    fn clone(&self) -> Self {
+        let mut topol = self.topol.clone();
+        let mut points = VProperty::new(&mut topol.vprops, A::zero_vector());
+        points.borrow_mut().copy_from_slice(&self.points.borrow());
+        let vnormals = self.vnormals.as_ref().map(|normals| {
+            let mut dst = VProperty::new(&mut topol.vprops, A::zero_vector());
+            dst.borrow_mut().copy_from_slice(&normals.borrow());
+            dst
+        });
+        let fnormals = self.fnormals.as_ref().map(|normals| {
+            let mut dst = FProperty::new(&mut topol.fprops, A::zero_vector());
+            dst.borrow_mut().copy_from_slice(&normals.borrow());
+            dst
+        });
+        Self {
+            topol,
+            cache: Default::default(),
+            points,
+            vnormals,
+            fnormals,
+        }
+    }
+}
+
 impl<const DIM: usize, A> HasTopology for PolyMeshT<DIM, A>
 where
     A: Adaptor<DIM>,

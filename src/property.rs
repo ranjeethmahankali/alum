@@ -330,6 +330,22 @@ where
         self.data.try_write().ok_or(Error::BorrowedPropertyAccess)
     }
 
+    /// Borrow the property with read-only access, blocking until it is available.
+    ///
+    /// Unlike [`try_borrow`](Self::try_borrow), this cannot fail. It will block
+    /// the current thread until any conflicting write access is released.
+    pub fn borrow(&'_ self) -> RwLockReadGuard<'_, PropBuf<H, T>> {
+        self.data.read()
+    }
+
+    /// Borrow the property with mutable access, blocking until it is available.
+    ///
+    /// Unlike [`try_borrow_mut`](Self::try_borrow_mut), this cannot fail. It
+    /// will block the current thread until any conflicting access is released.
+    pub fn borrow_mut(&'_ mut self) -> RwLockWriteGuard<'_, PropBuf<H, T>> {
+        self.data.write()
+    }
+
     /// Get a reference to the property value of the mesh element `h`.
     ///
     /// This function internally tries to borrow the property and returns an

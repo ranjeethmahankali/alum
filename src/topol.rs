@@ -1055,6 +1055,40 @@ impl Topology {
     }
 }
 
+impl Clone for Topology {
+    fn clone(&self) -> Self {
+        let (mut vprops, mut hprops, mut eprops, mut fprops) = (
+            PropertyContainer::new_with_size(self.num_vertices()),
+            PropertyContainer::new_with_size(self.num_halfedges()),
+            PropertyContainer::new_with_size(self.num_edges()),
+            PropertyContainer::new_with_size(self.num_faces()),
+        );
+        let (mut vstatus, mut hstatus, mut estatus, mut fstatus) = (
+            VProperty::new(&mut vprops, Default::default()),
+            HProperty::new(&mut hprops, Default::default()),
+            EProperty::new(&mut eprops, Default::default()),
+            FProperty::new(&mut fprops, Default::default()),
+        );
+        vstatus.borrow_mut().copy_from_slice(&self.vstatus.borrow());
+        hstatus.borrow_mut().copy_from_slice(&self.hstatus.borrow());
+        estatus.borrow_mut().copy_from_slice(&self.estatus.borrow());
+        fstatus.borrow_mut().copy_from_slice(&self.fstatus.borrow());
+        Self {
+            vertices: self.vertices.clone(),
+            edges: self.edges.clone(),
+            faces: self.faces.clone(),
+            vstatus,
+            hstatus,
+            estatus,
+            fstatus,
+            vprops,
+            hprops,
+            eprops,
+            fprops,
+        }
+    }
+}
+
 impl HasTopology for Topology {
     fn topology(&self) -> &Topology {
         self
