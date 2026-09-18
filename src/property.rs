@@ -27,7 +27,11 @@ where
     H: Handle,
 {
     fn default() -> Self {
-        Self::new()
+        PropertyContainer {
+            props: Vec::new(),
+            length: 0,
+            _phantom: PhantomData,
+        }
     }
 }
 
@@ -39,14 +43,6 @@ where
         PropertyContainer {
             props: Vec::new(),
             length,
-            _phantom: PhantomData,
-        }
-    }
-
-    pub fn new() -> Self {
-        PropertyContainer {
-            props: Vec::new(),
-            length: 0,
             _phantom: PhantomData,
         }
     }
@@ -593,7 +589,7 @@ mod test {
 
     #[test]
     fn t_garbage_collection() {
-        let mut container = PropertyContainer::new();
+        let mut container = PropertyContainer::default();
         assert_eq!(container.props.len(), 0);
         {
             let _prop0 = VProperty::<u32>::new(&mut container, 0);
