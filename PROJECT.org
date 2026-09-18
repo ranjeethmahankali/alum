@@ -7,12 +7,12 @@
 
   I am doing this in other subdiv methods. Might as well do the same here.
 
-* TODO tgaiwx - Volume meshes
+* NEXT tlksxa - Threadsafe Property System
   :PROPERTIES:
-  :CREATED:  2026-06-07 Sun 22:00
+  :CREATED:  2026-09-18 Fri 16:00
+  :END:
+  :LOGBOOK:
+  - State "NEXT"       from "TODO"       [2026-09-18 Fri 16:00]
   :END:
 
-  It is unclear how to integrate volume meshes into this library. I think
-  integrating it into this library instead of writing a new library will have a
-  synergy effect, specially for writing algorithms that use both volume and
-  polygon meshes.
+  Currently the property system is neither ~Send~ nor ~Sync~.
