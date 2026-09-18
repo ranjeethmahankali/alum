@@ -548,4 +548,35 @@ mod test {
             dod.try_calc_volume().expect("Cannot compute volume")
         );
     }
+
+    #[test]
+    fn t_tetrahedron_non_unit_radius() {
+        // Regression test: the apex vertex of the tetrahedron used to be
+        // hardcoded to (0, 0, 1) instead of being scaled by the radius, so
+        // non-unit radii produced a malformed tetrahedron.
+        const RADIUS: f32 = 2.5;
+        let tet = PolyMeshF32::tetrahedron(RADIUS).expect("Cannot create a tetrahedron");
+        assert_eq!(4, tet.num_vertices());
+        assert_eq!(12, tet.num_halfedges());
+        assert_eq!(6, tet.num_edges());
+        assert_eq!(4, tet.num_faces());
+        let points = tet.points();
+        let points = points.try_borrow().expect("Cannot borrow points");
+        for v in tet.vertices() {
+            let p = points[v];
+            let dist = (p.0 * p.0 + p.1 * p.1 + p.2 * p.2).sqrt();
+            assert_f32_eq!(RADIUS, dist, 1e-6);
+        }
+        drop(points);
+        assert_f32_eq!(
+            (8.0 / 3.0f32.sqrt()) * RADIUS * RADIUS,
+            tet.try_calc_area().expect("Cannot compute area"),
+            1e-5
+        );
+        assert_f32_eq!(
+            (8.0 / (9.0 * 3.0f32.sqrt())) * RADIUS * RADIUS * RADIUS,
+            tet.try_calc_volume().expect("Cannot compute volume"),
+            1e-5
+        );
+    }
 }
