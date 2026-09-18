@@ -1055,6 +1055,40 @@ impl Topology {
     }
 }
 
+impl Clone for Topology {
+    fn clone(&self) -> Self {
+        let (mut vprops, mut hprops, mut eprops, mut fprops) = (
+            PropertyContainer::new_with_size(self.num_vertices()),
+            PropertyContainer::new_with_size(self.num_halfedges()),
+            PropertyContainer::new_with_size(self.num_edges()),
+            PropertyContainer::new_with_size(self.num_faces()),
+        );
+        let (mut vstatus, mut hstatus, mut estatus, mut fstatus) = (
+            VProperty::new(&mut vprops, Default::default()),
+            HProperty::new(&mut hprops, Default::default()),
+            EProperty::new(&mut eprops, Default::default()),
+            FProperty::new(&mut fprops, Default::default()),
+        );
+        vstatus.borrow_mut().copy_from_slice(&self.vstatus.borrow());
+        hstatus.borrow_mut().copy_from_slice(&self.hstatus.borrow());
+        estatus.borrow_mut().copy_from_slice(&self.estatus.borrow());
+        fstatus.borrow_mut().copy_from_slice(&self.fstatus.borrow());
+        Self {
+            vertices: self.vertices.clone(),
+            edges: self.edges.clone(),
+            faces: self.faces.clone(),
+            vstatus,
+            hstatus,
+            estatus,
+            fstatus,
+            vprops,
+            hprops,
+            eprops,
+            fprops,
+        }
+    }
+}
+
 impl HasTopology for Topology {
     fn topology(&self) -> &Topology {
         self
@@ -1618,6 +1652,72 @@ pub(crate) mod test {
                 .set_tagged(true);
         }
         let copy = mesh.try_clone().expect("Cannot clone topology");
+        for v in copy.vertices() {
+            assert_eq!(
+                !v.index().is_multiple_of(2),
+                copy.vertex_status(v)
+                    .expect("Cannot access vertex status")
+                    .tagged()
+            );
+        }
+        for h in copy.halfedges() {
+            assert_eq!(
+                !h.index().is_multiple_of(2),
+                copy.halfedge_status(h)
+                    .expect("Cannot access vertex status")
+                    .tagged()
+            );
+        }
+        for e in copy.edges() {
+            assert_eq!(
+                !e.index().is_multiple_of(2),
+                copy.edge_status(e)
+                    .expect("Cannot access vertex status")
+                    .tagged()
+            );
+        }
+        for f in copy.faces() {
+            assert_eq!(
+                !f.index().is_multiple_of(2),
+                copy.face_status(f)
+                    .expect("Cannot access vertex status")
+                    .tagged()
+            );
+        }
+        // Caller owned properties are not cloned. There is exactly one caller owned property.
+        assert_eq!(1 + copy.num_halfedge_props(), mesh.num_halfedge_props());
+    }
+
+    #[test]
+    fn t_quad_box_infallible_clone() {
+        let mut mesh = quad_box();
+        let myprop = mesh.create_halfedge_prop(0u8); // Create custom halfedge property.
+        {
+            let myprop = myprop.try_borrow().expect("Cannot borrow property");
+            assert_eq!(myprop.len(), mesh.num_halfedges());
+        }
+        // Tag the odd numbered elements.
+        for v in mesh.vertices().filter(|v| !v.index().is_multiple_of(2)) {
+            mesh.vertex_status_mut(v)
+                .expect("Cannot access vertex status")
+                .set_tagged(true);
+        }
+        for h in mesh.halfedges().filter(|h| !h.index().is_multiple_of(2)) {
+            mesh.halfedge_status_mut(h)
+                .expect("Cannot access halfedge status")
+                .set_tagged(true);
+        }
+        for e in mesh.edges().filter(|e| !e.index().is_multiple_of(2)) {
+            mesh.edge_status_mut(e)
+                .expect("Cannot access edge status")
+                .set_tagged(true);
+        }
+        for f in mesh.faces().filter(|f| !f.index().is_multiple_of(2)) {
+            mesh.face_status_mut(f)
+                .expect("Cannot access face status")
+                .set_tagged(true);
+        }
+        let copy = mesh.clone();
         for v in copy.vertices() {
             assert_eq!(
                 !v.index().is_multiple_of(2),
