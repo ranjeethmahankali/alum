@@ -316,7 +316,7 @@ where
 
     /// Try to borrow the property with read-only access.
     ///
-    /// Properties use interior mutability pattern using a [`RefCell<T>`] to
+    /// Properties use interior mutability pattern using a [`RwLock<T>`](parking_lot::RwLock) to
     /// enforce runtime borrow checking rules. If borrowing fails,
     /// [`Error::BorrowedPropertyAccess`] is returned, otherwise a reference to
     /// the property is returned.
@@ -326,7 +326,7 @@ where
 
     /// Try to borrow the property with mutable access.
     ///
-    /// Properties use interior mutability pattern using a [`RefCell<T>`] to
+    /// Properties use interior mutability pattern using a [`RwLock<T>`](parking_lot::RwLock) to
     /// enforce runtime borrow checking rules. If borrowing fails,
     /// [`Error::BorrowedPropertyAccess`] is returned, otherwise a mutable
     /// reference to the property is returned.

@@ -251,7 +251,7 @@ where
                 hhs.clear();
                 hhs.extend(self.loop_ccw_iter(hstart));
                 debug_assert!(hhs.len().is_multiple_of(2));
-                for hpair in hhs.chunks_exact(2) {
+                for hpair in hhs.as_chunks::<2>().0 {
                     self.insert_edge(hpair[1], hpair[0], None)?;
                 }
             }
