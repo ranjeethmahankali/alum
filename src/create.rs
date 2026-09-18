@@ -131,7 +131,7 @@ where
         let c = radius * A::scalarf64((2.0 / 9.0f64).sqrt());
         let d = radius * A::scalarf64((2.0 / 3.0f64).sqrt());
         let verts = mesh.add_vertices(&[
-            A::vector([A::scalarf64(0.0), A::scalarf64(0.0), A::scalarf64(1.0)]),
+            A::vector([A::scalarf64(0.0), A::scalarf64(0.0), radius]),
             A::vector([-c, d, -a]),
             A::vector([-c, -d, -a]),
             A::vector([b, A::scalarf64(0.0), -a]),
