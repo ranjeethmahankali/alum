@@ -8,7 +8,7 @@ use crate::{
     property::{FProperty, HProperty, PropertyContainer, VProperty},
     status::Status,
 };
-use std::cell::RefMut;
+use parking_lot::MappedRwLockWriteGuard;
 
 enum TentativeEdge {
     Old(HH),
@@ -93,7 +93,7 @@ pub trait HasTopology: Sized {
     /// ```
     fn create_vertex_prop<T>(&mut self, default: T) -> VProperty<T>
     where
-        T: Clone + Copy + 'static,
+        T: Clone + Copy + Send + Sync + 'static,
     {
         VProperty::<T>::new(&mut self.topology_mut().vprops, default)
     }
@@ -114,7 +114,7 @@ pub trait HasTopology: Sized {
     /// ```
     fn create_halfedge_prop<T>(&mut self, default: T) -> HProperty<T>
     where
-        T: Clone + Copy + 'static,
+        T: Clone + Copy + Send + Sync + 'static,
     {
         HProperty::<T>::new(&mut self.topology_mut().hprops, default)
     }
@@ -135,7 +135,7 @@ pub trait HasTopology: Sized {
     /// ```
     fn create_edge_prop<T>(&mut self, default: T) -> EProperty<T>
     where
-        T: Clone + Copy + 'static,
+        T: Clone + Copy + Send + Sync + 'static,
     {
         EProperty::<T>::new(&mut self.topology_mut().eprops, default)
     }
@@ -156,7 +156,7 @@ pub trait HasTopology: Sized {
     /// ```
     fn create_face_prop<T>(&mut self, default: T) -> FProperty<T>
     where
-        T: Clone + Copy + 'static,
+        T: Clone + Copy + Send + Sync + 'static,
     {
         FProperty::<T>::new(&mut self.topology_mut().fprops, default)
     }
@@ -288,22 +288,22 @@ pub trait HasTopology: Sized {
     }
 
     /// The status of a vertex as mutable.
-    fn vertex_status_mut(&mut self, v: VH) -> Result<RefMut<'_, Status>, Error> {
+    fn vertex_status_mut(&mut self, v: VH) -> Result<MappedRwLockWriteGuard<'_, Status>, Error> {
         self.topology_mut().vstatus.get_mut(v)
     }
 
     /// The status of a halfedge as mutable.
-    fn halfedge_status_mut(&mut self, h: HH) -> Result<RefMut<'_, Status>, Error> {
+    fn halfedge_status_mut(&mut self, h: HH) -> Result<MappedRwLockWriteGuard<'_, Status>, Error> {
         self.topology_mut().hstatus.get_mut(h)
     }
 
     /// The status of an edge as mutable.
-    fn edge_status_mut(&mut self, e: EH) -> Result<RefMut<'_, Status>, Error> {
+    fn edge_status_mut(&mut self, e: EH) -> Result<MappedRwLockWriteGuard<'_, Status>, Error> {
         self.topology_mut().estatus.get_mut(e)
     }
 
     /// The status of a face as mutable.
-    fn face_status_mut(&mut self, f: FH) -> Result<RefMut<'_, Status>, Error> {
+    fn face_status_mut(&mut self, f: FH) -> Result<MappedRwLockWriteGuard<'_, Status>, Error> {
         self.topology_mut().fstatus.get_mut(f)
     }
 
