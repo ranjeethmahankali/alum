@@ -24,6 +24,9 @@
 
   Implement Default and Clone traits for the main mesh type.
 
+  <2026-09-18 Fri 17:37> Default was already implemented. Implemented a Clone that blocks when
+  trying to borrow. Trying to merge this now.
+
 * DONE tlksxa - Threadsafe Property System
   CLOSED: [2026-09-18 Fri 16:17]
   :PROPERTIES:
