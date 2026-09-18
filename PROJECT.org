@@ -14,11 +14,22 @@
 
   The docs are [[https://doc.rust-lang.org/std/sync/struct.RwLockReadGuard.html#method.map][here]].
 
-* NEXT tlkwik - Implement Default and Clone
+* NEXT tll0da - Fix Bugs
+  :PROPERTIES:
+  :CREATED:  2026-09-18 Fri 18:41
+  :END:
+
+  Found these bugs while using this crate in another project.
+
+  Tetrahedron doesn't scale the vertices by radius.
+
+* DONE tlkwik - Implement Default and Clone
+  CLOSED: [2026-09-18 Fri 18:44]
   :PROPERTIES:
   :CREATED:  2026-09-18 Fri 17:18
   :END:
   :LOGBOOK:
+  - State "DONE"       from "NEXT"       [2026-09-18 Fri 18:44]
   - State "NEXT"       from "TODO"       [2026-09-18 Fri 17:18]
   :END:
 
